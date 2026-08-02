@@ -1,19 +1,25 @@
+import json
+from pathlib import Path
+
+
 class MemoryStore:
 
-    def __init__(self):
-        self._store = {}
+    def __init__(self, filename="memory.json"):
+        self.path = Path(filename)
+
+        if self.path.exists():
+            self.memory = json.loads(self.path.read_text())
+        else:
+            self.memory = {}
 
     def save(self, key, value):
-        self._store[key] = value
+        self.memory[key] = value
+        self.path.write_text(
+            json.dumps(self.memory, indent=2)
+        )
 
     def load(self, key):
-        return self._store.get(key)
+        return self.memory.get(key)
 
-    def delete(self, key):
-        self._store.pop(key, None)
-
-    def clear(self):
-        self._store.clear()
-
-    def keys(self):
-        return list(self._store.keys())
+    def all(self):
+        return self.memory
