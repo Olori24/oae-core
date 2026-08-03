@@ -1,21 +1,16 @@
-from oae.planner.planner import Planner
-from oae.executor.engine import ExecutionEngine
+"""
+Open Autonomous Engineer
+"""
+
+from .pipeline import EngineeringPipeline
 
 
 class OAE:
+    """Main public interface for OAE."""
 
     def __init__(self):
-        self.planner = Planner()
-        self.executor = ExecutionEngine()
+        self.pipeline = EngineeringPipeline()
 
-    def run(self, goal: str):
-
-        mission, tasks = self.planner.create_plan(goal)
-
-        print(f"[MISSION] {mission.goal}")
-
-        for task in tasks:
-            result = self.executor.execute(task.name)
-            print(result.output)
-
-        return True
+    def execute(self, mission):
+        """Execute an engineering mission."""
+        return self.pipeline.execute(mission)
