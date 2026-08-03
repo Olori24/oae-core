@@ -48,5 +48,12 @@ class SharedMemory:
     def exists(self, key):
         return key in self._memory
 
+    def delete(self, key):
+        if key in self._memory:
+            del self._memory[key]
+            self._save()
+            return True
+        return False
+
     def keys(self):
         return list(self._memory.keys())
