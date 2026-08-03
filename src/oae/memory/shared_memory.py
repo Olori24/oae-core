@@ -1,44 +1,30 @@
-import json
-from pathlib import Path
+from .store import MemoryStore
 
 
 class SharedMemory:
-    """Persistent shared memory for OAE agents."""
+    """High-level shared memory interface for OAE agents."""
 
-    def __init__(self, file_path="memory.json"):
-        self.file_path = Path(file_path)
-        self._memory = {}
-        self._load()
-
-    def _load(self):
-        if self.file_path.exists():
-            try:
-                with open(self.file_path, "r") as f:
-                    self._memory = json.load(f)
-            except (json.JSONDecodeError, OSError):
-                self._memory = {}
-
-    def _save(self):
-        with open(self.file_path, "w") as f:
-            json.dump(self._memory, f, indent=2)
+    def __init__(self):
+        self.store = MemoryStore()
 
     def write(self, key, value):
-        existing = self._memory.get(key)
+        existing = self.store.load(key)
 
         if isinstance(existing, dict):
             version = existing.get("version", 0) + 1
         else:
             version = 1
 
-        self._memory[key] = {
-            "value": value,
-            "version": version,
-        }
-
-        self._save()
+        self.store.save(
+            key,
+            {
+                "value": value,
+                "version": version,
+            },
+        )
 
     def read(self, key):
-        entry = self._memory.get(key)
+        entry = self.store.load(key)
 
         if isinstance(entry, dict):
             return entry.get("value")
@@ -46,14 +32,13 @@ class SharedMemory:
         return entry
 
     def exists(self, key):
-        return key in self._memory
+        return self.store.load(key) is not None
 
     def delete(self, key):
-        if key in self._memory:
-            del self._memory[key]
-            self._save()
-            return True
-        return False
+        return self.store.delete(key)
+
+    def clear(self):
+        self.store.clear()
 
     def keys(self):
-        return list(self._memory.keys())
+        return list(self.store.all().keys())
