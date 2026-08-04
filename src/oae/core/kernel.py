@@ -1,10 +1,13 @@
+
 """
 OAE Kernel.
 """
 
 from oae.core.boot_manager import BootManager
 from oae.core.event_bus import EventBus
+from oae.core.execution_engine import ExecutionEngine
 from oae.core.registry import SubsystemRegistry
+from oae.core.oae import OAE
 from oae.governance.engine import GovernanceEngine
 
 
@@ -24,12 +27,21 @@ class Kernel:
             self.events,
         )
 
+        self.oae = OAE()
+
+        self.execution = ExecutionEngine(
+            self.events,
+            self.oae.pipeline,
+        )
+
     def validate_dependencies(self):
-        """Compatibility wrapper."""
         return self.boot.validate_dependencies()
 
     def initialize(self):
         return self.boot.initialize()
+
+    def execute(self, mission):
+        return self.execution.execute(mission)
 
     def ready(self):
 
@@ -72,3 +84,4 @@ class Kernel:
             ),
             "total_subsystems": len(self.registry.all()),
         }
+

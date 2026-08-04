@@ -14,28 +14,25 @@ class EngineeringPipeline:
     def __init__(self):
         self.stages = StageRegistry().load()
 
-    def execute(self, mission):
+    def execute(self, context):
 
-        context = EngineeringContext(mission)
+        if not isinstance(context, EngineeringContext):
+            context = EngineeringContext(context)
 
-        print(f"Mission received: {mission}")
+        print(f"Mission received: {context.mission}")
 
         for stage in self.stages:
 
             try:
-
                 context = stage.run(context)
 
             except Exception as exc:
 
                 context.success = False
-
                 context.failed_stage = stage.name
-
                 context.error = str(exc)
 
                 context.record(stage.name, "failed")
-
                 break
 
         context.complete()

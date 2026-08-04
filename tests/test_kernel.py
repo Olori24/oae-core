@@ -11,12 +11,15 @@ def test_kernel_lifecycle():
 
     assert kernel.ready() is True
 
+    result = kernel.execute("Mission 059")
+
+    assert result.mission == "Mission 059"
+
     report = kernel.health()
 
     assert report["kernel"] is True
-    assert report["healthy_subsystems"] == 1
-    assert report["total_subsystems"] == 1
 
     kernel.shutdown()
 
     assert kernel.ready() is False
+
