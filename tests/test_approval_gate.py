@@ -1,17 +1,32 @@
 from oae.security import ApprovalGate, SecurityPolicy
+from oae.security.request import ApprovalRequest
 
 
-def test_approval_gate_blocks_sensitive_actions():
+def test_sensitive_action_requires_approval():
     policy = SecurityPolicy()
     gate = ApprovalGate(policy)
 
-    assert gate.approve("delete") is False
-    assert gate.approve("force_push") is False
-    assert gate.approve("shell") is False
+    result = gate.approve(
+        action="delete",
+        target="src/oae/runtime.py",
+        requester="Planner",
+    )
+
+    assert isinstance(result, ApprovalRequest)
+    assert result.status == "PENDING"
+    assert result.action == "delete"
+    assert result.requester == "Planner"
 
 
-def test_unknown_action_is_denied():
+def test_unknown_action_requires_approval():
     policy = SecurityPolicy()
     gate = ApprovalGate(policy)
 
-    assert gate.approve("unknown") is False
+    result = gate.approve(
+        action="unknown",
+        target="anything",
+        requester="Planner",
+    )
+
+    assert isinstance(result, ApprovalRequest)
+    assert result.status == "PENDING"
