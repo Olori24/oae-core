@@ -22,11 +22,23 @@ class EngineeringPipeline:
 
         for stage in self.stages:
 
-            context.record(stage.name, "started")
+            try:
 
-            context = stage.execute(context)
+                context = stage.run(context)
 
-            context.record(stage.name, "completed")
+            except Exception as exc:
+
+                context.success = False
+
+                context.failed_stage = stage.name
+
+                context.error = str(exc)
+
+                context.record(stage.name, "failed")
+
+                break
+
+        context.complete()
 
         print("Pipeline completed.")
 

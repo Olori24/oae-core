@@ -1,5 +1,5 @@
 """
-Base stage for the OAE Engineering Pipeline.
+Base Stage for the Engineering Pipeline.
 """
 
 
@@ -8,16 +8,29 @@ class Stage:
 
     name = "Stage"
 
+    def before_execute(self, context):
+        """Hook executed before the stage."""
+        return context
+
     def execute(self, context):
-        """
-        Execute the stage.
+        """Override in subclasses."""
+        raise NotImplementedError
 
-        Args:
-            context: EngineeringContext
+    def after_execute(self, context):
+        """Hook executed after the stage."""
+        return context
 
-        Returns:
-            Updated context.
-        """
-        raise NotImplementedError(
-            f"{self.__class__.__name__} must implement execute()."
-        )
+    def run(self, context):
+        """Execute the complete stage lifecycle."""
+
+        context.record(self.name, "started")
+
+        context = self.before_execute(context)
+
+        context = self.execute(context)
+
+        context = self.after_execute(context)
+
+        context.record(self.name, "completed")
+
+        return context
