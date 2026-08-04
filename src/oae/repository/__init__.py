@@ -1,11 +1,7 @@
-"""
-Repository subsystem.
-"""
-
-from .service import RepositoryService
-from .scanner import RepositoryScanner
+from .profile import RepositoryProfile
+from .inspector import RepositoryInspector
 
 __all__ = [
-    "RepositoryService",
-    "RepositoryScanner",
+    "RepositoryProfile",
+    "RepositoryInspector",
 ]
