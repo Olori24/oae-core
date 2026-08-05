@@ -1,4 +1,5 @@
 from oae.core.dependency_engine import DependencyEngine
+from oae.core.dependency_classifier import ClassifiedDependency
 
 
 def test_dependency_engine_creation():
@@ -15,10 +16,19 @@ def test_dependency_report():
     assert isinstance(report.dependencies, list)
 
 
-def test_requirements_are_strings():
+def test_dependencies_are_classified():
     engine = DependencyEngine()
 
     report = engine.analyze()
 
     for dependency in report.dependencies:
-        assert isinstance(dependency, str)
+        assert isinstance(dependency, ClassifiedDependency)
+
+
+def test_dependency_has_category():
+    engine = DependencyEngine()
+
+    report = engine.analyze()
+
+    for dependency in report.dependencies:
+        assert isinstance(dependency.category, str)

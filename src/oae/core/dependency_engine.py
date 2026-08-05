@@ -1,19 +1,25 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from oae.core.dependency_classifier import (
+    DependencyClassifier,
+    ClassifiedDependency,
+)
+
 
 @dataclass
 class DependencyReport:
-    dependencies: list[str]
+    dependencies: list[ClassifiedDependency]
 
 
 class DependencyEngine:
     """
-    Reads repository dependencies.
+    Reads and classifies repository dependencies.
     """
 
     def __init__(self, repository: str | Path = "."):
         self.repository = Path(repository)
+        self.classifier = DependencyClassifier()
 
     def analyze(self) -> DependencyReport:
         dependencies = []
@@ -24,13 +30,12 @@ class DependencyEngine:
             for line in requirements.read_text().splitlines():
                 line = line.strip()
 
-                if not line:
+                if not line or line.startswith("#"):
                     continue
 
-                if line.startswith("#"):
-                    continue
-
-                dependencies.append(line)
+                dependencies.append(
+                    self.classifier.classify(line)
+                )
 
         return DependencyReport(
             dependencies=dependencies,
