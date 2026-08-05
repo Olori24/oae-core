@@ -1,0 +1,47 @@
+from oae.core.engineering_director import EngineeringDirector
+
+
+def test_creation():
+    director = EngineeringDirector()
+
+    assert director is not None
+
+
+def test_register_engineer():
+    director = EngineeringDirector()
+
+    director.register("Backend Engineer")
+
+    result = director.assign("Authentication")
+
+    assert result["engineer"] == "Backend Engineer"
+
+
+def test_assignment_contains_mission():
+    director = EngineeringDirector()
+
+    director.register("Backend Engineer")
+
+    result = director.assign("JWT")
+
+    assert result["mission"] == "JWT"
+
+
+def test_no_engineers():
+    director = EngineeringDirector()
+
+    assert director.assign("JWT") is None
+
+
+def test_multiple_engineers():
+    director = EngineeringDirector()
+
+    director.register("Backend Engineer")
+    director.register("QA Engineer")
+
+    result = director.assign("API")
+
+    assert result["engineer"] in [
+        "Backend Engineer",
+        "QA Engineer",
+    ]
