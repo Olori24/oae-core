@@ -42,19 +42,21 @@ def test_unknown_capability():
     assert selector.select("kubernetes") is None
 
 
-def test_first_matching_agent():
+def test_least_busy_selected():
     selector = AgentSelector()
 
     selector.register_agent(
         "Backend Engineer",
-        ["python", "jwt"],
+        ["jwt"],
     )
 
     selector.register_agent(
         "Security Engineer",
-        ["jwt", "security"],
+        ["jwt"],
     )
+
+    selector.workload.assign("Backend Engineer")
 
     agent = selector.select("jwt")
 
-    assert agent.name == "Backend Engineer"
+    assert agent.name == "Security Engineer"

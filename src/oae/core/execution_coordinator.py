@@ -12,7 +12,7 @@ class ExecutionResult:
 
 class ExecutionCoordinator:
     """
-    Executes missions using capability-based agent selection.
+    Executes missions using capability-based intelligent scheduling.
     """
 
     def __init__(self):
@@ -41,6 +41,8 @@ class ExecutionCoordinator:
                 objective,
                 [],
             )
+
+        self.selector.workload.assign(agent.name)
 
         self.scheduler.schedule(
             agent.name,

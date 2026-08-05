@@ -52,6 +52,26 @@ def test_scheduler_receives_task():
     assert len(coordinator.scheduler.pending()) == 1
 
 
+def test_workload_updated():
+    coordinator = ExecutionCoordinator()
+
+    coordinator.register_agent(
+        "Backend Engineer",
+        ["jwt"],
+    )
+
+    coordinator.execute(
+        "Implement JWT",
+        "jwt",
+    )
+
+    assert (
+        coordinator.selector.workload.workload(
+            "Backend Engineer"
+        ) == 1
+    )
+
+
 def test_correct_agent_selected():
     coordinator = ExecutionCoordinator()
 
