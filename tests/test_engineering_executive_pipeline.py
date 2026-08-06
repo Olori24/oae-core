@@ -3,12 +3,6 @@ from oae.core.engineering_executive_pipeline import (
 )
 
 
-def test_creation():
-    pipeline = EngineeringExecutivePipeline()
-
-    assert pipeline is not None
-
-
 def test_execute(tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -25,9 +19,9 @@ def run():
 
     pipeline = EngineeringExecutivePipeline()
 
-    result = pipeline.execute(repo)
+    report = pipeline.execute(repo)
 
-    assert "intelligence" in result
-    assert "diagnosis" in result
-    assert "missions" in result
-    assert len(result["missions"]) > 0
+    assert "diagnosis" in report
+    assert "analysis" in report
+    assert "recommendations" in report
+    assert "recovery" in report
