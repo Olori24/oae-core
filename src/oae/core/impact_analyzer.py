@@ -1,24 +1,36 @@
-from dataclasses import dataclass
-
-from oae.core.knowledge_graph import KnowledgeGraph
-
-
-@dataclass
-class ImpactReport:
-    target: str
-    affected: list[str]
-
-
 class ImpactAnalyzer:
     """
-    Uses the knowledge graph to estimate change impact.
+    Determines the impact of modifying a symbol.
     """
 
-    def __init__(self, graph: KnowledgeGraph):
-        self.graph = graph
+    def impacted_functions(self, call_graph, target):
+        impacted = []
 
-    def analyze(self, target: str) -> ImpactReport:
-        return ImpactReport(
-            target=target,
-            affected=self.graph.neighbors(target),
-        )
+        for caller, callees in call_graph.items():
+            if target in callees:
+                impacted.append(caller)
+
+        return impacted
+
+    def risk(self, call_graph, target):
+        impacted = self.impacted_functions(call_graph, target)
+
+        count = len(impacted)
+
+        if count >= 5:
+            return "HIGH"
+
+        if count >= 2:
+            return "MEDIUM"
+
+        return "LOW"
+
+    def report(self, call_graph, target):
+        impacted = self.impacted_functions(call_graph, target)
+
+        return {
+            "target": target,
+            "impacted": impacted,
+            "risk": self.risk(call_graph, target),
+            "count": len(impacted),
+        }
