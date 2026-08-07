@@ -1,41 +1,39 @@
-# OAE — Open Autonomous Engineer
+# OAE
 
-> Autonomous Engineering Operating System
+# Open Autonomous Engineer
 
-OAE is an autonomous engineering platform designed to understand software repositories, reason about engineering problems, generate implementation plans, build production-ready software, verify results, and continuously improve systems under human approval.
+### Autonomous Engineering Operating System
 
----
+> Analyze • Plan • Build • Verify • Improve
 
-# 🚀 Project Status
-
-**Version:** v0.5 Alpha
-
-**Development Status:** Active
-
-**Engineering Principles**
-
-- Security First
-- Verification Required
-- Human Approval
-- Repository Safety
-- Modular Architecture
-- Continuous Engineering
+![Version](https://img.shields.io/badge/version-v0.5--alpha-blue)
+![Tests](https://img.shields.io/badge/tests-546%2B%20passing-brightgreen)
+![Python](https://img.shields.io/badge/python-3.14-blue)
+![Status](https://img.shields.io/badge/status-active%20development-orange)
+![Architecture](https://img.shields.io/badge/architecture-modular-success)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
 
-# 🏆 Project Milestones
+# What is OAE?
 
-OAE is developed through measurable engineering milestones instead of feature accumulation.
+OAE (Open Autonomous Engineer) is an autonomous engineering operating system designed to help AI systems understand repositories, discover engineering problems, generate implementation plans, safely improve software, verify results, and continuously evolve software systems under human approval.
 
-## ✅ Milestone 001 — Autonomous Engineering Review
+Unlike traditional AI coding assistants that focus on generating code, OAE is engineered as a complete engineering platform capable of reasoning about entire repositories.
 
-OAE completed its first verified autonomous engineering improvement cycle on a real application.
+---
+
+# 🏆 Latest Milestone
+
+## First Autonomous Engineering Improvement — COMPLETE
+
+OAE successfully completed its first verified autonomous engineering cycle on a real software project.
 
 ### Benchmark Repository
 
-Opportunity Radar Africa
+**Opportunity Radar Africa**
 
-### Engineering Workflow
+### Engineering Cycle
 
 Repository Analysis
 
@@ -45,7 +43,7 @@ Engineering Review
 
 ↓
 
-Improvement Recommendations
+Engineering Recommendations
 
 ↓
 
@@ -65,74 +63,83 @@ Repository Re-analysis
 
 ### Result
 
-Repository Health Score
+Repository Engineering Health
 
 **91 → 94**
 
-First completed recommendation
+### First Completed Engineering Recommendation
 
-- ✅ Structured Logging
+✅ Structured Logging
 
 Remaining engineering roadmap
 
 - Configuration
 - Middleware
 
-**Status:** COMPLETE
+This marks the first time OAE has successfully:
+
+- Analysed a real repository
+- Detected engineering weaknesses
+- Generated engineering recommendations
+- Improved the repository
+- Verified the improvement
+- Confirmed the repository health increased
 
 ---
 
-## ✅ Milestone 002 — Engineering Operating System
+# Current Capabilities
 
-OAE successfully evolved beyond code generation into an Engineering Operating System.
+## Repository Intelligence
 
-Core systems completed
+- Repository Scanner
+- Repository Profiler
+- Repository Sandbox
+- Workspace Manager
+- Repository Recovery Engine
 
-- Agent Runtime
+## Engineering Intelligence
+
+- Engineering Review Engine
+- Capability Discovery Engine
+- Semantic Repository Analyzer
+- Capability Planner
+- Dependency Resolver
+
+## Autonomous Engineering
+
+- Bootstrap Engine
+- Executable Application Generator
 - Mission Queue
 - Scheduler
-- Repository Scanner
-- Repository Bootstrap Engine
 - Verification Engine
-- Executable Application Generator
-- Capability Discovery Engine
-- Capability Planner
-- Capability Dependency Graph
-- Capability Resolver
-- Semantic Repository Analyzer
-- Engineering Review Engine
+- Rollback Engine
+
+## Multi-Agent System
+
+- Agent Runtime
+- Agent Registry
+- Agent Message Bus
+- Shared Agent Memory
 
 ---
 
-## ✅ Milestone 003 — Engineering Quality
+# Engineering Principles
 
-Current automated verification
+OAE follows strict engineering governance.
 
-**546+ Passing Tests**
-
-Every engineering capability must pass automated verification before integration.
-
----
-
-# 🎯 Vision
-
-The goal of OAE is to become an Autonomous Engineering Operating System capable of:
-
-- Understanding repositories
-- Discovering engineering problems
-- Planning engineering work
-- Building production-ready software
-- Verifying implementation
-- Improving existing systems
-- Learning new engineering capabilities
-- Operating safely under human governance
+- Security First
+- Human Approval
+- Verification Required
+- Repository Safety
+- Modular Architecture
+- Test Before Integration
+- Continuous Engineering
 
 ---
 
-# 🔄 Engineering Loop
+# Engineering Workflow
 
-OAE continuously follows this engineering cycle.
-
+```text
 Repository
 
 ↓
@@ -170,45 +177,83 @@ Repository Re-analysis
 ↓
 
 Engineering Health Improvement
+```
 
 ---
 
-# 🧪 Benchmark Repository
+# Benchmark Repository
 
-OAE validates every major capability using a real software project.
+Every major capability is validated using a real software project.
 
-**Benchmark Repository #001**
+## Opportunity Radar Africa
 
-Opportunity Radar Africa
+Current Engineering Health
 
-Every major OAE release must improve the engineering quality of this repository.
+**94 / 100**
 
-This ensures OAE evolves through measurable engineering outcomes rather than simply adding new features.
+Current recommendations
 
----
+- Configuration
+- Middleware
 
-# 📈 Current Progress
-
-- ✅ 546+ Passing Tests
-- ✅ Autonomous Engineering Review
-- ✅ Capability Discovery
-- ✅ Semantic Engineering Analysis
-- ✅ Engineering Planning
-- ✅ Repository Bootstrap
-- ✅ Executable Application Generation
-- ✅ Continuous Repository Improvement
+OAE must continuously improve this repository before new autonomous capabilities are considered complete.
 
 ---
 
-# 🚧 Current Roadmap
+# Project Roadmap
 
-### OAE v0.5 Alpha
+## v0.5 Alpha
 
-- Capability Discovery
 - Engineering Review
 - Semantic Repository Analysis
-- Repository Improvement Loop
+- Capability Discovery
+- Continuous Improvement Loop
 
-### OAE v0.6
+## v0.6
 
-- AST
+- AST Code Understanding
+- Engineering Knowledge Graph
+- Cross-Repository Learning
+- Multi-Agent Collaboration
+
+## v1.0
+
+Autonomous engineering teams capable of understanding, improving, testing, documenting and governing software repositories with minimal human intervention.
+
+---
+
+# Project Statistics
+
+- ✅ 546+ Automated Tests
+- ✅ Modular Architecture
+- ✅ Autonomous Repository Analysis
+- ✅ Autonomous Engineering Review
+- ✅ Continuous Repository Improvement
+- ✅ Human Approval Workflow
+
+---
+
+# Vision
+
+OAE is being built to become an Autonomous Engineering Operating System capable of safely engineering software at scale.
+
+The long-term objective is to create AI engineering teams that can continuously understand, maintain, improve and govern software systems while keeping humans responsible for strategic decisions and approvals.
+
+---
+
+# Contributing
+
+Every contribution must:
+
+- Include automated tests
+- Preserve repository safety
+- Pass verification
+- Follow engineering governance
+
+Quality always comes before speed.
+
+---
+
+# License
+
+MIT License
