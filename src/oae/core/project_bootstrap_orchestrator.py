@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from oae.core.project_skeleton_generator import ProjectSkeletonGenerator
 from oae.core.readme_generator import ReadmeGenerator
 from oae.core.gitignore_generator import GitignoreGenerator
@@ -6,6 +8,10 @@ from oae.core.env_generator import EnvGenerator
 from oae.core.pyproject_generator import PyprojectGenerator
 from oae.core.dockerfile_generator import DockerfileGenerator
 from oae.core.github_actions_generator import GitHubActionsGenerator
+from oae.core.application_scaffold_generator import ApplicationScaffoldGenerator
+from oae.core.executable_application_generator import (
+    ExecutableApplicationGenerator,
+)
 
 
 class ProjectBootstrapOrchestrator:
@@ -14,6 +20,8 @@ class ProjectBootstrapOrchestrator:
     """
 
     def bootstrap(self, root, specification):
+        root = Path(root)
+
         ProjectSkeletonGenerator().generate(root, specification)
         ReadmeGenerator().generate(root, specification)
         GitignoreGenerator().generate(root)
@@ -22,5 +30,7 @@ class ProjectBootstrapOrchestrator:
         PyprojectGenerator().generate(root, specification)
         DockerfileGenerator().generate(root)
         GitHubActionsGenerator().generate(root)
+        ApplicationScaffoldGenerator().generate(root, specification)
+        ExecutableApplicationGenerator().generate(root, specification)
 
-        return True
+        return root
