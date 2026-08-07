@@ -15,10 +15,12 @@ def test_backend_engineer_actions():
 
     actions = agent.actions(task)
 
-    assert len(actions) == 3
+    assert len(actions) == 4
 
-    assert actions[0]["action"] == "analyze"
+    assert actions[0]["operation"] == "create_file"
 
-    assert actions[1]["action"] == "implement"
+    assert actions[1]["operation"] == "modify_file"
 
-    assert actions[2]["action"] == "verify"
+    assert actions[2]["operation"] == "run_tests"
+
+    assert actions[3]["operation"] == "commit_changes"

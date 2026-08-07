@@ -3,6 +3,9 @@ from oae.core.autonomous_execution_pipeline import (
 )
 
 from oae.agents.cto_agent import CTOAgent
+from oae.agents.engineering_action_executor import (
+    EngineeringActionExecutor,
+)
 
 
 class EngineeringDirector:
@@ -13,19 +16,20 @@ class EngineeringDirector:
     def __init__(self):
 
         self.pipeline = AutonomousExecutionPipeline()
-
         self.cto = CTOAgent()
+        self.executor = EngineeringActionExecutor()
 
     def register(self, agent):
 
         self.pipeline.register(agent)
 
     def review(self, missions):
-        """
-        Ask the CTO Agent to assign engineering work.
-        """
 
         return self.cto.assign(missions)
+
+    def execute_actions(self, actions):
+
+        return self.executor.execute(actions)
 
     def assign(self, mission):
 

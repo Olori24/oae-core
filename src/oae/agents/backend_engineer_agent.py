@@ -32,15 +32,17 @@ class BackendEngineerAgent:
 
         return [
             {
-                "action": "analyze",
-                "target": task.title,
+                "operation": "create_file",
+                "path": "src/generated/example.py",
             },
             {
-                "action": "implement",
-                "target": task.title,
+                "operation": "modify_file",
+                "path": "README.md",
             },
             {
-                "action": "verify",
-                "target": task.title,
+                "operation": "run_tests",
+            },
+            {
+                "operation": "commit_changes",
             },
         ]
