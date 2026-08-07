@@ -14,48 +14,39 @@ from oae.core.database_generator import DatabaseGenerator
 from oae.core.opportunity_model_generator import OpportunityModelGenerator
 from oae.core.opportunity_repository_generator import OpportunityRepositoryGenerator
 from oae.core.opportunity_api_generator import OpportunityApiGenerator
+from oae.core.authentication_generator import AuthenticationGenerator
+from oae.core.api_integration_generator import ApiIntegrationGenerator
 
 
 class ProjectBootstrapOrchestrator:
-    """
-    Executes the complete repository bootstrap process.
-    """
+
+    def __init__(self):
+        self.generators = [
+            ProjectSkeletonGenerator(),
+            ReadmeGenerator(),
+            GitignoreGenerator(),
+            RequirementsGenerator(),
+            EnvGenerator(),
+            PyprojectGenerator(),
+            DockerfileGenerator(),
+            GitHubActionsGenerator(),
+            ApplicationScaffoldGenerator(),
+            ExecutableApplicationGenerator(),
+            DatabaseGenerator(),
+            OpportunityModelGenerator(),
+            OpportunityRepositoryGenerator(),
+            OpportunityApiGenerator(),
+            AuthenticationGenerator(),
+            ApiIntegrationGenerator(),
+        ]
 
     def bootstrap(self, root, specification):
         root = Path(root)
 
-        ProjectSkeletonGenerator().generate(root, specification)
-
-        ReadmeGenerator().generate(root, specification)
-
-        GitignoreGenerator().generate(root)
-
-        RequirementsGenerator().generate(root)
-
-        EnvGenerator().generate(root)
-
-        PyprojectGenerator().generate(root, specification)
-
-        DockerfileGenerator().generate(root)
-
-        GitHubActionsGenerator().generate(root)
-
-        ApplicationScaffoldGenerator().generate(
-            root,
-            specification,
-        )
-
-        ExecutableApplicationGenerator().generate(
-            root,
-            specification,
-        )
-
-        DatabaseGenerator().generate(root)
-
-        OpportunityModelGenerator().generate(root)
-
-        OpportunityRepositoryGenerator().generate(root)
-
-        OpportunityApiGenerator().generate(root)
+        for generator in self.generators:
+            try:
+                generator.generate(root, specification)
+            except TypeError:
+                generator.generate(root)
 
         return root
