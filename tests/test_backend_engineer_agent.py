@@ -1,52 +1,22 @@
-from oae.core.architect_agent import ArchitecturePlan
-from oae.core.backend_engineer_agent import BackendEngineerAgent
+from oae.agents.backend_engineer_agent import (
+    BackendEngineerAgent,
+    BackendTask,
+)
 
 
-def make_plan():
-    return ArchitecturePlan(
-        objective="Add JWT authentication",
-        language="Python",
-        framework="FastAPI",
-        tasks=[
-            "Inspect repository",
-            "Analyze repository context",
-            "Analyze dependencies",
-            "Assess impact",
-            "Assess risk",
-            "Request approval if needed",
-            "Execute changes",
-            "Run tests",
-            "Record engineering ledger",
-        ],
+def test_backend_engineer_plan():
+
+    agent = BackendEngineerAgent()
+
+    task = BackendTask(
+        title="Implement Logging",
+        description="Add structured logging.",
     )
 
+    plan = agent.plan(task)
 
-def test_backend_agent_creation():
-    agent = BackendEngineerAgent()
+    assert plan["task"] == "Implement Logging"
 
-    assert agent is not None
+    assert plan["owner"] == "Backend Engineer"
 
-
-def test_backend_task_creation():
-    agent = BackendEngineerAgent()
-
-    task = agent.implement(make_plan())
-
-    assert task.objective == "Add JWT authentication"
-
-
-def test_backend_adds_steps():
-    agent = BackendEngineerAgent()
-
-    task = agent.implement(make_plan())
-
-    assert "Implement backend code" in task.implementation_steps
-    assert "Verify backend implementation" in task.implementation_steps
-
-
-def test_backend_step_count():
-    agent = BackendEngineerAgent()
-
-    task = agent.implement(make_plan())
-
-    assert len(task.implementation_steps) == 11
+    assert plan["status"] == "planned"
