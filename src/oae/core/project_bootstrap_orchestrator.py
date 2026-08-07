@@ -13,6 +13,7 @@ from oae.core.executable_application_generator import ExecutableApplicationGener
 from oae.core.database_generator import DatabaseGenerator
 from oae.core.opportunity_model_generator import OpportunityModelGenerator
 from oae.core.opportunity_repository_generator import OpportunityRepositoryGenerator
+from oae.core.opportunity_api_generator import OpportunityApiGenerator
 
 
 class ProjectBootstrapOrchestrator:
@@ -24,12 +25,19 @@ class ProjectBootstrapOrchestrator:
         root = Path(root)
 
         ProjectSkeletonGenerator().generate(root, specification)
+
         ReadmeGenerator().generate(root, specification)
+
         GitignoreGenerator().generate(root)
+
         RequirementsGenerator().generate(root)
+
         EnvGenerator().generate(root)
+
         PyprojectGenerator().generate(root, specification)
+
         DockerfileGenerator().generate(root)
+
         GitHubActionsGenerator().generate(root)
 
         ApplicationScaffoldGenerator().generate(
@@ -47,5 +55,7 @@ class ProjectBootstrapOrchestrator:
         OpportunityModelGenerator().generate(root)
 
         OpportunityRepositoryGenerator().generate(root)
+
+        OpportunityApiGenerator().generate(root)
 
         return root
