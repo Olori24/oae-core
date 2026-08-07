@@ -15,8 +15,8 @@ class BackendEngineerAgent:
     """
     Backend Engineer Agent.
 
-    Receives engineering tasks from the CTO Agent
-    and produces an implementation plan.
+    Produces executable engineering actions
+    from approved engineering tasks.
     """
 
     def plan(self, task: BackendTask):
@@ -27,3 +27,20 @@ class BackendEngineerAgent:
             "status": "planned",
             "owner": "Backend Engineer",
         }
+
+    def actions(self, task: BackendTask):
+
+        return [
+            {
+                "action": "analyze",
+                "target": task.title,
+            },
+            {
+                "action": "implement",
+                "target": task.title,
+            },
+            {
+                "action": "verify",
+                "target": task.title,
+            },
+        ]
