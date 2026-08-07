@@ -105,3 +105,33 @@ def test_create_file_operation():
     assert file_path.read_text(
         encoding="utf-8"
     ) == "print('hello from OAE')\n"
+def test_run_tests_operation():
+
+    executor = EngineeringActionExecutor()
+
+    actions = [
+        {
+            "operation": "run_tests",
+            "command": [
+                "python",
+                "-c",
+                "print('OAE TEST PASS')",
+            ],
+        }
+    ]
+
+    results = executor.execute(actions)
+
+    assert len(results) == 1
+
+    assert results[0]["operation"] == "run_tests"
+
+    assert results[0]["status"] == "completed"
+
+    test_result = results[0]["result"]
+
+    assert test_result["returncode"] == 0
+
+    assert test_result["passed"] is True
+
+    assert "OAE TEST PASS" in test_result["stdout"]

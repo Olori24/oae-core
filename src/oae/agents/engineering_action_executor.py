@@ -31,14 +31,23 @@ class EngineeringActionExecutor:
                     action
                 )
 
-                results.append(
-                    {
-                        "operation": action["operation"],
-                        "path": action.get("path"),
-                        "status": result["status"],
-                        "workspace": result.get("workspace"),
-                    }
-                )
+                execution_result = {
+                    "operation": action["operation"],
+                    "path": action.get("path"),
+                    "status": result["status"],
+                }
+
+                if "workspace" in result:
+                    execution_result["workspace"] = result[
+                        "workspace"
+                    ]
+
+                if "result" in result:
+                    execution_result["result"] = result[
+                        "result"
+                    ]
+
+                results.append(execution_result)
 
                 continue
 

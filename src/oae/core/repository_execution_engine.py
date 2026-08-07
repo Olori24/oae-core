@@ -12,6 +12,10 @@ from oae.core.real_patch_engine import (
     RealPatchEngine,
 )
 
+from oae.core.repository_test_runner import (
+    RepositoryTestRunner,
+)
+
 
 class RepositoryExecutionEngine:
     """
@@ -23,6 +27,7 @@ class RepositoryExecutionEngine:
         self.worktree = RepositoryWorktreeManager()
         self.branch_manager = GitBranchManager()
         self.patch_engine = RealPatchEngine()
+        self.test_runner = RepositoryTestRunner()
 
     def execute(
         self,
@@ -106,6 +111,26 @@ class RepositoryExecutionEngine:
                 "operation": operation_type,
                 "path": path,
                 "workspace": workspace,
+            }
+
+        if operation_type == "run_tests":
+
+            command = operation.get(
+                "command",
+                ["python", "--version"],
+            )
+
+            cwd = operation.get("cwd")
+
+            result = self.test_runner.run(
+                command=command,
+                cwd=cwd,
+            )
+
+            return {
+                "status": "completed",
+                "operation": "run_tests",
+                "result": result,
             }
 
         return {
