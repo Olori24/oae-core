@@ -9,9 +9,10 @@ from oae.core.pyproject_generator import PyprojectGenerator
 from oae.core.dockerfile_generator import DockerfileGenerator
 from oae.core.github_actions_generator import GitHubActionsGenerator
 from oae.core.application_scaffold_generator import ApplicationScaffoldGenerator
-from oae.core.executable_application_generator import (
-    ExecutableApplicationGenerator,
-)
+from oae.core.executable_application_generator import ExecutableApplicationGenerator
+from oae.core.database_generator import DatabaseGenerator
+from oae.core.opportunity_model_generator import OpportunityModelGenerator
+from oae.core.opportunity_repository_generator import OpportunityRepositoryGenerator
 
 
 class ProjectBootstrapOrchestrator:
@@ -30,7 +31,21 @@ class ProjectBootstrapOrchestrator:
         PyprojectGenerator().generate(root, specification)
         DockerfileGenerator().generate(root)
         GitHubActionsGenerator().generate(root)
-        ApplicationScaffoldGenerator().generate(root, specification)
-        ExecutableApplicationGenerator().generate(root, specification)
+
+        ApplicationScaffoldGenerator().generate(
+            root,
+            specification,
+        )
+
+        ExecutableApplicationGenerator().generate(
+            root,
+            specification,
+        )
+
+        DatabaseGenerator().generate(root)
+
+        OpportunityModelGenerator().generate(root)
+
+        OpportunityRepositoryGenerator().generate(root)
 
         return root
