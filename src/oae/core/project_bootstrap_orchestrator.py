@@ -16,6 +16,7 @@ from oae.core.opportunity_repository_generator import OpportunityRepositoryGener
 from oae.core.opportunity_api_generator import OpportunityApiGenerator
 from oae.core.authentication_generator import AuthenticationGenerator
 from oae.core.api_integration_generator import ApiIntegrationGenerator
+from oae.core.schema_generator import SchemaGenerator
 
 
 class ProjectBootstrapOrchestrator:
@@ -37,6 +38,7 @@ class ProjectBootstrapOrchestrator:
             OpportunityRepositoryGenerator(),
             OpportunityApiGenerator(),
             AuthenticationGenerator(),
+            SchemaGenerator(),
             ApiIntegrationGenerator(),
         ]
 
