@@ -1,90 +1,69 @@
 # OAE Architecture
 
-Version: 0.3.0-alpha
+## Core Philosophy
 
-## Purpose
+Security First
 
-This document provides a high-level overview of the Open Autonomous Engineer (OAE) architecture.
+Verification Required
 
-OAE is designed as a governed autonomous engineering operating system capable of planning, executing, verifying and auditing software engineering work.
+Human Approval
 
----
+Modular Engineering
 
-# Core Layers
-
-## Governance Layer
-
-Responsible for engineering rules.
-
-Components:
-
-- Constitution
-- Governance Standards
-- Architecture Decision Records (ADRs)
+Repository Safety
 
 ---
 
-## Execution Layer
+## Layers
 
-Responsible for mission execution.
+Repository Intelligence
 
-Components:
+↓
 
-- Engineering Pipeline
-- Stage Lifecycle
-- Stage Registry
-- Engineering Context
+Planning
 
----
+↓
 
-## Security Layer
+Architecture
 
-Responsible for safe execution.
+↓
 
-Components:
+Meta Generator Engine
 
-- Permissions
-- Policies
-- Approvals
-- Audit
+↓
 
----
+Engineering Modules
 
-## Repository Layer
+↓
 
-Responsible for repository management.
+Verification
 
-Components:
+↓
 
-- Repository Service
-- Scanner
-- Snapshot Manager
-- Rollback Engine
+Git
+
+↓
+
+Deployment
 
 ---
 
-## Memory Layer
+## Major Subsystems
 
-Responsible for persistent engineering knowledge.
+Repository Intelligence
 
-Components:
+Planning Engine
 
-- Shared Memory
-- Memory Store
-- Mission Context
+Mission Engine
 
----
+Builder Engine
 
-# Engineering Principles
+Bootstrap Engine
 
-- Security First
-- Verification Required
-- Repository Safety
-- Governance Before Automation
-- Architecture Before Features
+Meta Generator Engine
 
----
+Architecture Governance
 
-# Long-Term Vision
+Security Kernel
 
-OAE evolves from an AI coding assistant into an Engineering Operating System capable of safely managing multiple repositories through governed autonomous engineering.
+Verification Engine
