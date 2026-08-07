@@ -2,16 +2,22 @@ from oae.core.autonomous_execution_pipeline import (
     AutonomousExecutionPipeline,
 )
 
+from oae.core.repository_execution_engine import (
+    RepositoryExecutionEngine,
+)
+
 
 class EngineeringActionExecutor:
     """
     Executes engineering actions through OAE's
-    autonomous execution pipeline.
+    autonomous execution pipeline and repository
+    execution infrastructure.
     """
 
     def __init__(self):
 
         self.pipeline = AutonomousExecutionPipeline()
+        self.repository_engine = RepositoryExecutionEngine()
 
     def execute(self, actions):
 
@@ -19,8 +25,22 @@ class EngineeringActionExecutor:
 
         for action in actions:
 
-            # Future versions will execute real engineering operations.
-            # For now we route every action through the execution pipeline.
+            if "operation" in action:
+
+                result = self.repository_engine.execute_operation(
+                    action
+                )
+
+                results.append(
+                    {
+                        "operation": action["operation"],
+                        "path": action.get("path"),
+                        "status": result["status"],
+                        "workspace": result.get("workspace"),
+                    }
+                )
+
+                continue
 
             self.pipeline.execute(action)
 

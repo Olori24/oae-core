@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from oae.core.repository_worktree_manager import (
     RepositoryWorktreeManager,
 )
@@ -29,7 +31,7 @@ class RepositoryExecutionEngine:
         filename: str = "file.py",
     ):
         """
-        Backward-compatible execution API.
+        Backward-compatible patch execution API.
         """
 
         workspace = self.worktree.create_worktree()
@@ -53,10 +55,60 @@ class RepositoryExecutionEngine:
 
     def execute_operation(self, operation: dict):
         """
-        New engineering-operation API.
+        Execute a repository operation.
+
+        Supported operations:
+        - create_file
+        - modify_file
+        - run_tests
+        - commit_changes
         """
+
+        operation_type = operation.get("operation")
+
+        if operation_type in {
+            "create_file",
+            "modify_file",
+        }:
+
+            path = operation.get("path")
+
+            content = operation.get(
+                "content",
+                "",
+            )
+
+            if not path:
+                return {
+                    "status": "error",
+                    "operation": operation_type,
+                    "error": "Missing file path",
+                }
+
+            workspace = self.worktree.create_worktree()
+
+            file_path = (
+                Path(workspace["path"]) / path
+            )
+
+            file_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            file_path.write_text(
+                content,
+                encoding="utf-8",
+            )
+
+            return {
+                "status": "completed",
+                "operation": operation_type,
+                "path": path,
+                "workspace": workspace,
+            }
 
         return {
             "status": "accepted",
-            "operation": operation.get("operation"),
+            "operation": operation_type,
         }
