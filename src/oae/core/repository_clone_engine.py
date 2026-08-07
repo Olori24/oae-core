@@ -1,20 +1,33 @@
-import shutil
 from pathlib import Path
+import subprocess
 
 
 class RepositoryCloneEngine:
     """
-    Creates a local working copy of a repository.
+    Clone or update a Git repository.
     """
 
-    def clone(self, source, destination):
-        source = Path(source)
-        destination = Path(destination)
+    def __init__(self, workspace="workspace"):
+        self.workspace = Path(workspace)
+        self.workspace.mkdir(parents=True, exist_ok=True)
 
-        shutil.copytree(source, destination)
+    def clone(self, url):
+        name = url.rstrip("/").split("/")[-1]
 
-        return {
-            "status": "cloned",
-            "source": str(source),
-            "destination": str(destination),
-        }
+        if name.endswith(".git"):
+            name = name[:-4]
+
+        destination = self.workspace / name
+
+        if destination.exists():
+            subprocess.run(
+                ["git", "-C", str(destination), "pull"],
+                check=True,
+            )
+        else:
+            subprocess.run(
+                ["git", "clone", url, str(destination)],
+                check=True,
+            )
+
+        return destination
