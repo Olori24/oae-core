@@ -1,9 +1,11 @@
 from oae.core.repository_worktree_manager import (
     RepositoryWorktreeManager,
 )
+
 from oae.core.git_branch_manager import (
     GitBranchManager,
 )
+
 from oae.core.real_patch_engine import (
     RealPatchEngine,
 )
@@ -15,23 +17,28 @@ class RepositoryExecutionEngine:
     """
 
     def __init__(self):
+
         self.worktree = RepositoryWorktreeManager()
-        self.git = GitBranchManager()
-        self.patch = RealPatchEngine()
+        self.branch_manager = GitBranchManager()
+        self.patch_engine = RealPatchEngine()
 
     def execute(
         self,
-        original,
-        modified,
-        filename="file.py",
+        original: str,
+        modified: str,
+        filename: str = "file.py",
     ):
+        """
+        Backward-compatible execution API.
+        """
+
         workspace = self.worktree.create_worktree()
 
-        branch = self.git.create_branch(
-            "oae/execution"
+        branch = self.branch_manager.create_branch(
+            "oae-engineering"
         )
 
-        patch = self.patch.generate_patch(
+        patch = self.patch_engine.generate_patch(
             original,
             modified,
             filename,
@@ -42,4 +49,14 @@ class RepositoryExecutionEngine:
             "branch": branch,
             "patch": patch,
             "status": "completed",
+        }
+
+    def execute_operation(self, operation: dict):
+        """
+        New engineering-operation API.
+        """
+
+        return {
+            "status": "accepted",
+            "operation": operation.get("operation"),
         }
