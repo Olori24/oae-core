@@ -140,3 +140,24 @@ def test_decide_records_engineering_decision():
     assert "authentication" in entry.details
     assert "review" in entry.details
     assert "review_historical_failures" in entry.details
+
+
+def test_decision_report_exposes_governance_history():
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "ENGINEERING_DECISION",
+        str({
+            "mission": "Authentication",
+            "decision": "review",
+            "recommendation": {
+                "recommendation": "review_historical_failures",
+            },
+        }),
+    )
+
+    report = director.decision_report()
+
+    assert report["total"] == 1
+    assert report["review"] == 1
+    assert report["recommendations"]["review_historical_failures"] == 1

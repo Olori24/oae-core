@@ -227,3 +227,104 @@ def test_empty_experience_report():
     assert report["failed"] == 0
     assert report["success_rate"] == 0.0
     assert report["latest"] is None
+
+
+def test_decision_report_empty():
+    memory = EngineeringMemory(EngineeringLedger())
+
+    report = memory.decision_report()
+
+    assert report["total"] == 0
+    assert report["proceed"] == 0
+    assert report["review"] == 0
+    assert report["hold"] == 0
+    assert report["recommendations"] == {}
+    assert report["latest"] is None
+
+
+def test_decision_report_counts_decisions():
+    ledger = EngineeringLedger()
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        "{'mission': 'Auth', 'decision': 'proceed', "
+        "'recommendation': {'recommendation': "
+        "'proceed_with_standard_verification'}}",
+    )
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        "{'mission': 'Payments', 'decision': 'review', "
+        "'recommendation': {'recommendation': "
+        "'review_historical_failures'}}",
+    )
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        "{'mission': 'Database', 'decision': 'hold', "
+        "'recommendation': {'recommendation': "
+        "'increase_verification'}}",
+    )
+
+    memory = EngineeringMemory(ledger)
+
+    report = memory.decision_report()
+
+    assert report["total"] == 3
+    assert report["proceed"] == 1
+    assert report["review"] == 1
+    assert report["hold"] == 1
+
+
+def test_decision_report_counts_recommendations():
+    ledger = EngineeringLedger()
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        "{'mission': 'Auth', 'decision': 'review', "
+        "'recommendation': {'recommendation': "
+        "'review_historical_failures'}}",
+    )
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        "{'mission': 'Payments', 'decision': 'review', "
+        "'recommendation': {'recommendation': "
+        "'review_historical_failures'}}",
+    )
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        "{'mission': 'Database', 'decision': 'hold', "
+        "'recommendation': {'recommendation': "
+        "'increase_verification'}}",
+    )
+
+    memory = EngineeringMemory(ledger)
+
+    report = memory.decision_report()
+
+    assert report["recommendations"]["review_historical_failures"] == 2
+    assert report["recommendations"]["increase_verification"] == 1
+
+
+def test_decision_report_latest():
+    ledger = EngineeringLedger()
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        "{'mission': 'Auth', 'decision': 'review'}",
+    )
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        "{'mission': 'Database', 'decision': 'hold'}",
+    )
+
+    memory = EngineeringMemory(ledger)
+
+    report = memory.decision_report()
+
+    assert report["latest"].details == (
+        "{'mission': 'Database', 'decision': 'hold'}"
+    )

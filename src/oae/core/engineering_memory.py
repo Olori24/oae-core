@@ -1,3 +1,5 @@
+import ast
+
 class EngineeringMemory:
     """
     Reads engineering history and extracts useful experience.
@@ -127,3 +129,38 @@ class EngineeringMemory:
             "events": events,
             "status": status,
         }
+
+
+    def decision_report(self):
+        """Summarize historical Engineering Director decisions."""
+
+        decisions = self.events("ENGINEERING_DECISION")
+
+        report = {
+            "total": len(decisions),
+            "proceed": 0,
+            "review": 0,
+            "hold": 0,
+            "recommendations": {},
+            "latest": decisions[-1] if decisions else None,
+        }
+
+        for entry in decisions:
+            try:
+                data = ast.literal_eval(entry.details)
+            except (ValueError, SyntaxError):
+                continue
+
+            decision = data.get("decision")
+            if decision in ("proceed", "review", "hold"):
+                report[decision] += 1
+
+            recommendation = data.get("recommendation", {})
+            if isinstance(recommendation, dict):
+                name = recommendation.get("recommendation")
+                if name:
+                    report["recommendations"][name] = (
+                        report["recommendations"].get(name, 0) + 1
+                    )
+
+        return report

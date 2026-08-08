@@ -69,3 +69,8 @@ class EngineeringDirector:
         )
 
         return decision
+
+
+
+    def decision_report(self):
+        return self.memory.decision_report()
