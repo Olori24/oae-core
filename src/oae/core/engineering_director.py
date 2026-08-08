@@ -3,6 +3,8 @@ from oae.core.autonomous_execution_pipeline import (
 )
 
 from oae.agents.cto_agent import CTOAgent
+from oae.core.engineering_ledger import EngineeringLedger
+from oae.core.engineering_memory import EngineeringMemory
 from oae.agents.engineering_action_executor import (
     EngineeringActionExecutor,
 )
@@ -18,6 +20,8 @@ class EngineeringDirector:
         self.pipeline = AutonomousExecutionPipeline()
         self.cto = CTOAgent()
         self.executor = EngineeringActionExecutor()
+        self.ledger = EngineeringLedger()
+        self.memory = EngineeringMemory(self.ledger)
 
     def register(self, agent):
 
@@ -34,3 +38,6 @@ class EngineeringDirector:
     def assign(self, mission):
 
         return self.pipeline.execute(mission)
+
+    def experience(self, query):
+        return self.memory.experience_report(query)

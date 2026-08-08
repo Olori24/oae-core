@@ -45,3 +45,25 @@ def test_multiple_engineers():
         "Backend Engineer",
         "QA Engineer",
     ]
+
+def test_experience_returns_memory_report():
+    from oae.core.engineering_director import EngineeringDirector
+
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "MISSION_FAILED",
+        "Authentication deployment failed",
+    )
+
+    director.ledger.record(
+        "MISSION_COMPLETED",
+        "Authentication deployment verified",
+    )
+
+    report = director.experience("authentication")
+
+    assert report["match_count"] == 2
+    assert report["completed"] == 1
+    assert report["failed"] == 1
+    assert report["success_rate"] == 0.5

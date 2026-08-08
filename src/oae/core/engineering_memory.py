@@ -46,6 +46,52 @@ class EngineeringMemory:
 
         return completed / total
 
+    def find_related(self, query):
+        """
+        Find historical ledger events containing the query text.
+        Matching is case-insensitive.
+        """
+        if not query:
+            return []
+
+        query = str(query).lower()
+
+        return [
+            entry
+            for entry in self.ledger.entries()
+            if query in entry.details.lower()
+        ]
+
+    def experience_report(self, query):
+        matches = self.find_related(query)
+
+        completed = sum(
+            1 for entry in matches
+            if entry.event == "MISSION_COMPLETED"
+        )
+
+        failed = sum(
+            1 for entry in matches
+            if entry.event == "MISSION_FAILED"
+        )
+
+        total_outcomes = completed + failed
+
+        if total_outcomes == 0:
+            success_rate = 0.0
+        else:
+            success_rate = completed / total_outcomes
+
+        return {
+            "query": query,
+            "matches": matches,
+            "match_count": len(matches),
+            "completed": completed,
+            "failed": failed,
+            "success_rate": success_rate,
+            "latest": matches[-1] if matches else None,
+        }
+
     def mission_events(self, mission):
         return [
             entry
