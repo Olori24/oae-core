@@ -88,3 +88,26 @@ def test_recommendation_returns_advisory_result():
 
     assert result["recommendation"] == "review_historical_failures"
     assert result["confidence"] == 0.5
+
+
+def test_decide_uses_historical_recommendation():
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "MISSION_FAILED",
+        "Authentication deployment failed",
+    )
+
+    director.ledger.record(
+        "MISSION_COMPLETED",
+        "Authentication deployment verified",
+    )
+
+    decision = director.decide("authentication")
+
+    assert decision.mission == "authentication"
+    assert decision.decision == "review"
+    assert (
+        decision.recommendation["recommendation"]
+        == "review_historical_failures"
+    )

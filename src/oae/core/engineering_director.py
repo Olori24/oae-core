@@ -8,6 +8,7 @@ from oae.core.engineering_memory import EngineeringMemory
 from oae.core.engineering_recommendation_engine import (
     EngineeringRecommendationEngine,
 )
+from oae.core.engineering_decision_gate import EngineeringDecisionGate
 from oae.agents.engineering_action_executor import (
     EngineeringActionExecutor,
 )
@@ -28,6 +29,7 @@ class EngineeringDirector:
         self.recommendation_engine = EngineeringRecommendationEngine(
             self.memory
         )
+        self.decision_gate = EngineeringDecisionGate()
 
     def register(self, agent):
 
@@ -50,3 +52,12 @@ class EngineeringDirector:
 
     def recommend(self, query):
         return self.recommendation_engine.recommend(query)
+
+
+
+    def decide(self, mission):
+        recommendation = self.recommend(mission)
+        return self.decision_gate.evaluate(
+            mission,
+            recommendation,
+        )
