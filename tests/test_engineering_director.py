@@ -111,3 +111,32 @@ def test_decide_uses_historical_recommendation():
         decision.recommendation["recommendation"]
         == "review_historical_failures"
     )
+
+
+def test_decide_records_engineering_decision():
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "MISSION_FAILED",
+        "Authentication deployment failed",
+    )
+
+    director.ledger.record(
+        "MISSION_COMPLETED",
+        "Authentication deployment verified",
+    )
+
+    decision = director.decide("authentication")
+
+    assert decision.decision == "review"
+
+    entries = director.ledger.entries()
+
+    assert len(entries) == 3
+
+    entry = entries[-1]
+
+    assert entry.event == "ENGINEERING_DECISION"
+    assert "authentication" in entry.details
+    assert "review" in entry.details
+    assert "review_historical_failures" in entry.details

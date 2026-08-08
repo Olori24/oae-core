@@ -57,7 +57,15 @@ class EngineeringDirector:
 
     def decide(self, mission):
         recommendation = self.recommend(mission)
-        return self.decision_gate.evaluate(
+
+        decision = self.decision_gate.evaluate(
             mission,
             recommendation,
         )
+
+        self.ledger.record(
+            "ENGINEERING_DECISION",
+            str(decision.to_dict()),
+        )
+
+        return decision
