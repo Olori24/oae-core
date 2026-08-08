@@ -10,6 +10,7 @@ from oae.core.context import EngineeringContext
 from oae.core.mission_execution_record import MissionExecutionRecord
 from oae.core.mission_history import MissionHistory
 from oae.core.engineering_ledger import EngineeringLedger
+from oae.core.engineering_memory import EngineeringMemory
 
 
 class ExecutionEngine:
@@ -29,6 +30,7 @@ class ExecutionEngine:
         self.recovery = recovery
         self.history = MissionHistory()
         self.ledger = ledger or EngineeringLedger()
+        self.memory = EngineeringMemory(self.ledger)
         self.ledger = EngineeringLedger()
 
     def execute(self, mission):
