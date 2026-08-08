@@ -67,3 +67,24 @@ def test_experience_returns_memory_report():
     assert report["completed"] == 1
     assert report["failed"] == 1
     assert report["success_rate"] == 0.5
+
+
+def test_recommendation_returns_advisory_result():
+    from oae.core.engineering_director import EngineeringDirector
+
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "MISSION_FAILED",
+        "Authentication deployment failed",
+    )
+
+    director.ledger.record(
+        "MISSION_COMPLETED",
+        "Authentication deployment verified",
+    )
+
+    result = director.recommend("authentication")
+
+    assert result["recommendation"] == "review_historical_failures"
+    assert result["confidence"] == 0.5
