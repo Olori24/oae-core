@@ -328,3 +328,169 @@ def test_decision_report_latest():
     assert report["latest"].details == (
         "{'mission': 'Database', 'decision': 'hold'}"
     )
+
+
+def test_decision_effectiveness_empty():
+    memory = EngineeringMemory(EngineeringLedger())
+
+    report = memory.decision_effectiveness()
+
+    assert report["total_decisions"] == 0
+    assert report["matched_decisions"] == 0
+    assert report["pending_decisions"] == 0
+    assert report["effective"] == 0
+    assert report["ineffective"] == 0
+
+
+def test_proceed_completed_is_effective():
+    ledger = EngineeringLedger()
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        str({
+            "mission": "Authentication",
+            "decision": "proceed",
+        }),
+    )
+
+    ledger.record(
+        "MISSION_COMPLETED",
+        str({
+            "mission": "Authentication",
+            "status": "completed",
+        }),
+    )
+
+    memory = EngineeringMemory(ledger)
+
+    report = memory.decision_effectiveness()
+
+    assert report["total_decisions"] == 1
+    assert report["matched_decisions"] == 1
+    assert report["pending_decisions"] == 0
+    assert report["effective"] == 1
+    assert report["ineffective"] == 0
+
+
+def test_proceed_failed_is_ineffective():
+    ledger = EngineeringLedger()
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        str({
+            "mission": "Payments",
+            "decision": "proceed",
+        }),
+    )
+
+    ledger.record(
+        "MISSION_FAILED",
+        str({
+            "mission": "Payments",
+            "status": "failed",
+        }),
+    )
+
+    memory = EngineeringMemory(ledger)
+
+    report = memory.decision_effectiveness()
+
+    assert report["total_decisions"] == 1
+    assert report["matched_decisions"] == 1
+    assert report["effective"] == 0
+    assert report["ineffective"] == 1
+
+
+def test_review_completed_is_effective():
+    ledger = EngineeringLedger()
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        str({
+            "mission": "Database",
+            "decision": "review",
+        }),
+    )
+
+    ledger.record(
+        "MISSION_COMPLETED",
+        str({
+            "mission": "Database",
+            "status": "completed",
+        }),
+    )
+
+    memory = EngineeringMemory(ledger)
+
+    report = memory.decision_effectiveness()
+
+    assert report["matched_decisions"] == 1
+    assert report["effective"] == 1
+
+
+def test_decision_without_outcome_is_pending():
+    ledger = EngineeringLedger()
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        str({
+            "mission": "New subsystem",
+            "decision": "review",
+        }),
+    )
+
+    memory = EngineeringMemory(ledger)
+
+    report = memory.decision_effectiveness()
+
+    assert report["total_decisions"] == 1
+    assert report["matched_decisions"] == 0
+    assert report["pending_decisions"] == 1
+    assert report["effective"] == 0
+    assert report["ineffective"] == 0
+
+
+def test_decision_effectiveness_uses_subsequent_outcome():
+    ledger = EngineeringLedger()
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        str({
+            "mission": "Authentication",
+            "decision": "proceed",
+        }),
+    )
+
+    ledger.record(
+        "MISSION_FAILED",
+        str({
+            "mission": "Authentication",
+            "status": "failed",
+        }),
+    )
+
+    ledger.record(
+        "ENGINEERING_DECISION",
+        str({
+            "mission": "Authentication",
+            "decision": "review",
+        }),
+    )
+
+    ledger.record(
+        "MISSION_COMPLETED",
+        str({
+            "mission": "Authentication",
+            "status": "completed",
+        }),
+    )
+
+    memory = EngineeringMemory(ledger)
+
+    report = memory.decision_effectiveness()
+
+    assert report["total_decisions"] == 2
+    assert report["matched_decisions"] == 2
+    assert report["pending_decisions"] == 0
+    assert report["effective"] == 1
+    assert report["ineffective"] == 1

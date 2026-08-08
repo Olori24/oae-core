@@ -164,3 +164,73 @@ class EngineeringMemory:
                     )
 
         return report
+    def decision_effectiveness(self):
+        """Measure decision outcomes against subsequent mission results."""
+
+        entries = self.ledger.entries()
+        decisions = [
+            (index, entry)
+            for index, entry in enumerate(entries)
+            if entry.event == "ENGINEERING_DECISION"
+        ]
+
+        report = {
+            "total_decisions": len(decisions),
+            "matched_decisions": 0,
+            "pending_decisions": 0,
+            "effective": 0,
+            "ineffective": 0,
+        }
+
+        for index, entry in decisions:
+            try:
+                decision_data = ast.literal_eval(entry.details)
+            except (ValueError, SyntaxError):
+                report["pending_decisions"] += 1
+                continue
+
+            mission = decision_data.get("mission")
+
+            if mission is None:
+                report["pending_decisions"] += 1
+                continue
+
+            mission_key = str(mission).lower()
+            outcome = None
+
+            for subsequent in entries[index + 1:]:
+                if subsequent.event not in (
+                    "MISSION_COMPLETED",
+                    "MISSION_FAILED",
+                ):
+                    continue
+
+                try:
+                    outcome_data = ast.literal_eval(subsequent.details)
+                except (ValueError, SyntaxError):
+                    continue
+
+                outcome_mission = outcome_data.get("mission")
+
+                if (
+                    outcome_mission is not None
+                    and str(outcome_mission).lower() == mission_key
+                ):
+                    outcome = subsequent.event
+                    break
+
+            if outcome is None:
+                report["pending_decisions"] += 1
+                continue
+
+            report["matched_decisions"] += 1
+
+            if (
+                decision_data.get("decision") == "proceed"
+                and outcome == "MISSION_FAILED"
+            ):
+                report["ineffective"] += 1
+            else:
+                report["effective"] += 1
+
+        return report
