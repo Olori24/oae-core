@@ -4,50 +4,66 @@ from oae.core.failure_recovery_coordinator import (
 from oae.core.recovery_mission_bridge import (
     RecoveryMissionBridge,
 )
-from oae.core.mission_dispatcher import (
-    MissionDispatcher,
-)
 
 
 class AutonomousRecoveryPipeline:
     """
-    Coordinates autonomous failure recovery from classification
-    through mission creation and dispatch.
+    Converts failed execution results into controlled recovery missions.
     """
 
     def __init__(self):
-        self.recovery = FailureRecoveryCoordinator()
+        self.coordinator = FailureRecoveryCoordinator()
         self.bridge = RecoveryMissionBridge()
-        self.dispatcher = MissionDispatcher()
+        self._missions = []
 
     def handle(self, execution_result, mission):
-        recovery = self.recovery.recover(
+        """
+        Analyze an execution result and create recovery missions when needed.
+        """
+        recovery = self.coordinator.recover(
             execution_result,
             mission,
         )
 
-        missions = self.bridge.create_missions(
+        if recovery["status"] == "no_recovery_required":
+            self._missions = []
+            return {
+                "status": "no_recovery_required",
+                "failure_type": recovery["failure_type"],
+                "missions": [],
+            }
+
+        self._missions = self.bridge.create_missions(
             recovery
         )
 
-        for injected in missions:
-            objective = injected["mission"]
-
-            if isinstance(objective, dict):
-                objective = objective.get(
-                    "objective",
-                    objective.get("type", str(objective)),
-                )
-
-            self.dispatcher.queue.enqueue(
-                objective,
-                1,
-            )
-
         return {
-            **recovery,
-            "missions": missions,
+            "status": "recovery_required",
+            "failure_type": recovery["failure_type"],
+            "risk": recovery["risk"],
+            "plan": recovery["plan"],
+            "missions": self._missions,
         }
 
     def dispatch(self):
-        return self.dispatcher.dispatch()
+        """
+        Dispatch the next pending recovery mission.
+        """
+        if not self._missions:
+            return None
+
+        for mission in self._missions:
+            if mission.get("status") == "pending":
+                mission["status"] = "dispatched"
+
+                return type(
+                    "RecoveryDispatch",
+                    (),
+                    {
+                        "dispatched": True,
+                        "objective": mission["mission"],
+                        "mission": mission,
+                    },
+                )()
+
+        return None
