@@ -21,12 +21,14 @@ class ExecutionEngine:
         pipeline,
         verifier=None,
         recovery=None,
+        ledger=None,
     ):
         self.event_bus = event_bus
         self.pipeline = pipeline
         self.verifier = verifier
         self.recovery = recovery
         self.history = MissionHistory()
+        self.ledger = ledger or EngineeringLedger()
         self.ledger = EngineeringLedger()
 
     def execute(self, mission):
