@@ -1,52 +1,23 @@
 from datetime import date
-from urllib.parse import urlparse
+
+from oae.core.opportunity_source_trust import OpportunitySourceTrust
 
 
 class OpportunityIntelligenceScorer:
     """
     Deterministic intelligence scorer for funding opportunities.
-
-    The scorer evaluates:
-    - country eligibility
-    - fit
-    - funding
-    - verification
-    - opportunity type
-    - data completeness
-    - source reliability
-    - deadline status
     """
 
-    OFFICIAL_DOMAINS = {
-        "worldbank.org",
-        "imf.org",
-        "afdb.org",
-        "un.org",
-        "who.int",
-        "unesco.org",
-        "europa.eu",
-        "gov.ng",
-        "gov.za",
-        "gov.ke",
-        "gov.gh",
-    }
+    def __init__(self, source_trust=None):
+        self.source_trust = source_trust or OpportunitySourceTrust()
 
     def score(self, opportunity, country=None):
-        """
-        Score an opportunity.
+        opportunity = opportunity or {}
 
-        `country` is optional so the scorer can be used both for:
-        - country-specific eligibility checks
-        - general opportunity intelligence scoring
-        """
-
-        eligible = True
-
-        if country is not None:
-            eligible = self._is_eligible(
-                opportunity.get("eligible_countries"),
-                country,
-            )
+        eligible = self._is_eligible(
+            opportunity.get("eligible_countries"),
+            country,
+        )
 
         fit_score = self._number(
             opportunity.get("fit_score"),
@@ -116,16 +87,11 @@ class OpportunityIntelligenceScorer:
         }
 
     def _is_eligible(self, eligible_countries, country):
+        # Missing target country must never be considered eligible.
         if not eligible_countries or not country:
             return False
 
-        if isinstance(eligible_countries, str):
-            countries = [
-                item.strip().lower()
-                for item in eligible_countries.split(",")
-                if item.strip()
-            ]
-        elif isinstance(eligible_countries, (list, tuple, set)):
+        if isinstance(eligible_countries, (list, tuple, set)):
             countries = [
                 str(item).strip().lower()
                 for item in eligible_countries
@@ -133,7 +99,9 @@ class OpportunityIntelligenceScorer:
             ]
         else:
             countries = [
-                str(eligible_countries).strip().lower()
+                item.strip().lower()
+                for item in str(eligible_countries).split(",")
+                if item.strip()
             ]
 
         return str(country).strip().lower() in countries
@@ -241,68 +209,52 @@ class OpportunityIntelligenceScorer:
 
     def _source_reliability_score(
         self,
-        source_reliability=None,
+        source_reliability,
         source_url=None,
     ):
-        """
-        Determine source reliability.
+        value = str(
+            source_reliability or ""
+        ).strip().lower()
 
-        Explicit reliability classification takes precedence.
-        If absent, derive the baseline classification from source_url.
-        """
-
-        if source_reliability:
-            value = str(
-                source_reliability
-            ).strip().lower()
-
-            if value == "official":
-                return 100
-
-            if value in {
-                "reputable",
-                "trusted",
-                "verified_directory",
-            }:
-                return 75
-
-            if value in {
-                "secondary",
-                "aggregator",
-            }:
-                return 50
-
-            if value in {
-                "unknown",
-                "unverified",
-            }:
-                return 20
-
-        return self._source_url_score(source_url)
-
-    def _source_url_score(self, source_url):
-        if not source_url:
-            return 0
-
-        try:
-            parsed = urlparse(str(source_url).strip())
-            hostname = (
-                parsed.hostname or ""
-            ).lower().rstrip(".")
-        except ValueError:
-            return 0
-
-        if not hostname:
-            return 0
-
-        if any(
-            hostname == domain
-            or hostname.endswith("." + domain)
-            for domain in self.OFFICIAL_DOMAINS
-        ):
+        if value == "official":
             return 100
 
-        return 20
+        if value in {
+            "reputable",
+            "trusted",
+            "verified_directory",
+        }:
+            return 75
+
+        if value in {
+            "secondary",
+            "aggregator",
+        }:
+            return 50
+
+        if value in {
+            "unknown",
+            "unverified",
+        }:
+            return 20
+
+        if source_url:
+            return self._source_url_score(source_url)
+
+        return 0
+
+    def _source_url_score(self, source_url):
+        try:
+            result = self.source_trust.evaluate(source_url)
+        except (AttributeError, TypeError, ValueError):
+            return 0
+
+        return self._number(
+            result.get("score"),
+            default=0,
+            minimum=0,
+            maximum=100,
+        )
 
     def _deadline_status(self, deadline):
         if not deadline:
