@@ -41,6 +41,14 @@ class Opportunity(Base):
     url = Column(String(500))
 
     description = Column(Text)
+
+    eligible_countries = Column(Text)
+    opportunity_type = Column(String(255))
+    funding_amount = Column(String(255))
+    application_url = Column(String(500))
+    source_url = Column(String(500))
+    verification_status = Column(String(255))
+    fit_score = Column(String(255))
 '''
         )
 

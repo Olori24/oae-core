@@ -26,6 +26,13 @@ class OpportunityCreate(BaseModel):
     deadline: str
     url: str
     description: str
+    eligible_countries: str
+    opportunity_type: str
+    funding_amount: str
+    application_url: str
+    source_url: str
+    verification_status: str
+    fit_score: float
 
 
 class OpportunityRead(OpportunityCreate):
