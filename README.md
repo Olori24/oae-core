@@ -61,7 +61,7 @@ pip install -e ".[dev]"
 cp .env.example .env
 ```
 
-The repository now ships with working local-development values. Do not use those development values for a production deployment.
+The repository ships with working local-development values. Do not use those development values for a production deployment.
 
 ### 3. Start the API
 
@@ -79,39 +79,70 @@ The API will be available at:
 
 ## Developer Beta Onboarding
 
-The intended first test group is 20 developers. Give each developer a separate tenant rather than sharing one API key.
+The initial test group is 20 developers. Give each developer a separate tenant rather than sharing one API key.
 
-### Create a tester tenant
+### Create all 20 tester tenants
+
+With the API running, execute:
 
 ```bash
-curl -X POST http://127.0.0.1:8000/v1/tenants \
+python scripts/create_beta_cohort.py
+```
+
+The script creates `Developer 01` through `Developer 20` and prints a one-time CSV-style list containing each tenant ID and API key. Store that output securely. API keys cannot be recovered after creation because OAE stores only their HMAC digests.
+
+### Run a first analysis
+
+The following command captures a newly created tenant's API key and uses it for a real analysis request:
+
+```bash
+TENANT_JSON=$(curl -sS -X POST http://127.0.0.1:8000/v1/tenants \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Developer 01"}'
-```
+  -d '{"name":"CLI Smoke Test"}')
 
-The response contains the developer's API key. Store it securely because OAE stores only its HMAC digest and cannot recover the original key.
+OAE_API_KEY=$(python -c 'import json,sys; print(json.load(sys.stdin)["api_key"])' <<< "$TENANT_JSON")
 
-Repeat with `Developer 02` through `Developer 20` for the initial beta cohort.
-
-### Run the first analysis
-
-Replace `YOUR_API_KEY` with the key returned when the tenant was created:
-
-```bash
-curl -X POST http://127.0.0.1:8000/v1/jobs \
-  -H 'Authorization: Bearer YOUR_API_KEY' \
+JOB_JSON=$(curl -sS -X POST http://127.0.0.1:8000/v1/jobs \
+  -H "Authorization: Bearer $OAE_API_KEY" \
   -H 'Content-Type: application/json' \
-  -d '{"operation":"analyze","payload":{"repository_url":"https://github.com/Olori24/oae-core"}}'
+  -d '{"operation":"analyze","payload":{"repository_url":"https://github.com/Olori24/oae-core"}}')
+
+JOB_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$JOB_JSON")
+
+curl -sS "http://127.0.0.1:8000/v1/jobs/$JOB_ID" \
+  -H "Authorization: Bearer $OAE_API_KEY"
 ```
 
-Poll the returned job ID:
+The analyze operation is read-only and accepts public GitHub HTTPS repository URLs.
 
-```bash
-curl http://127.0.0.1:8000/v1/jobs/JOB_ID \
-  -H 'Authorization: Bearer YOUR_API_KEY'
-```
+### Recommended 20-developer beta test
 
-For the complete API surface, open `/docs` after starting the service.
+Each developer should test the same core workflow first:
+
+1. Create or receive a dedicated tenant API key.
+2. Run a public GitHub repository analysis.
+3. Poll the job until it reaches a terminal status.
+4. Repeat with a repository containing Python source and tests.
+5. Test invalid authentication and confirm it is rejected.
+6. Confirm one developer cannot read another developer's job.
+7. Report execution errors, unexpected results, latency, and API usability issues.
+
+Do not give beta developers shared credentials. Tenant isolation is one of the primary things this cohort is intended to validate.
+
+---
+
+## API Surface
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /` | Service status and API documentation path |
+| `GET /health` | Health check |
+| `POST /v1/tenants` | Create an isolated tenant and issue its API key |
+| `GET /v1/me` | Return the authenticated tenant |
+| `POST /v1/jobs` | Queue an engineering job |
+| `GET /v1/jobs` | List the authenticated tenant's recent jobs |
+| `GET /v1/jobs/{id}` | Retrieve one tenant-scoped job |
+| `GET /docs` | Interactive OpenAPI documentation |
 
 ---
 
@@ -127,7 +158,7 @@ OAE is designed for controlled autonomous engineering rather than unrestricted c
 - Force-push is disabled by default.
 - Unknown operations are rejected by the SaaS execution layer.
 - API keys are not stored in plaintext.
-- Production deployments must provide a non-default API key pepper.
+- Production deployments require a non-default API key pepper.
 - Tenant data and job access are scoped to the authenticated tenant.
 
 Do not disable these controls simply to make a workflow convenient. They are part of OAE's core engineering contract.
