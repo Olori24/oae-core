@@ -1,11 +1,11 @@
 # OAE — Open Autonomous Engineer
 
-### Autonomous Engineering Operating System + SaaS API
+### Autonomous Engineering Operating System + SaaS
 
 > Analyze • Plan • Build • Verify • Improve
 
 ![Version](https://img.shields.io/badge/version-v0.6.0-blue)
-![Tests](https://img.shields.io/badge/tests-773%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-773%20local%20baseline-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.14-blue)
 ![Status](https://img.shields.io/badge/status-SaaS%20beta-orange)
 ![Architecture](https://img.shields.io/badge/architecture-modular-success)
@@ -13,18 +13,20 @@
 
 OAE is an autonomous engineering platform that analyzes software repositories, identifies engineering work, executes controlled engineering operations, verifies results, and keeps humans responsible for sensitive decisions.
 
-The project now includes a deployable multi-tenant SaaS control plane for developer testing.
+The repository now includes a multi-tenant SaaS control plane and a browser onboarding experience for controlled developer testing.
 
 ---
 
 ## SaaS Beta
 
-OAE is ready for a controlled beta with **20 developers**.
+OAE is prepared for a controlled beta with **20 developers**.
 
-Each developer operates through a tenant-scoped API key. Jobs are isolated by tenant, execution is restricted to an explicit operation allowlist, and repository writes remain protected by OAE's permission and human-approval security model.
+Each developer operates through a tenant-scoped API key. Jobs are isolated by tenant, SaaS execution is restricted to an explicit operation allowlist, and repository writes remain protected by OAE's permission and human-approval security model.
 
 ### Beta capabilities
 
+- Browser landing page and developer onboarding
+- API-key login and tenant identity
 - Multi-tenant API authentication
 - Tenant-scoped job history
 - Asynchronous job execution
@@ -33,13 +35,13 @@ Each developer operates through a tenant-scoped API key. Jobs are isolated by te
 - Per-tenant 30-day job quota
 - Request IDs and security headers
 - Production secret validation
-- Docker deployment
+- Docker deployment foundation
 - OpenAPI documentation
 - CI compile and test gates
 
-### Current test baseline
+### Test baseline
 
-**773 automated tests passing** in the latest local verification run.
+The latest local verification baseline is **773 passing tests**. CI also verifies compilation and the complete test suite.
 
 ---
 
@@ -61,19 +63,40 @@ pip install -e ".[dev]"
 cp .env.example .env
 ```
 
-The repository ships with working local-development values. Do not use those development values for a production deployment.
+The repository ships with working local-development values. Do not use those development values for production.
 
-### 3. Start the API
+### 3. Start the application
 
 ```bash
 uvicorn oae.api.app:app --reload
 ```
 
-The API will be available at:
+Open:
 
-- `http://127.0.0.1:8000/`
-- `http://127.0.0.1:8000/health`
-- `http://127.0.0.1:8000/docs`
+- `http://127.0.0.1:8000/` — browser onboarding and dashboard
+- `http://127.0.0.1:8000/health` — health check
+- `http://127.0.0.1:8000/docs` — interactive API documentation
+
+---
+
+## Browser Onboarding
+
+The root page is now the beta entry point.
+
+A new developer can:
+
+1. Create a workspace.
+2. Receive a one-time API key.
+3. Continue directly into the workspace dashboard.
+4. Log back in later with the API key.
+5. Submit a public GitHub repository for analysis.
+6. Poll the job until completion.
+7. Inspect the returned engineering result.
+8. Log out and authenticate again.
+
+The browser stores the API key only in session storage. OAE stores only an HMAC digest of the key server-side.
+
+For the initial 20-person cohort, do not share one API key across developers.
 
 ---
 
@@ -91,31 +114,7 @@ python scripts/create_beta_cohort.py
 
 The script creates `Developer 01` through `Developer 20` and prints a one-time CSV-style list containing each tenant ID and API key. Store that output securely. API keys cannot be recovered after creation because OAE stores only their HMAC digests.
 
-### Run a first analysis
-
-The following command captures a newly created tenant's API key and uses it for a real analysis request:
-
-```bash
-TENANT_JSON=$(curl -sS -X POST http://127.0.0.1:8000/v1/tenants \
-  -H 'Content-Type: application/json' \
-  -d '{"name":"CLI Smoke Test"}')
-
-OAE_API_KEY=$(python -c 'import json,sys; print(json.load(sys.stdin)["api_key"])' <<< "$TENANT_JSON")
-
-JOB_JSON=$(curl -sS -X POST http://127.0.0.1:8000/v1/jobs \
-  -H "Authorization: Bearer $OAE_API_KEY" \
-  -H 'Content-Type: application/json' \
-  -d '{"operation":"analyze","payload":{"repository_url":"https://github.com/Olori24/oae-core"}}')
-
-JOB_ID=$(python -c 'import json,sys; print(json.load(sys.stdin)["id"])' <<< "$JOB_JSON")
-
-curl -sS "http://127.0.0.1:8000/v1/jobs/$JOB_ID" \
-  -H "Authorization: Bearer $OAE_API_KEY"
-```
-
-The analyze operation is read-only and accepts public GitHub HTTPS repository URLs.
-
-### Recommended 20-developer beta test
+### Recommended 20-developer test
 
 Each developer should test the same core workflow first:
 
@@ -127,15 +126,13 @@ Each developer should test the same core workflow first:
 6. Confirm one developer cannot read another developer's job.
 7. Report execution errors, unexpected results, latency, and API usability issues.
 
-Do not give beta developers shared credentials. Tenant isolation is one of the primary things this cohort is intended to validate.
-
 ---
 
 ## API Surface
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /` | Service status and API documentation path |
+| `GET /` | Browser onboarding and developer dashboard |
 | `GET /health` | Health check |
 | `POST /v1/tenants` | Create an isolated tenant and issue its API key |
 | `GET /v1/me` | Return the authenticated tenant |
@@ -161,7 +158,7 @@ OAE is designed for controlled autonomous engineering rather than unrestricted c
 - Production deployments require a non-default API key pepper.
 - Tenant data and job access are scoped to the authenticated tenant.
 
-Do not disable these controls simply to make a workflow convenient. They are part of OAE's core engineering contract.
+Do not disable these controls simply to make a workflow convenient. They are part of OAE's engineering contract.
 
 ---
 
@@ -171,14 +168,14 @@ Do not disable these controls simply to make a workflow convenient. They are par
 Developer
    |
    v
+Browser Onboarding
+   |
+   v
 FastAPI SaaS Control Plane
    |
    +--> Tenant Authentication
-   |
    +--> Quota Enforcement
-   |
    +--> Job Store
-   |
    +--> Operation Allowlist
    |
    v
@@ -240,45 +237,20 @@ The SaaS layer is a controlled entry point around the existing OAE engineering c
 ### SaaS Control Plane
 
 - FastAPI API
+- Browser onboarding
 - Tenant authentication
 - Tenant-scoped jobs
 - Background job execution
 - Public GitHub repository analysis
 - Usage quotas
 - Security middleware
-- Docker deployment
-
----
-
-## Engineering Workflow
-
-```text
-Repository
-   ↓
-Repository Analysis
-   ↓
-Engineering Review
-   ↓
-Capability Discovery
-   ↓
-Planning
-   ↓
-Security / Human Approval
-   ↓
-Implementation
-   ↓
-Verification
-   ↓
-Repository Re-analysis
-   ↓
-Engineering Health Improvement
-```
+- Docker deployment foundation
 
 ---
 
 ## Production Deployment
 
-For a production deployment, configure:
+For production, configure:
 
 - `APP_ENV=production`
 - A strong random `API_KEY_PEPPER`
@@ -289,33 +261,11 @@ For a production deployment, configure:
 - Persistent storage
 - External monitoring and logs
 
-The included Dockerfile and `docker-compose.yml` provide the deployment foundation. The current SQLite storage and in-process background execution are suitable for controlled beta testing and a single-instance deployment. A horizontally scaled production service should move persistence to PostgreSQL and jobs to a durable worker queue.
+The included Dockerfile and `docker-compose.yml` provide a single-instance deployment foundation with persistent Docker volume storage.
 
-See [`docs/SAAS.md`](docs/SAAS.md) for the API and deployment details.
+**Production infrastructure caveat:** the current implementation uses SQLite and in-process background tasks. That is appropriate for a controlled single-instance beta, not horizontal production scaling. PostgreSQL plus a durable worker queue should be used before multi-instance production traffic.
 
----
-
-## Benchmark: Opportunity Radar Africa
-
-OAE has been validated against a real software repository through an autonomous engineering cycle:
-
-```text
-Repository Analysis
-↓
-Engineering Review
-↓
-Engineering Recommendations
-↓
-Human Approval
-↓
-Implementation
-↓
-Verification
-↓
-Repository Re-analysis
-```
-
-The benchmark cycle improved the repository engineering health from **91 to 94** and verified structured logging as the first completed recommendation.
+See [`docs/SAAS.md`](docs/SAAS.md) for API and deployment details.
 
 ---
 
@@ -352,26 +302,11 @@ Quality comes before autonomy.
 - GitHub App / OAuth for private repositories
 - Billing and plan enforcement
 - Production observability
-- Public dashboard and developer console
 - Production domain and deployment
 
 ### OAE v1.0
 
 Autonomous engineering teams capable of understanding, improving, testing, documenting, and governing software repositories with minimal human intervention while keeping humans responsible for strategic decisions and sensitive approvals.
-
----
-
-## Contributing
-
-Every contribution must:
-
-- Include automated tests
-- Preserve repository safety
-- Pass verification
-- Respect tenant isolation
-- Follow engineering governance
-
-Pull requests are expected to pass the CI compile and test gates before integration.
 
 ---
 
