@@ -1,3 +1,5 @@
+from oae.core.execution_outcome_analyzer import ExecutionOutcomeAnalyzer
+
 """
 Mission execution history.
 """
@@ -20,3 +22,7 @@ class MissionHistory:
 
     def count(self):
         return len(self._history)
+
+    def analyze(self):
+        analyzer = ExecutionOutcomeAnalyzer()
+        return analyzer.analyze(self._history)

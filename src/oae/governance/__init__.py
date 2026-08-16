@@ -1,9 +1,7 @@
 """
-OAE Governance Subsystem.
+OAE Architecture Governance
+
+Responsible for RFC generation,
+engineering standards,
+and architecture governance.
 """
-
-from .engine import GovernanceEngine
-
-__all__ = [
-    "GovernanceEngine",
-]

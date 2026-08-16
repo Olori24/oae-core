@@ -1,59 +1,75 @@
 # OAE Roadmap
 
-## Version 0.3 Alpha
+## Vision
 
-Completed
-
-- Engineering Pipeline
-- Stage Lifecycle
-- Stage Registry
-- Shared Memory
-- Security Kernel
-- Verification
-- Audit
-- Repository Service
-- Snapshot Manager
-- Fault-Tolerant Pipeline
-- Mission Lifecycle
+Build an Autonomous Engineering Operating System capable of safely understanding, building, testing, improving, documenting, securing and governing software repositories.
 
 ---
 
-## Version 0.4 Alpha
+# Version History
 
-Planned
+## v0.1
 
-- Rollback Engine
-- Governance Engine
-- Policy Engine
-- Mission Ledger
-- Repository Snapshots
+Core Runtime
 
----
-
-## Version 0.5 Alpha
-
-Planned
-
-- Git Integration
-- Autonomous Builder
-- Multi-Repository Support
-- Engineering Metrics
+- Agent Runtime
+- Mission Queue
+- Scheduler
 
 ---
 
-## Version 0.6 Beta
+## v0.2
 
-Planned
+Engineering Intelligence
 
-- Self-Improvement Loop
-- Autonomous Repository Management
-- Human Approval Workflow
-- Distributed Agent Runtime
+- Repository Scanner
+- Repository Intelligence
+- Engineering Analysis
+- Knowledge Graph
 
 ---
 
-## Version 1.0
+## v0.3
 
-Target
+Application Builder
 
-An enterprise-grade autonomous engineering operating system.
+- Bootstrap Engine
+- Executable Application Generator
+- Database Generator
+- Authentication Generator
+- CRUD Generator
+
+---
+
+## v0.4
+
+Engineering Operating System
+
+- Meta Generator Engine
+- Architecture Governance
+- Generator Registry
+- Planner Bridge
+
+---
+
+## v0.5
+
+Self-Extending Platform
+
+- Generator Planner
+- Approval Engine
+- Recursive Engineering
+
+---
+
+## v1.0
+
+Autonomous Engineering Team
+
+- Planner
+- Architect
+- Builder
+- QA
+- Security
+- Deployment
+- Continuous Improvement

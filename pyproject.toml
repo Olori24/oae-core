@@ -1,18 +1,28 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "oae-core"
-version = "0.1.0"
-description = "Open Autonomous Engineer Core Runtime"
-authors = [
-    { name = "Olori" }
-]
+version = "0.6.0"
+description = "Open Autonomous Engineer"
+readme = "README.md"
 requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.34,<1",
+    "pydantic-settings>=2.7,<3",
+]
 
-[tool.setuptools]
-package-dir = {"" = "src"}
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "httpx2>=2,<3"]
+
+[project.scripts]
+oae-api = "oae.api.app:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["sandbox", "workspace", ".git", ".pytest_cache"]

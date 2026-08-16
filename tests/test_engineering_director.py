@@ -45,3 +45,119 @@ def test_multiple_engineers():
         "Backend Engineer",
         "QA Engineer",
     ]
+
+def test_experience_returns_memory_report():
+    from oae.core.engineering_director import EngineeringDirector
+
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "MISSION_FAILED",
+        "Authentication deployment failed",
+    )
+
+    director.ledger.record(
+        "MISSION_COMPLETED",
+        "Authentication deployment verified",
+    )
+
+    report = director.experience("authentication")
+
+    assert report["match_count"] == 2
+    assert report["completed"] == 1
+    assert report["failed"] == 1
+    assert report["success_rate"] == 0.5
+
+
+def test_recommendation_returns_advisory_result():
+    from oae.core.engineering_director import EngineeringDirector
+
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "MISSION_FAILED",
+        "Authentication deployment failed",
+    )
+
+    director.ledger.record(
+        "MISSION_COMPLETED",
+        "Authentication deployment verified",
+    )
+
+    result = director.recommend("authentication")
+
+    assert result["recommendation"] == "review_historical_failures"
+    assert result["confidence"] == 0.5
+
+
+def test_decide_uses_historical_recommendation():
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "MISSION_FAILED",
+        "Authentication deployment failed",
+    )
+
+    director.ledger.record(
+        "MISSION_COMPLETED",
+        "Authentication deployment verified",
+    )
+
+    decision = director.decide("authentication")
+
+    assert decision.mission == "authentication"
+    assert decision.decision == "review"
+    assert (
+        decision.recommendation["recommendation"]
+        == "review_historical_failures"
+    )
+
+
+def test_decide_records_engineering_decision():
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "MISSION_FAILED",
+        "Authentication deployment failed",
+    )
+
+    director.ledger.record(
+        "MISSION_COMPLETED",
+        "Authentication deployment verified",
+    )
+
+    decision = director.decide("authentication")
+
+    assert decision.decision == "review"
+
+    entries = director.ledger.entries()
+
+    assert len(entries) == 3
+
+    entry = entries[-1]
+
+    assert entry.event == "ENGINEERING_DECISION"
+    assert "authentication" in entry.details
+    assert "review" in entry.details
+    assert "review_historical_failures" in entry.details
+
+
+def test_decision_report_exposes_governance_history():
+    director = EngineeringDirector()
+
+    director.ledger.record(
+        "ENGINEERING_DECISION",
+        str({
+            "mission": "Authentication",
+            "decision": "review",
+            "recommendation": {
+                "recommendation": "review_historical_failures",
+            },
+        }),
+    )
+
+    report = director.decision_report()
+
+    assert report["total"] == 1
+    assert report["review"] == 1
+    assert report["recommendations"]["review_historical_failures"] == 1

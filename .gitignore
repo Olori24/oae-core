@@ -6,3 +6,7 @@ __pycache__/
 .venv/
 .env
 memory.json
+data/
+*.db
+.coverage
+htmlcov/
