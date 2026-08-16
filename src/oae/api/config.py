@@ -59,12 +59,18 @@ class Settings(BaseSettings):
 
     @property
     def resolved_database_url(self) -> str:
-        """Resolve the production database from explicit or deployment env names."""
+        """Resolve the production database from explicit and integration env names."""
         if self.database_url:
             return self.database_url
+
+        # Vercel storage integrations can apply a custom prefix to the
+        # generated DATABASE_URL. For example, OAE_DB_DATABASE_URL.
         for name in (
-            "OAE_DB",
+            "OAE_DB_DATABASE_URL",
             "OAE_DB_URL",
+            "OAE_DB_POSTGRES_URL",
+            "OAE_DB",
+            "OAE_DB_URL_NON_POOLING",
             "POSTGRES_URL",
             "POSTGRES_PRISMA_URL",
             "POSTGRES_URL_NON_POOLING",
@@ -72,6 +78,7 @@ class Settings(BaseSettings):
             value = os.getenv(name, "").strip()
             if value:
                 return value
+
         if self.app_env == "production" or os.getenv("VERCEL"):
             return ""
         return "sqlite:///./oae.db"
