@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
@@ -48,6 +49,24 @@ async def security_headers(request: Request, call_next):
         "no-store" if request.url.path.startswith("/v1/") else "no-cache"
     )
     return response
+
+
+@app.exception_handler(RuntimeError)
+async def runtime_error_handler(request: Request, exc: RuntimeError):
+    """Keep infrastructure failures machine-readable for the SaaS client."""
+    message = str(exc)
+    if "database" in message.lower() or "postgres" in message.lower():
+        detail = "Database configuration is unavailable. Check the production database integration."
+    else:
+        detail = "The service could not complete this request."
+    return JSONResponse(
+        status_code=503,
+        content={
+            "error": "service_unavailable",
+            "detail": detail,
+        },
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 app.include_router(router)
