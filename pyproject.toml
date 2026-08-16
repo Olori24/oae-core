@@ -28,4 +28,4 @@ testpaths = ["tests"]
 norecursedirs = ["sandbox", "workspace", ".git", ".pytest_cache"]
 
 [tool.vercel]
-entrypoint = "src.oae.api.app:app"
+entrypoint = "api.index:app"
