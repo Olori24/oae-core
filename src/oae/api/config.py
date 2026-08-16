@@ -63,6 +63,7 @@ class Settings(BaseSettings):
         if self.database_url:
             return self.database_url
         for name in (
+            "OAE_DB_URL",
             "POSTGRES_URL",
             "POSTGRES_PRISMA_URL",
             "POSTGRES_URL_NON_POOLING",
