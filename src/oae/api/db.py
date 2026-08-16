@@ -1,11 +1,10 @@
-import sqlite3
 from contextlib import contextmanager
-from pathlib import Path
+import sqlite3
 
 from oae.api.config import settings
 
 
-SCHEMA = """
+SQLITE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS tenants (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
@@ -32,15 +31,93 @@ CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC);
 """
 
+POSTGRES_STATEMENTS = (
+    """
+    CREATE TABLE IF NOT EXISTS tenants (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS api_keys (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id),
+        key_hash TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL,
+        revoked_at TEXT
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS jobs (
+        id TEXT PRIMARY KEY,
+        tenant_id TEXT NOT NULL REFERENCES tenants(id),
+        status TEXT NOT NULL,
+        operation TEXT NOT NULL,
+        payload TEXT NOT NULL,
+        result TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)",
+    "CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC)",
+)
 
-def _connect() -> sqlite3.Connection:
-    path = settings.sqlite_path
-    if path.parent != Path("."):
-        path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.executescript(SCHEMA)
-    return conn
+
+class _ConnectionAdapter:
+    """Small compatibility layer so existing repository code works on SQLite and Postgres."""
+
+    def __init__(self, connection, backend: str):
+        self._connection = connection
+        self.backend = backend
+
+    def execute(self, query: str, params=()):
+        if self.backend == "postgres":
+            query = query.replace("?", "%s")
+        return self._connection.execute(query, params)
+
+    def executescript(self, script: str):
+        if self.backend != "sqlite":
+            raise RuntimeError("executescript is only available for SQLite")
+        return self._connection.executescript(script)
+
+    def commit(self):
+        self._connection.commit()
+
+    def rollback(self):
+        self._connection.rollback()
+
+    def close(self):
+        self._connection.close()
+
+
+def _connect() -> _ConnectionAdapter:
+    backend = settings.database_backend
+    if backend == "postgres":
+        try:
+            import psycopg
+        except ImportError as exc:
+            raise RuntimeError("Postgres is configured but psycopg is not installed") from exc
+        connection = psycopg.connect(settings.resolved_database_url)
+        adapter = _ConnectionAdapter(connection, "postgres")
+        for statement in POSTGRES_STATEMENTS:
+            adapter.execute(statement)
+        return adapter
+
+    if backend == "sqlite":
+        path = settings.sqlite_path
+        if path.parent != path.parent.parent:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        connection = sqlite3.connect(path, check_same_thread=False)
+        connection.row_factory = sqlite3.Row
+        adapter = _ConnectionAdapter(connection, "sqlite")
+        adapter.executescript(SQLITE_SCHEMA)
+        return adapter
+
+    raise RuntimeError(
+        "No supported persistent database configured. Set DATABASE_URL or POSTGRES_URL."
+    )
 
 
 @contextmanager
