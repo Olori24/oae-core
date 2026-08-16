@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """Create the initial 20-developer OAE beta cohort.
 
-The API must already be running. API keys are printed once and should be
-stored securely; OAE stores only their HMAC digests.
+Set OAE_API_URL to the running OAE API before executing this script.
+API keys are printed once and should be stored securely; OAE stores only
+salted PBKDF2 hashes of the keys.
 """
 
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.environ.get("OAE_API_URL", "http://127.0.0.1:8000").rstrip("/")
 COHORT_SIZE = 20
 
 
@@ -27,8 +29,8 @@ def create_tenant(name: str) -> dict[str, str]:
 
 
 def main() -> int:
-    print("OAE developer beta cohort")
-    print("Creating 20 isolated tenants...\n")
+    print(f"OAE developer beta cohort — {API_URL}")
+    print(f"Creating {COHORT_SIZE} isolated tenants...\n")
     print("developer,tenant_id,api_key")
 
     for number in range(1, COHORT_SIZE + 1):
