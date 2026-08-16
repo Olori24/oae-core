@@ -1,7 +1,9 @@
+import json
 from pathlib import Path
 
 from pydantic import field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
+from typing import Annotated
 
 
 class Settings(BaseSettings):
@@ -9,9 +11,28 @@ class Settings(BaseSettings):
     app_env: str = "development"
     database_url: str = "sqlite:///./oae.db"
     api_key_pepper: str = "change-me-in-production"
-    cors_origins: list[str] = ["*"]
-    allowed_hosts: list[str] = ["*"]
+    cors_origins: Annotated[list[str], NoDecode] = ["*"]
+    allowed_hosts: Annotated[list[str], NoDecode] = ["*"]
     max_job_seconds: int = 300
+
+    @field_validator("cors_origins", "allowed_hosts", mode="before")
+    @classmethod
+    def parse_list_setting(cls, value):
+        if value is None:
+            return ["*"]
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return ["*"]
+            if value.startswith("["):
+                parsed = json.loads(value)
+                if not isinstance(parsed, list):
+                    raise ValueError("Expected a JSON list")
+                return [str(item).strip() for item in parsed if str(item).strip()]
+            return [item.strip() for item in value.split(",") if item.strip()]
+        raise TypeError("Expected a list or string")
 
     @field_validator("api_key_pepper")
     @classmethod
