@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     app_env: str = "development"
-    database_url: str = "sqlite:///./oae.db"
+    database_url: str = ""
     # Kept for backward compatibility. New API keys use per-key salted PBKDF2.
     api_key_pepper: str = ""
     cors_origins: Annotated[list[str], NoDecode] = ["*"]
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         if value == "":
             defaults = {
                 "app_env": "development",
-                "database_url": "sqlite:///./oae.db",
+                "database_url": "",
                 "api_key_pepper": "",
             }
             return defaults[info.field_name]
@@ -58,10 +58,34 @@ class Settings(BaseSettings):
         raise TypeError("Expected a list or string")
 
     @property
+    def resolved_database_url(self) -> str:
+        """Resolve the production database from explicit or Vercel/Neon env names."""
+        if self.database_url:
+            return self.database_url
+        for name in (
+            "POSTGRES_URL",
+            "POSTGRES_PRISMA_URL",
+            "POSTGRES_URL_NON_POOLING",
+        ):
+            value = os.getenv(name, "").strip()
+            if value:
+                return value
+        if self.app_env == "production" or os.getenv("VERCEL"):
+            return ""
+        return "sqlite:///./oae.db"
+
+    @property
+    def database_backend(self) -> str:
+        url = self.resolved_database_url.lower()
+        if url.startswith(("postgres://", "postgresql://")):
+            return "postgres"
+        if url.startswith("sqlite:///"):
+            return "sqlite"
+        return "unknown"
+
+    @property
     def sqlite_path(self) -> Path:
-        configured = self.database_url.removeprefix("sqlite:///")
-        if os.getenv("VERCEL") and self.database_url == "sqlite:///./oae.db":
-            return Path("/tmp/oae.db")
+        configured = self.resolved_database_url.removeprefix("sqlite:///")
         return Path(configured)
 
 
