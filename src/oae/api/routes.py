@@ -2,13 +2,15 @@ import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from oae.api.auth import create_api_key, require_tenant
 from oae.api.db import db
+from oae.api.job_runner import JobRunner
 from oae.api.schemas import JobCreate, JobResponse, TenantCreate, TenantCreated
 
 router = APIRouter()
+MAX_JOBS_PER_30_DAYS = 1000
 
 
 def _now() -> str:
@@ -43,14 +45,25 @@ def me(tenant_id: str = Depends(require_tenant)) -> dict[str, str]:
 
 
 @router.post("/v1/jobs", response_model=JobResponse, status_code=202, tags=["jobs"])
-def create_job(data: JobCreate, tenant_id: str = Depends(require_tenant)) -> JobResponse:
+def create_job(
+    data: JobCreate,
+    background_tasks: BackgroundTasks,
+    tenant_id: str = Depends(require_tenant),
+) -> JobResponse:
     job_id = str(uuid4())
     now = _now()
     with db() as conn:
+        recent = conn.execute(
+            "SELECT COUNT(*) FROM jobs WHERE tenant_id=? AND created_at >= datetime('now','-30 days')",
+            (tenant_id,),
+        ).fetchone()[0]
+        if recent >= MAX_JOBS_PER_30_DAYS:
+            raise HTTPException(status_code=429, detail="Monthly job quota exceeded")
         conn.execute(
             "INSERT INTO jobs(id,tenant_id,status,operation,payload,created_at,updated_at) VALUES(?,?,?,?,?,?,?)",
             (job_id, tenant_id, "queued", data.operation, json.dumps(data.payload), now, now),
         )
+    background_tasks.add_task(JobRunner().run, job_id)
     return JobResponse(id=job_id, status="queued", operation=data.operation, payload=data.payload, created_at=now, updated_at=now)
 
 

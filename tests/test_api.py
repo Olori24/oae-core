@@ -10,40 +10,36 @@ def test_health():
     assert response.json()["status"] == "ok"
 
 
-def test_tenant_isolation_and_job_lifecycle(tmp_path, monkeypatch):
-    db_path = tmp_path / "oae.db"
-    monkeypatch.setenv("DATABASE_URL", f"sqlite:///{db_path}")
-
-    # Reload settings/database-dependent modules so this test uses its own database.
-    import importlib
-    import oae.api.config as config
-    import oae.api.db as database
+def test_tenant_job_lifecycle(tmp_path):
     import oae.api.auth as auth
-    import oae.api.routes as routes
+    import oae.api.db as database
 
-    config.settings.database_url = f"sqlite:///{db_path}"
+    db_path = tmp_path / "oae.db"
     database.settings.database_url = f"sqlite:///{db_path}"
     auth.settings.database_url = f"sqlite:///{db_path}"
 
     client = TestClient(app)
     created = client.post("/v1/tenants", json={"name": "Acme"})
     assert created.status_code == 201
-    body = created.json()
-    key = body["api_key"]
-
+    key = created.json()["api_key"]
     headers = {"Authorization": f"Bearer {key}"}
+
     assert client.get("/v1/me", headers=headers).status_code == 200
 
     job = client.post(
         "/v1/jobs", headers=headers,
-        json={"operation": "analyze", "payload": {"repository": "demo"}},
+        json={"operation": "review", "payload": {"findings": ["test gap"]}},
     )
     assert job.status_code == 202
-    job_body = job.json()
-    assert job_body["status"] == "queued"
+    job_id = job.json()["id"]
 
-    fetched = client.get(f"/v1/jobs/{job_body['id']}", headers=headers)
+    fetched = client.get(f"/v1/jobs/{job_id}", headers=headers)
     assert fetched.status_code == 200
-    assert fetched.json()["id"] == job_body["id"]
+    assert fetched.json()["status"] == "completed"
+    assert fetched.json()["result"]["count"] == 1
 
-    importlib.reload(routes)
+
+def test_invalid_api_key_is_rejected():
+    client = TestClient(app)
+    response = client.get("/v1/me", headers={"Authorization": "Bearer invalid"})
+    assert response.status_code == 401
