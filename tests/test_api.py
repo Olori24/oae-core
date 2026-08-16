@@ -3,6 +3,14 @@ from fastapi.testclient import TestClient
 from oae.api.app import app
 
 
+def test_landing_page_is_available():
+    client = TestClient(app)
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Start testing" in response.text
+    assert "Developer login" in response.text
+
+
 def test_health():
     client = TestClient(app)
     response = client.get("/health")
