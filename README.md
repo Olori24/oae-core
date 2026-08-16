@@ -70,7 +70,7 @@ With the API running, execute:
 python scripts/create_beta_cohort.py
 ```
 
-The script creates `Developer 01` through `Developer 20` and prints a one-time CSV-style list containing each tenant ID and API key. Store that output securely. API keys cannot be recovered after creation because OAE stores only their HMAC digests.
+The script creates `Developer 01` through `Developer 20` and prints a one-time CSV-style list containing each tenant ID and API key. Store that output securely. API keys cannot be recovered after creation because OAE stores only their salted PBKDF2 hashes.
 
 ### Recommended beta test
 
@@ -112,7 +112,7 @@ The dashboard surfaces the existing OAE architecture instead of pretending the S
 | Endpoint | Purpose |
 |---|---|
 | `GET /` | Cinematic browser onboarding and Mission Control |
-| `GET /health` | Health check |
+| `GET /health` | Health check and active database backend |
 | `POST /v1/tenants` | Create an isolated tenant and issue its API key |
 | `GET /v1/me` | Return the authenticated tenant |
 | `POST /v1/jobs` | Queue an engineering job |
@@ -231,7 +231,8 @@ The SaaS layer is a controlled entry point around the existing engineering core.
 - Public GitHub repository analysis
 - Usage quotas
 - Security middleware
-- Docker deployment foundation
+- PostgreSQL-compatible production persistence
+- SQLite local-development fallback
 
 ---
 
@@ -253,7 +254,7 @@ pip install -e ".[dev]"
 cp .env.example .env
 ```
 
-The repository ships with working local-development values. Do not use development secrets in production.
+Local development falls back to SQLite when no database URL is supplied. Production must use PostgreSQL.
 
 ### 3. Start the application
 
@@ -271,28 +272,33 @@ Open:
 
 ## Production deployment
 
-For production, configure:
+OAE's serverless SaaS control plane now supports a persistent PostgreSQL database and automatically detects common Vercel/Neon connection variables. Configure one of these in the Vercel production environment:
+
+- `DATABASE_URL` — preferred
+- `POSTGRES_URL` — supported for Vercel/Neon integrations
+- `POSTGRES_PRISMA_URL` — supported as a fallback
+- `POSTGRES_URL_NON_POOLING` — supported as a fallback
+
+Also configure:
 
 - `APP_ENV=production`
 - A strong random `API_KEY_PEPPER`
-- A production database URL
 - Exact production `ALLOWED_HOSTS`
 - Exact production `CORS_ORIGINS`
 - HTTPS termination
-- Persistent storage
 - External monitoring and logs
 
-The included Dockerfile and `docker-compose.yml` provide a single-instance deployment foundation with persistent Docker volume storage.
+The application creates its required tables and indexes automatically on first database access. The schema is portable across local SQLite and production PostgreSQL.
 
-**Infrastructure caveat:** the current implementation uses SQLite and in-process background tasks. This is suitable for the controlled beta and a single-instance deployment, not horizontal production scaling. PostgreSQL plus a durable worker queue should be introduced before multi-instance production traffic.
+**Important:** do not run the production SaaS on Vercel's ephemeral filesystem. SQLite is intentionally retained only as a local-development fallback. A persistent PostgreSQL database is required for multi-developer testing because serverless instances may be replaced at any time.
 
-See [`docs/SAAS.md`](docs/SAAS.md) for API and deployment details.
+The Vercel deployment explicitly exports `src.oae.api.app:app`, so FastAPI entrypoint detection is deterministic.
 
 ---
 
 ## Test baseline
 
-The repository's current local baseline is **773 passing tests**, with CI compilation and test gates passing on `main`.
+The repository's previous local baseline is **773 passing tests**. The database adapter change preserves the existing SQLite test path while adding the production PostgreSQL dependency and portable SQL layer.
 
 For every SaaS UI change, also validate the browser flow: page load → workspace creation/login → dashboard → job submission → result → sign-out → sign-in.
 
@@ -326,7 +332,6 @@ Quality comes before autonomy.
 
 ### Scale-up
 
-- PostgreSQL persistence
 - Durable job queue and workers
 - GitHub App / OAuth for private repositories
 - Billing and plan enforcement
