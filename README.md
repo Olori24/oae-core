@@ -1,244 +1,426 @@
-# OAE — Open Autonomous Engineer
+<div align="center">
 
-### Autonomous Engineering Operating System + SaaS
+# OAE
+## Open Autonomous Engineer
 
-> Analyze • Plan • Build • Verify • Improve
+**The engineering operating system for software that can understand, plan, change, verify, and govern itself.**
 
-![Version](https://img.shields.io/badge/version-v0.6.0-blue)
-![Tests](https://img.shields.io/badge/tests-773%20local%20baseline-brightgreen)
-![Python](https://img.shields.io/badge/python-3.14-blue)
-![Status](https://img.shields.io/badge/status-SaaS%20beta-orange)
-![Architecture](https://img.shields.io/badge/architecture-modular-success)
-![License](https://img.shields.io/badge/license-MIT-lightgrey)
+[![Version](https://img.shields.io/badge/version-0.6.0-111827?style=flat-square)](https://github.com/Olori24/oae-core)
+[![Python](https://img.shields.io/badge/python-3.11%2B-111827?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![Tests](https://img.shields.io/badge/tests-773%20local%20baseline-16a34a?style=flat-square)](https://github.com/Olori24/oae-core)
+[![Status](https://img.shields.io/badge/status-controlled%20SaaS%20beta-7c3aed?style=flat-square)](https://github.com/Olori24/oae-core)
+[![License](https://img.shields.io/badge/license-MIT-111827?style=flat-square)](LICENSE)
 
-OAE is an autonomous engineering platform for understanding software repositories, identifying engineering work, executing controlled engineering operations, verifying results, and keeping humans responsible for sensitive decisions.
+**Analyze · Diagnose · Plan · Build · Verify · Govern**
 
-The repository includes a multi-tenant SaaS control plane and a cinematic browser workspace designed for controlled developer testing.
-
----
-
-## SaaS Beta
-
-OAE is prepared for a controlled **20-developer beta cohort**.
-
-Each developer gets an isolated tenant and API key. Jobs are scoped to that tenant, SaaS operations are explicitly allowlisted, and sensitive repository writes remain protected by OAE's permission, policy, approval, and audit model.
-
-### What a developer can do now
-
-- Open the cinematic OAE landing page and understand the product without a manual walkthrough
-- Create an isolated developer workspace
-- Receive a one-time API key and securely continue into the workspace
-- Sign back in with the API key
-- Submit a public GitHub HTTPS repository for analysis
-- Track queued/running/completed/failed jobs
-- Inspect tenant-scoped mission history
-- See repositories discovered from previous analysis jobs
-- Explore OAE's engineering capabilities and security posture
-- Use the interactive OpenAPI documentation at `/docs`
-- Verify service health at `/health`
-
-### Supported SaaS operations
-
-- `analyze` — public GitHub repository analysis
-- `review` — structured review of supplied findings
-- `verify` — explicit verification of supplied checks/results
-
-The SaaS layer intentionally does **not** expose unrestricted shell execution or arbitrary repository writes to internet users.
+</div>
 
 ---
 
-## Developer onboarding
+## The short version
 
-### Browser flow
+Software is becoming easier to generate and harder to engineer well.
 
-1. Open the OAE production URL.
-2. Select **Launch workspace**.
-3. Enter a workspace/team name.
-4. Save the one-time API key.
-5. Enter the workspace.
-6. Sign out and sign back in to verify persistence.
-7. Submit a public GitHub repository through the job API or an enabled client.
-8. Watch the mission move through the engineering pipeline and inspect the result.
+Code agents can write a file in seconds. The difficult part is understanding an existing system, deciding what should change, protecting the repository while changing it, proving that the change worked, and keeping humans in control when the consequences matter.
 
-For the initial cohort, every developer should have a separate tenant. Do not share one API key across the team.
+**OAE is built around that problem.**
 
-### Create all 20 beta tenants
+OAE — Open Autonomous Engineer — is an autonomous engineering operating system that combines repository intelligence, engineering analysis, mission planning, controlled execution, verification, memory, multi-agent coordination, and security governance into one system.
 
-With the API running, execute:
+It is not designed as a chatbot that happens to have terminal access.
 
-```bash
-python scripts/create_beta_cohort.py
-```
-
-The script creates `Developer 01` through `Developer 20` and prints a one-time CSV-style list containing each tenant ID and API key. Store that output securely. API keys cannot be recovered after creation because OAE stores only their salted PBKDF2 hashes.
-
-### Recommended beta test
-
-Ask each developer to:
-
-1. Authenticate with their dedicated key.
-2. Analyze a public GitHub repository.
-3. Inspect the returned repository intelligence.
-4. Repeat with a repository containing Python source and tests.
-5. Try invalid authentication and confirm it is rejected.
-6. Confirm another tenant's job cannot be accessed.
-7. Record errors, latency, confusing UX, and unexpected analysis results.
-
----
-
-## Product surface
-
-The root browser experience is intentionally more than a static marketing page. It contains:
-
-- Cinematic product introduction
-- Workspace creation and API-key authentication
-- Responsive Mission Control dashboard
-- Tenant-scoped mission history
-- Repository history
-- Engineering pipeline visualization
-- Agent capability map
-- Repository intelligence overview
-- Security posture view
-- Workspace identity/settings view
-- Mobile-responsive layout
-- Loading, empty, success and error states
-
-The dashboard surfaces the existing OAE architecture instead of pretending the SaaS has capabilities that the API does not expose.
-
----
-
-## API Surface
-
-| Endpoint | Purpose |
-|---|---|
-| `GET /` | Cinematic browser onboarding and Mission Control |
-| `GET /health` | Health check and active database backend |
-| `POST /v1/tenants` | Create an isolated tenant and issue its API key |
-| `GET /v1/me` | Return the authenticated tenant |
-| `POST /v1/jobs` | Queue an engineering job |
-| `GET /v1/jobs` | List the authenticated tenant's recent jobs |
-| `GET /v1/jobs/{id}` | Retrieve one tenant-scoped job |
-| `GET /docs` | Interactive OpenAPI documentation |
-
----
-
-## Security model
-
-OAE is designed for controlled autonomous engineering rather than unrestricted code execution.
-
-### Protected by default
-
-- Repository writes require permission and human approval.
-- Shell execution is disabled by default.
-- File deletion is disabled by default.
-- Force-push is disabled by default.
-- Unknown SaaS operations are rejected by the job runner.
-- API keys are not stored in plaintext.
-- Production deployments require a non-default API key pepper.
-- Tenant data and job access are scoped to the authenticated tenant.
-- Request IDs and security headers are applied at the API boundary.
-
-Do not disable these controls merely to make a workflow convenient. They are part of OAE's engineering contract.
-
----
-
-## Architecture
+It is designed as an **engineering control loop**.
 
 ```text
-Developer
-   |
-   v
-Cinematic Browser Workspace
-   |
-   v
-FastAPI SaaS Control Plane
-   |
-   +--> Tenant Authentication
-   +--> Quota Enforcement
-   +--> Job Store
-   +--> Operation Allowlist
-   |
-   v
-Autonomous Engineering Core
-   |
-   +--> Repository Intelligence
-   +--> Knowledge Graph
-   +--> Planning
-   +--> Engineering Actions
-   +--> Verification
-   +--> Security Kernel
-   +--> Agent Registry + Message Bus
-   +--> Shared Memory
-   |
-   v
-Engineering Result
+                    SOFTWARE REPOSITORY
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │   UNDERSTAND      │
+                  │ scan · profile    │
+                  │ graph · diagnose  │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │      PLAN         │
+                  │ missions · deps   │
+                  │ scheduling        │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │   EXECUTE SAFELY  │
+                  │ worktrees · patch │
+                  │ security gates    │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │     VERIFY        │
+                  │ tests · checks    │
+                  │ recovery          │
+                  └─────────┬─────────┘
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │ GOVERN + RECORD   │
+                  │ audit · ledger    │
+                  │ human decisions   │
+                  └─────────┬─────────┘
+                            │
+                            └──────► next engineering cycle
 ```
 
-The SaaS layer is a controlled entry point around the existing engineering core. It does not replace the autonomous engineering architecture.
+This loop is the product. The SaaS interface is the access layer around it.
 
 ---
 
-## Core capabilities
+## Why OAE exists
 
-### Repository Intelligence
+Modern software teams are gaining an enormous amount of coding capacity from AI, but raw generation capacity is not the same thing as engineering capacity.
 
-- Repository Scanner
-- Repository Profiler
-- Repository Sandbox
-- Workspace Manager
-- Repository Recovery Engine
-- Repository Knowledge Graph
+A serious engineering system needs to answer questions such as:
+
+- **What is actually in this repository?**
+- **Where are the architectural risks and dependencies?**
+- **What should be changed first?**
+- **What is safe to change automatically?**
+- **What requires human approval?**
+- **Did the change actually work?**
+- **Can the result be explained, audited, and recovered?**
+- **Can multiple engineering agents collaborate without bypassing system controls?**
+
+OAE is being built around those questions.
+
+### The thesis
+
+> **Autonomous software engineering should be governed engineering, not unrestricted automation.**
+
+The goal is not to remove engineers from the loop.
+
+The goal is to give engineers a system capable of doing more of the mechanical, analytical, repetitive, and verifiable engineering work while preserving human authority over consequential decisions.
+
+---
+
+# What makes OAE different
+
+| Conventional AI coding workflow | OAE approach |
+|---|---|
+| Starts from a prompt | Starts from repository context |
+| Generates code | Builds explicit engineering missions |
+| Tool calls can become opaque | Operations pass through defined infrastructure |
+| Tests are often an afterthought | Verification is a first-class stage |
+| Agent authority can be broad | Security and approval gates constrain authority |
+| Context is mostly conversational | Repository intelligence + shared engineering memory |
+| One agent does everything | Specialized agents cooperate through system infrastructure |
+| Success means “the model responded” | Success means “the engineering objective was verified” |
+
+OAE is deliberately closer to an **engineering operating system** than a chat product.
+
+---
+
+# Architecture
+
+The architecture is intentionally layered. The SaaS control plane does not replace the engineering core; it provides a secure product boundary around it.
+
+```mermaid
+graph TB
+    USER[Developer / Engineering Team]
+    USER --> UX[OAE Workspace]
+    UX --> API[FastAPI Control Plane]
+
+    API --> AUTH[Tenant Authentication]
+    API --> JOBS[Jobs + Persistence]
+    API --> QUOTA[Usage / Quota Controls]
+    API --> ALLOW[Operation Allowlist]
+
+    AUTH --> CORE[Autonomous Engineering Core]
+    JOBS --> CORE
+    ALLOW --> CORE
+
+    CORE --> INTEL[Repository Intelligence]
+    INTEL --> GRAPH[Knowledge Graph]
+    INTEL --> ANALYSIS[Engineering Analysis]
+    ANALYSIS --> PLAN[Planner + Mission Queue]
+    PLAN --> AGENTS[Agents + Capabilities]
+    AGENTS --> EXEC[Controlled Execution]
+
+    EXEC --> SEC[Security Kernel]
+    SEC --> APPROVAL[Permission / Policy / Human Approval]
+    SEC --> AUDIT[Audit]
+
+    EXEC --> WORKTREE[Isolated Repository Workspace]
+    WORKTREE --> VERIFY[Verification Engine]
+    VERIFY --> LEDGER[Engineering Ledger]
+    LEDGER --> JOBS
+```
+
+### Architecture at a glance
+
+**Product boundary**
+
+`Workspace → API → Authentication → Jobs → Tenant isolation`
+
+**Engineering cognition**
+
+`Repository intelligence → Analysis → Planning → Missions`
+
+**Engineering action**
+
+`Agents → Execution → Worktree → Verification`
+
+**Governance**
+
+`Permissions → Policies → Human approval → Audit`
+
+**Continuity**
+
+`Memory → Agent communication → Mission state → Engineering history`
+
+The detailed architecture is maintained in [`docs/architecture.md`](docs/architecture.md).
+
+---
+
+# The OAE engineering loop
+
+```mermaid
+flowchart LR
+    A[Repository] --> B[Understand]
+    B --> C[Diagnose]
+    C --> D[Plan Mission]
+    D --> E[Authorize]
+    E --> F[Execute]
+    F --> G[Verify]
+    G --> H[Record]
+    H --> B
+    G -->|failure| I[Recover]
+    I --> D
+```
+
+Each stage has a job:
+
+1. **Understand** — establish repository facts and structure.
+2. **Diagnose** — identify engineering findings, risks, dependencies, and opportunities.
+3. **Plan** — convert findings into explicit missions and executable work.
+4. **Authorize** — apply security, policy, permissions, and human-approval requirements.
+5. **Execute** — perform controlled operations inside the appropriate repository boundary.
+6. **Verify** — test and validate the intended outcome.
+7. **Record** — preserve engineering state, results, and audit information.
+8. **Recover** — return to a safe state when execution or verification fails.
+
+That loop is what allows OAE to move toward autonomous engineering without pretending that autonomy means unlimited authority.
+
+---
+
+# System capabilities
+
+## Repository intelligence
+
+OAE can build an engineering picture of a repository before acting on it.
+
+- Repository scanning and profiling
+- Repository context
+- Repository knowledge graph
 - Dependency analysis
 - Dead-code detection
 - Circular-dependency detection
+- Repository health analysis
+- Engineering intelligence reports
+- Repository recovery infrastructure
+- Workspace/worktree management
 
-### Engineering Intelligence
+## Engineering analysis
 
-- Engineering Review Engine
-- Capability Discovery Engine
-- Semantic Repository Analyzer
-- Capability Planner
-- Dependency Resolver
-- Engineering Analysis Engine
-- Engineering Ledger
+The intelligence layer turns repository facts into engineering information.
 
-### Autonomous Engineering
+- Engineering analysis engine
+- Semantic repository analysis
+- Engineering review capabilities
+- Capability discovery
+- Dependency resolution
+- Code-change planning
+- Engineering ledger
 
-- Bootstrap Engine
-- Application Scaffold Generator
-- Mission Queue
-- Scheduler
-- Verification Engine
-- Rollback infrastructure
-- Repository execution engine
+## Autonomous engineering
 
-### Multi-Agent System
+The execution system provides the machinery for controlled engineering work.
 
-- Agent Runtime
-- Agent Registry
-- Agent Message Bus
-- Shared Agent Memory
+- Mission queue
+- Scheduling
+- Builders and generators
+- Application scaffolding
+- Patch generation
+- Repository execution
+- Test execution
+- Verification
+- Recovery and rollback infrastructure
+
+## Multi-agent engineering
+
+OAE is designed for specialized engineering roles rather than a single monolithic agent.
+
+- Agent runtime
+- Agent registry
+- Agent message bus
+- Shared memory
+- Architect capabilities
+- Builder capabilities
+- Verification capabilities
+- Security capabilities
+- Backend/DevOps-oriented engineering capabilities
 - Engineering action executor
-- Architect, Builder, Verifier, Security and DevOps-oriented capabilities
 
-### SaaS Control Plane
+## SaaS control plane
 
-- FastAPI API
-- Cinematic browser onboarding
+The SaaS layer makes the system accessible to real developers while preserving the underlying engineering boundaries.
+
+- FastAPI application
 - Tenant authentication
 - Tenant-scoped jobs
-- Background job execution
-- Public GitHub repository analysis
-- Usage quotas
-- Security middleware
-- PostgreSQL-compatible production persistence
-- SQLite local-development fallback
+- API-key authentication
+- Persistent PostgreSQL support
+- Local SQLite development fallback
+- Usage/quota controls
+- Health endpoint
+- OpenAPI documentation
+- Browser workspace
+- Responsive Mission Control experience
 
 ---
 
-## Quick start
+# Security is part of the architecture
 
-### 1. Clone and install
+OAE is intentionally **not** an unrestricted remote shell with an AI in front of it.
+
+Consequential operations are governed by the security subsystem.
+
+```mermaid
+graph LR
+    REQUEST[Engineering Action] --> PERMISSION[Permission Check]
+    PERMISSION --> POLICY[Policy Check]
+    POLICY --> APPROVAL[Human Approval]
+    APPROVAL --> AUDIT[Audit]
+    AUDIT --> EXECUTION[Controlled Execution]
+
+    PERMISSION -. denied .-> STOP[STOP]
+    POLICY -. denied .-> STOP
+    APPROVAL -. denied .-> STOP
+```
+
+### Default security posture
+
+- Repository writes require authorization and approval.
+- Commit and destructive operations are governed.
+- Shell execution is disabled by default.
+- File deletion is disabled by default.
+- Force-push is disabled by default.
+- SaaS operations are explicitly allowlisted.
+- API credentials are stored as hashes rather than plaintext secrets.
+- Tenant-scoped access is enforced at the application boundary.
+- Security decisions are auditable.
+
+These are product invariants, not optional “enterprise features”.
+
+---
+
+# Built for developers first
+
+OAE is being prepared for a controlled beta with **20 developers**.
+
+The beta is intended to answer practical questions, not manufacture vanity metrics:
+
+- Does repository intelligence save meaningful engineering time?
+- Are OAE's findings useful enough to influence real development work?
+- Does the mission model make autonomous work understandable?
+- Are verification and recovery trustworthy?
+- Is the security model strong without making the system unusable?
+- Can developers understand what OAE is doing without needing the founder beside them?
+
+### Suggested first test
+
+```text
+1. Create a developer workspace
+2. Authenticate with a dedicated API key
+3. Submit a public GitHub repository
+4. Inspect repository intelligence
+5. Review the resulting engineering mission
+6. Run a supported analysis/review/verification operation
+7. Inspect the result and mission history
+8. Sign out
+9. Sign back in
+10. Confirm tenant data and history persist
+```
+
+The beta is deliberately controlled. Internet-facing users are not given unrestricted repository mutation or shell access.
+
+---
+
+# API surface
+
+The current SaaS control plane exposes a deliberately small initial surface:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /` | OAE browser workspace / onboarding |
+| `GET /health` | Service health and database status |
+| `POST /v1/tenants` | Create a tenant and issue an API key |
+| `GET /v1/me` | Inspect the authenticated tenant |
+| `POST /v1/jobs` | Queue a supported engineering operation |
+| `GET /v1/jobs` | List tenant-scoped jobs |
+| `GET /v1/jobs/{id}` | Retrieve one tenant-scoped job |
+| `GET /docs` | Interactive OpenAPI reference |
+
+Supported public SaaS operations are intentionally constrained. The API is an access surface into OAE, not a bypass around OAE's governance model.
+
+---
+
+# Repository structure
+
+The repository is organized around system responsibilities rather than a flat collection of features.
+
+```text
+src/oae/
+│
+├── api/             Application and HTTP boundary
+├── router/          Application routing
+│
+├── agents/          Specialized engineering agents
+├── agent/           Agent runtime
+├── capabilities/    Engineering capabilities
+│
+├── core/            Core orchestration and engineering engines
+├── planner/         Planning and mission infrastructure
+├── executor/        Execution infrastructure
+├── builder/         Build and generation capabilities
+│
+├── repository/      Repository-domain infrastructure
+├── git/             Git operations
+├── memory/          Shared/persistent engineering memory
+├── providers/       External providers
+│
+├── governance/      Governance infrastructure
+└── security/        Permissions, policies, approvals and audit
+
+ tests/              Automated test suite
+ docs/               Architecture and engineering documentation
+ scripts/            Operational/developer scripts
+```
+
+This structure is intended to remain modular as OAE grows. New capabilities should have a clear home and should not collapse unrelated concerns into the core.
+
+---
+
+# Quick start
+
+## Requirements
+
+- Python 3.11+
+- Git
+- PostgreSQL for production
+- SQLite is supported as a local-development fallback
+
+## Install
 
 ```bash
 git clone https://github.com/Olori24/oae-core.git
@@ -248,102 +430,235 @@ python -m venv .venv
 pip install -e ".[dev]"
 ```
 
-### 2. Configure local development
+## Configure
 
 ```bash
 cp .env.example .env
 ```
 
-Local development falls back to SQLite when no database URL is supplied. Production must use PostgreSQL.
+Configure a production PostgreSQL connection and the required application secrets for a deployed environment. Never commit production credentials to Git.
 
-### 3. Start the application
+## Run locally
 
 ```bash
 uvicorn oae.api.app:app --reload
 ```
 
-Open:
+Then open:
 
-- `http://127.0.0.1:8000/` — browser workspace
+- `http://127.0.0.1:8000/` — OAE workspace
 - `http://127.0.0.1:8000/health` — health check
-- `http://127.0.0.1:8000/docs` — API documentation
+- `http://127.0.0.1:8000/docs` — OpenAPI documentation
 
 ---
 
-## Production deployment
+# Testing philosophy
 
-OAE's serverless SaaS control plane now supports a persistent PostgreSQL database and automatically detects common Vercel/Neon connection variables. Configure one of these in the Vercel production environment:
+OAE treats tests as part of the engineering loop.
 
-- `DATABASE_URL` — preferred
-- `POSTGRES_URL` — supported for Vercel/Neon integrations
-- `POSTGRES_PRISMA_URL` — supported as a fallback
-- `POSTGRES_URL_NON_POOLING` — supported as a fallback
+The repository has a **773-test local baseline** from the current development history. New changes should preserve the existing suite and add focused coverage where behavior changes.
 
-Also configure:
+Run:
+
+```bash
+pytest -q
+```
+
+Before a production-facing change, validate at least:
+
+```text
+unit/integration tests
+        ↓
+API tests
+        ↓
+security tests
+        ↓
+repository execution tests
+        ↓
+real browser/API smoke test
+        ↓
+production verification
+```
+
+A green unit-test suite is necessary. It is not, by itself, proof that the SaaS is ready for users.
+
+---
+
+# Production model
+
+OAE's serverless API is designed to use persistent PostgreSQL storage in production.
+
+Supported database environment variables include:
+
+- `DATABASE_URL`
+- `POSTGRES_URL`
+- `POSTGRES_PRISMA_URL`
+- `POSTGRES_URL_NON_POOLING`
+
+The deployment must also provide production security configuration such as:
 
 - `APP_ENV=production`
-- A strong random `API_KEY_PEPPER`
-- Exact production `ALLOWED_HOSTS`
-- Exact production `CORS_ORIGINS`
-- HTTPS termination
-- External monitoring and logs
+- strong `API_KEY_PEPPER`
+- exact allowed hosts
+- exact CORS origins
+- HTTPS
 
-The application creates its required tables and indexes automatically on first database access. The schema is portable across local SQLite and production PostgreSQL.
+SQLite remains a local-development convenience. It is **not** the production persistence strategy for a multi-developer SaaS deployment.
 
-**Important:** do not run the production SaaS on Vercel's ephemeral filesystem. SQLite is intentionally retained only as a local-development fallback. A persistent PostgreSQL database is required for multi-developer testing because serverless instances may be replaced at any time.
+The FastAPI entrypoint is explicitly declared in `pyproject.toml`:
 
-The Vercel deployment explicitly exports `src.oae.api.app:app`, so FastAPI entrypoint detection is deterministic.
-
----
-
-## Test baseline
-
-The repository's previous local baseline is **773 passing tests**. The database adapter change preserves the existing SQLite test path while adding the production PostgreSQL dependency and portable SQL layer.
-
-For every SaaS UI change, also validate the browser flow: page load → workspace creation/login → dashboard → job submission → result → sign-out → sign-in.
+```toml
+[tool.vercel]
+entrypoint = "src.oae.api.app:app"
+```
 
 ---
 
-## Engineering principles
+# Engineering principles
 
-- Security First
-- Human Approval
-- Verification Required
-- Repository Safety
-- Modular Architecture
-- Test Before Integration
-- Continuous Engineering
-- Tenant Isolation
+These principles define OAE's behavior as the system grows.
 
-Quality comes before autonomy.
+### 1. Security first
+
+Autonomy without boundaries is not engineering maturity.
+
+### 2. Understand before changing
+
+Repository intelligence comes before repository mutation.
+
+### 3. Plan explicitly
+
+Engineering work should be represented as missions and operations that can be inspected.
+
+### 4. Verify everything that matters
+
+A generated change is not a successful change until the intended result is verified.
+
+### 5. Humans retain consequential authority
+
+OAE can automate engineering work without pretending that every decision should be automated.
+
+### 6. Preserve repository safety
+
+Isolation, worktrees, controlled operations, recovery, and auditability exist because real repositories contain real value.
+
+### 7. Agents are components, not sovereigns
+
+Specialized agents operate inside the OAE architecture and inherit its contracts.
+
+### 8. Documentation follows the implementation
+
+The codebase is the source of truth. Documentation must describe what exists, what is verified, and what is explicitly planned — never imaginary capability.
 
 ---
 
-## Roadmap
+# Documentation map
 
-### Controlled Beta
+| Document | Purpose |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | System boundaries, data flow, execution loop and design invariants |
+| [`README.md`](README.md) | Product, architecture, onboarding and developer entry point |
+| `tests/` | Executable behavioral contract |
+| `pyproject.toml` | Package metadata, dependencies, test configuration and deployment entrypoint |
 
-- 20-developer testing
-- API reliability testing
-- Tenant isolation validation
-- Job execution validation
-- Security testing
-- Developer feedback collection
+The documentation follows a simple rule: **learn the product here, understand the architecture in `docs/`, and trust executable code/tests for implementation truth.**
 
-### Scale-up
+---
 
-- Durable job queue and workers
-- GitHub App / OAuth for private repositories
-- Billing and plan enforcement
+# Road to OAE 1.0
+
+OAE is being developed in controlled stages.
+
+### Current focus — controlled SaaS beta
+
+- Real developer onboarding
+- Tenant isolation
+- API reliability
+- Repository intelligence feedback
+- Mission usefulness
+- Verification quality
+- Security validation
 - Production observability
-- Production domain and deployment
 
-### OAE v1.0
+### Later scale capabilities
 
-Autonomous engineering teams capable of understanding, improving, testing, documenting and governing software repositories with minimal human intervention while keeping humans responsible for strategic decisions and sensitive approvals.
+- Durable worker infrastructure
+- Private repository authorization through a GitHub App/OAuth model
+- Deeper repository write workflows behind explicit approvals
+- Billing and plan enforcement
+- Expanded observability
+- Larger engineering-agent teams
+
+These are deliberately separated from the current beta so that the core product can be validated before the system becomes unnecessarily complex.
 
 ---
 
-## License
+# The long-term vision
 
-MIT License
+OAE is ultimately aimed at a world where an engineering organization can delegate an increasing amount of software maintenance and improvement to an accountable machine system:
+
+```text
+                    HUMAN INTENT
+                         │
+                         ▼
+                  ENGINEERING MISSION
+                         │
+                         ▼
+                OAE UNDERSTANDS SYSTEM
+                         │
+                         ▼
+                  OAE PLANS THE WORK
+                         │
+                         ▼
+               OAE BUILDS / CHANGES
+                         │
+                         ▼
+                  OAE VERIFIES IT
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+           VERIFIED             FAILED
+              │                     │
+              ▼                     ▼
+          RECORD / SHIP         RECOVER / REPLAN
+              │                     │
+              └──────────┬──────────┘
+                         ▼
+                 HUMAN OVERSIGHT
+```
+
+The destination is not “AI writes more code.”
+
+The destination is **software engineering infrastructure capable of understanding systems, executing disciplined work, proving outcomes, and remaining accountable to humans.**
+
+---
+
+# Contributing
+
+OAE is being developed as a modular engineering system. Contributions should preserve the architectural boundaries and security invariants described above.
+
+Before opening a change:
+
+1. Understand the existing subsystem.
+2. Identify the narrowest correct layer for the change.
+3. Add or update tests.
+4. Run the relevant test suite.
+5. Run `git diff --check`.
+6. Document behavior that materially changes the public contract.
+7. Never weaken security controls merely to make tests or demos easier.
+
+---
+
+# License
+
+MIT License. See [`LICENSE`](LICENSE).
+
+---
+
+<div align="center">
+
+**OAE — Open Autonomous Engineer**
+
+*Understand the system. Plan the work. Execute with control. Verify the result.*
+
+</div>
