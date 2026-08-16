@@ -7,8 +7,8 @@ def test_landing_page_is_available():
     client = TestClient(app)
     response = client.get("/")
     assert response.status_code == 200
-    assert "Start testing" in response.text
-    assert "Developer login" in response.text
+    assert "Create developer workspace" in response.text
+    assert "Launch developer workspace" in response.text
 
 
 def test_health():
