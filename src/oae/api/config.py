@@ -59,10 +59,11 @@ class Settings(BaseSettings):
 
     @property
     def resolved_database_url(self) -> str:
-        """Resolve the production database from explicit or Vercel/Neon env names."""
+        """Resolve the production database from explicit or deployment env names."""
         if self.database_url:
             return self.database_url
         for name in (
+            "OAE_DB",
             "OAE_DB_URL",
             "POSTGRES_URL",
             "POSTGRES_PRISMA_URL",
