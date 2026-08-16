@@ -13,6 +13,8 @@ from oae.api.config import settings
 
 _PBKDF2_ITERATIONS = 310_000
 _HASH_PREFIX = "pbkdf2_sha256"
+_KEY_PREFIX_LENGTH = 12
+_MAX_API_KEY_LENGTH = 256
 
 
 def _now() -> str:
@@ -66,8 +68,8 @@ def create_api_key(tenant_id: str) -> str:
     raw = issue_api_key(tenant_id)
     with db() as conn:
         conn.execute(
-            "INSERT INTO api_keys(id, tenant_id, key_hash, created_at) VALUES(?,?,?,?)",
-            (str(uuid4()), tenant_id, hash_key(raw), _now()),
+            "INSERT INTO api_keys(id, tenant_id, key_prefix, key_hash, created_at) VALUES(?,?,?,?,?)",
+            (str(uuid4()), tenant_id, raw[:_KEY_PREFIX_LENGTH], hash_key(raw), _now()),
         )
     return raw
 
@@ -79,12 +81,21 @@ def require_tenant(authorization: str | None = Header(default=None)) -> str:
             detail="Bearer API key required",
         )
     raw = authorization.removeprefix("Bearer ").strip()
-    if not raw:
+    if not raw or len(raw) > _MAX_API_KEY_LENGTH:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
+
+    prefix = raw[:_KEY_PREFIX_LENGTH]
     with db() as conn:
         rows = conn.execute(
-            "SELECT tenant_id,key_hash FROM api_keys WHERE revoked_at IS NULL"
+            "SELECT tenant_id,key_hash FROM api_keys WHERE revoked_at IS NULL AND key_prefix=?",
+            (prefix,),
         ).fetchall()
+        # Existing keys created before prefix indexing remain valid during migration.
+        if not rows:
+            rows = conn.execute(
+                "SELECT tenant_id,key_hash FROM api_keys WHERE revoked_at IS NULL AND key_prefix IS NULL"
+            ).fetchall()
+
     for row in rows:
         if _verify_hash(raw, str(row[1])):
             return str(row[0])
