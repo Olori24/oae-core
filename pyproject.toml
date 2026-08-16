@@ -26,3 +26,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = ["sandbox", "workspace", ".git", ".pytest_cache"]
+
+[tool.vercel]
+entrypoint = "src.oae.api.app:app"
