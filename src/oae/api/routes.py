@@ -1,10 +1,11 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 
 from oae.api.auth import create_api_key, require_tenant
+from oae.api.config import settings
 from oae.api.db import db
 from oae.api.job_runner import JobRunner
 from oae.api.schemas import JobCreate, JobResponse, TenantCreate, TenantCreated
@@ -21,7 +22,11 @@ def _now() -> str:
 def health() -> dict[str, str]:
     with db() as conn:
         conn.execute("SELECT 1").fetchone()
-    return {"status": "ok", "service": "oae-api"}
+    return {
+        "status": "ok",
+        "service": "oae-api",
+        "database": settings.database_backend,
+    }
 
 
 @router.post("/v1/tenants", response_model=TenantCreated, status_code=201, tags=["tenants"])
@@ -52,10 +57,11 @@ def create_job(
 ) -> JobResponse:
     job_id = str(uuid4())
     now = _now()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
     with db() as conn:
         recent = conn.execute(
-            "SELECT COUNT(*) FROM jobs WHERE tenant_id=? AND created_at >= datetime('now','-30 days')",
-            (tenant_id,),
+            "SELECT COUNT(*) FROM jobs WHERE tenant_id=? AND created_at >= ?",
+            (tenant_id, cutoff),
         ).fetchone()[0]
         if recent >= MAX_JOBS_PER_30_DAYS:
             raise HTTPException(status_code=429, detail="Monthly job quota exceeded")
