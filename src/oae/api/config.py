@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 from pydantic import field_validator
@@ -10,7 +11,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     app_env: str = "development"
     database_url: str = "sqlite:///./oae.db"
-    api_key_pepper: str = "change-me-in-production"
+    # Kept for backward compatibility with existing deployments. New API keys
+    # use per-key salted PBKDF2 and do not depend on this global secret.
+    api_key_pepper: str = ""
     cors_origins: Annotated[list[str], NoDecode] = ["*"]
     allowed_hosts: Annotated[list[str], NoDecode] = ["*"]
     max_job_seconds: int = 300
@@ -34,16 +37,16 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         raise TypeError("Expected a list or string")
 
-    @field_validator("api_key_pepper")
-    @classmethod
-    def production_secret_must_change(cls, value: str, info):
-        if info.data.get("app_env") == "production" and value == "change-me-in-production":
-            raise ValueError("API_KEY_PEPPER must be configured in production")
-        return value
-
     @property
     def sqlite_path(self) -> Path:
-        return Path(self.database_url.removeprefix("sqlite:///"))
+        configured = self.database_url.removeprefix("sqlite:///")
+        # Vercel's function filesystem is read-only except for /tmp. This
+        # keeps the single-instance beta operational when no external DB is
+        # configured. Durable multi-instance persistence still requires an
+        # external database.
+        if os.getenv("VERCEL") and self.database_url == "sqlite:///./oae.db":
+            return Path("/tmp/oae.db")
+        return Path(configured)
 
 
 settings = Settings()
