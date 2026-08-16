@@ -2,16 +2,21 @@ import base64
 import hashlib
 import hmac
 import secrets
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from fastapi import Depends, Header, HTTPException, status
 
-from oae.api.config import settings
 from oae.api.db import db
+from oae.api.config import settings
 
 
 _PBKDF2_ITERATIONS = 310_000
 _HASH_PREFIX = "pbkdf2_sha256"
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
 
 
 def hash_key(raw: str) -> str:
@@ -61,8 +66,8 @@ def create_api_key(tenant_id: str) -> str:
     raw = issue_api_key(tenant_id)
     with db() as conn:
         conn.execute(
-            "INSERT INTO api_keys(id, tenant_id, key_hash, created_at) VALUES(?,?,?,datetime('now'))",
-            (str(uuid4()), tenant_id, hash_key(raw)),
+            "INSERT INTO api_keys(id, tenant_id, key_hash, created_at) VALUES(?,?,?,?)",
+            (str(uuid4()), tenant_id, hash_key(raw), _now()),
         )
     return raw
 
