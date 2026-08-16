@@ -2,11 +2,11 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
 from oae.api.routes import router
+from oae.api.web import page
 
 
 def create_app() -> FastAPI:
@@ -36,12 +36,12 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(router)
+
+    @app.get("/", include_in_schema=False)
+    def landing_page():
+        return page()
+
     return app
 
 
 app = create_app()
-
-
-@app.get("/", tags=["system"])
-def root() -> dict[str, str]:
-    return {"name": "oae", "status": "online", "docs": "/docs"}
