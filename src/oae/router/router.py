@@ -5,7 +5,6 @@ class AIRouter:
     def __init__(self, provider="gemini"):
         if provider not in PROVIDERS:
             raise ValueError(f"Unknown provider: {provider}")
-
         self.provider = PROVIDERS[provider]
 
     def current_provider(self):
@@ -16,4 +15,4 @@ class AIRouter:
             "name": self.provider.name,
             "model": self.provider.model,
             "env": self.provider.api_key_env,
-      
+        }

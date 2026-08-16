@@ -1,0 +1,12 @@
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - oae-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  oae-data:
