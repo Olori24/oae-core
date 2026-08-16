@@ -11,100 +11,58 @@
 ![Architecture](https://img.shields.io/badge/architecture-modular-success)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-OAE is an autonomous engineering platform that analyzes software repositories, identifies engineering work, executes controlled engineering operations, verifies results, and keeps humans responsible for sensitive decisions.
+OAE is an autonomous engineering platform for understanding software repositories, identifying engineering work, executing controlled engineering operations, verifying results, and keeping humans responsible for sensitive decisions.
 
-The repository now includes a multi-tenant SaaS control plane and a browser onboarding experience for controlled developer testing.
+The repository includes a multi-tenant SaaS control plane and a cinematic browser workspace designed for controlled developer testing.
 
 ---
 
 ## SaaS Beta
 
-OAE is prepared for a controlled beta with **20 developers**.
+OAE is prepared for a controlled **20-developer beta cohort**.
 
-Each developer operates through a tenant-scoped API key. Jobs are isolated by tenant, SaaS execution is restricted to an explicit operation allowlist, and repository writes remain protected by OAE's permission and human-approval security model.
+Each developer gets an isolated tenant and API key. Jobs are scoped to that tenant, SaaS operations are explicitly allowlisted, and sensitive repository writes remain protected by OAE's permission, policy, approval, and audit model.
 
-### Beta capabilities
+### What a developer can do now
 
-- Browser landing page and developer onboarding
-- API-key login and tenant identity
-- Multi-tenant API authentication
-- Tenant-scoped job history
-- Asynchronous job execution
-- Repository analysis for public GitHub HTTPS repositories
-- Analyze, review, and verify operations
-- Per-tenant 30-day job quota
-- Request IDs and security headers
-- Production secret validation
-- Docker deployment foundation
-- OpenAPI documentation
-- CI compile and test gates
+- Open the cinematic OAE landing page and understand the product without a manual walkthrough
+- Create an isolated developer workspace
+- Receive a one-time API key and securely continue into the workspace
+- Sign back in with the API key
+- Submit a public GitHub HTTPS repository for analysis
+- Track queued/running/completed/failed jobs
+- Inspect tenant-scoped mission history
+- See repositories discovered from previous analysis jobs
+- Explore OAE's engineering capabilities and security posture
+- Use the interactive OpenAPI documentation at `/docs`
+- Verify service health at `/health`
 
-### Test baseline
+### Supported SaaS operations
 
-The latest local verification baseline is **773 passing tests**. CI also verifies compilation and the complete test suite.
+- `analyze` — public GitHub repository analysis
+- `review` — structured review of supplied findings
+- `verify` — explicit verification of supplied checks/results
 
----
-
-## Quick Start
-
-### 1. Clone and install
-
-```bash
-git clone https://github.com/Olori24/oae-core.git
-cd oae-core
-python -m venv .venv
-. .venv/bin/activate
-pip install -e ".[dev]"
-```
-
-### 2. Configure local development
-
-```bash
-cp .env.example .env
-```
-
-The repository ships with working local-development values. Do not use those development values for production.
-
-### 3. Start the application
-
-```bash
-uvicorn oae.api.app:app --reload
-```
-
-Open:
-
-- `http://127.0.0.1:8000/` — browser onboarding and dashboard
-- `http://127.0.0.1:8000/health` — health check
-- `http://127.0.0.1:8000/docs` — interactive API documentation
+The SaaS layer intentionally does **not** expose unrestricted shell execution or arbitrary repository writes to internet users.
 
 ---
 
-## Browser Onboarding
+## Developer onboarding
 
-The root page is now the beta entry point.
+### Browser flow
 
-A new developer can:
+1. Open the OAE production URL.
+2. Select **Launch workspace**.
+3. Enter a workspace/team name.
+4. Save the one-time API key.
+5. Enter the workspace.
+6. Sign out and sign back in to verify persistence.
+7. Submit a public GitHub repository through the job API or an enabled client.
+8. Watch the mission move through the engineering pipeline and inspect the result.
 
-1. Create a workspace.
-2. Receive a one-time API key.
-3. Continue directly into the workspace dashboard.
-4. Log back in later with the API key.
-5. Submit a public GitHub repository for analysis.
-6. Poll the job until completion.
-7. Inspect the returned engineering result.
-8. Log out and authenticate again.
+For the initial cohort, every developer should have a separate tenant. Do not share one API key across the team.
 
-The browser stores the API key only in session storage. OAE stores only an HMAC digest of the key server-side.
-
-For the initial 20-person cohort, do not share one API key across developers.
-
----
-
-## Developer Beta Onboarding
-
-The initial test group is 20 developers. Give each developer a separate tenant rather than sharing one API key.
-
-### Create all 20 tester tenants
+### Create all 20 beta tenants
 
 With the API running, execute:
 
@@ -114,17 +72,38 @@ python scripts/create_beta_cohort.py
 
 The script creates `Developer 01` through `Developer 20` and prints a one-time CSV-style list containing each tenant ID and API key. Store that output securely. API keys cannot be recovered after creation because OAE stores only their HMAC digests.
 
-### Recommended 20-developer test
+### Recommended beta test
 
-Each developer should test the same core workflow first:
+Ask each developer to:
 
-1. Create or receive a dedicated tenant API key.
-2. Run a public GitHub repository analysis.
-3. Poll the job until it reaches a terminal status.
+1. Authenticate with their dedicated key.
+2. Analyze a public GitHub repository.
+3. Inspect the returned repository intelligence.
 4. Repeat with a repository containing Python source and tests.
-5. Test invalid authentication and confirm it is rejected.
-6. Confirm one developer cannot read another developer's job.
-7. Report execution errors, unexpected results, latency, and API usability issues.
+5. Try invalid authentication and confirm it is rejected.
+6. Confirm another tenant's job cannot be accessed.
+7. Record errors, latency, confusing UX, and unexpected analysis results.
+
+---
+
+## Product surface
+
+The root browser experience is intentionally more than a static marketing page. It contains:
+
+- Cinematic product introduction
+- Workspace creation and API-key authentication
+- Responsive Mission Control dashboard
+- Tenant-scoped mission history
+- Repository history
+- Engineering pipeline visualization
+- Agent capability map
+- Repository intelligence overview
+- Security posture view
+- Workspace identity/settings view
+- Mobile-responsive layout
+- Loading, empty, success and error states
+
+The dashboard surfaces the existing OAE architecture instead of pretending the SaaS has capabilities that the API does not expose.
 
 ---
 
@@ -132,7 +111,7 @@ Each developer should test the same core workflow first:
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /` | Browser onboarding and developer dashboard |
+| `GET /` | Cinematic browser onboarding and Mission Control |
 | `GET /health` | Health check |
 | `POST /v1/tenants` | Create an isolated tenant and issue its API key |
 | `GET /v1/me` | Return the authenticated tenant |
@@ -143,7 +122,7 @@ Each developer should test the same core workflow first:
 
 ---
 
-## Security Model
+## Security model
 
 OAE is designed for controlled autonomous engineering rather than unrestricted code execution.
 
@@ -153,22 +132,23 @@ OAE is designed for controlled autonomous engineering rather than unrestricted c
 - Shell execution is disabled by default.
 - File deletion is disabled by default.
 - Force-push is disabled by default.
-- Unknown operations are rejected by the SaaS execution layer.
+- Unknown SaaS operations are rejected by the job runner.
 - API keys are not stored in plaintext.
 - Production deployments require a non-default API key pepper.
 - Tenant data and job access are scoped to the authenticated tenant.
+- Request IDs and security headers are applied at the API boundary.
 
-Do not disable these controls simply to make a workflow convenient. They are part of OAE's engineering contract.
+Do not disable these controls merely to make a workflow convenient. They are part of OAE's engineering contract.
 
 ---
 
-## Current Architecture
+## Architecture
 
 ```text
 Developer
    |
    v
-Browser Onboarding
+Cinematic Browser Workspace
    |
    v
 FastAPI SaaS Control Plane
@@ -182,20 +162,23 @@ FastAPI SaaS Control Plane
 Autonomous Engineering Core
    |
    +--> Repository Intelligence
+   +--> Knowledge Graph
    +--> Planning
    +--> Engineering Actions
    +--> Verification
    +--> Security Kernel
+   +--> Agent Registry + Message Bus
+   +--> Shared Memory
    |
    v
 Engineering Result
 ```
 
-The SaaS layer is a controlled entry point around the existing OAE engineering core; it does not replace the autonomous engineering architecture.
+The SaaS layer is a controlled entry point around the existing engineering core. It does not replace the autonomous engineering architecture.
 
 ---
 
-## Core Capabilities
+## Core capabilities
 
 ### Repository Intelligence
 
@@ -205,7 +188,9 @@ The SaaS layer is a controlled entry point around the existing OAE engineering c
 - Workspace Manager
 - Repository Recovery Engine
 - Repository Knowledge Graph
-- Dependency and dead-code analysis
+- Dependency analysis
+- Dead-code detection
+- Circular-dependency detection
 
 ### Engineering Intelligence
 
@@ -215,6 +200,7 @@ The SaaS layer is a controlled entry point around the existing OAE engineering c
 - Capability Planner
 - Dependency Resolver
 - Engineering Analysis Engine
+- Engineering Ledger
 
 ### Autonomous Engineering
 
@@ -233,11 +219,12 @@ The SaaS layer is a controlled entry point around the existing OAE engineering c
 - Agent Message Bus
 - Shared Agent Memory
 - Engineering action executor
+- Architect, Builder, Verifier, Security and DevOps-oriented capabilities
 
 ### SaaS Control Plane
 
 - FastAPI API
-- Browser onboarding
+- Cinematic browser onboarding
 - Tenant authentication
 - Tenant-scoped jobs
 - Background job execution
@@ -248,7 +235,41 @@ The SaaS layer is a controlled entry point around the existing OAE engineering c
 
 ---
 
-## Production Deployment
+## Quick start
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/Olori24/oae-core.git
+cd oae-core
+python -m venv .venv
+. .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+### 2. Configure local development
+
+```bash
+cp .env.example .env
+```
+
+The repository ships with working local-development values. Do not use development secrets in production.
+
+### 3. Start the application
+
+```bash
+uvicorn oae.api.app:app --reload
+```
+
+Open:
+
+- `http://127.0.0.1:8000/` — browser workspace
+- `http://127.0.0.1:8000/health` — health check
+- `http://127.0.0.1:8000/docs` — API documentation
+
+---
+
+## Production deployment
 
 For production, configure:
 
@@ -263,13 +284,21 @@ For production, configure:
 
 The included Dockerfile and `docker-compose.yml` provide a single-instance deployment foundation with persistent Docker volume storage.
 
-**Production infrastructure caveat:** the current implementation uses SQLite and in-process background tasks. That is appropriate for a controlled single-instance beta, not horizontal production scaling. PostgreSQL plus a durable worker queue should be used before multi-instance production traffic.
+**Infrastructure caveat:** the current implementation uses SQLite and in-process background tasks. This is suitable for the controlled beta and a single-instance deployment, not horizontal production scaling. PostgreSQL plus a durable worker queue should be introduced before multi-instance production traffic.
 
 See [`docs/SAAS.md`](docs/SAAS.md) for API and deployment details.
 
 ---
 
-## Engineering Principles
+## Test baseline
+
+The repository's current local baseline is **773 passing tests**, with CI compilation and test gates passing on `main`.
+
+For every SaaS UI change, also validate the browser flow: page load → workspace creation/login → dashboard → job submission → result → sign-out → sign-in.
+
+---
+
+## Engineering principles
 
 - Security First
 - Human Approval
@@ -286,16 +315,16 @@ Quality comes before autonomy.
 
 ## Roadmap
 
-### SaaS Beta
+### Controlled Beta
 
-- 20-developer controlled testing
+- 20-developer testing
 - API reliability testing
 - Tenant isolation validation
 - Job execution validation
 - Security testing
 - Developer feedback collection
 
-### Production Platform
+### Scale-up
 
 - PostgreSQL persistence
 - Durable job queue and workers
@@ -306,7 +335,7 @@ Quality comes before autonomy.
 
 ### OAE v1.0
 
-Autonomous engineering teams capable of understanding, improving, testing, documenting, and governing software repositories with minimal human intervention while keeping humans responsible for strategic decisions and sensitive approvals.
+Autonomous engineering teams capable of understanding, improving, testing, documenting and governing software repositories with minimal human intervention while keeping humans responsible for strategic decisions and sensitive approvals.
 
 ---
 
