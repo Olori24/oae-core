@@ -7,7 +7,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
 from oae.api.routes import router
-from oae.api.web import page
+from oae.api.ui import page
 
 
 app = FastAPI(
