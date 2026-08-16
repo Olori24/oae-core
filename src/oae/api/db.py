@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS tenants (
 CREATE TABLE IF NOT EXISTS api_keys (
     id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    key_prefix TEXT,
     key_hash TEXT NOT NULL UNIQUE,
     created_at TEXT NOT NULL,
     revoked_at TEXT
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC);
 """
@@ -43,6 +45,7 @@ POSTGRES_STATEMENTS = (
     CREATE TABLE IF NOT EXISTS api_keys (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL REFERENCES tenants(id),
+        key_prefix TEXT,
         key_hash TEXT NOT NULL UNIQUE,
         created_at TEXT NOT NULL,
         revoked_at TEXT
@@ -60,6 +63,7 @@ POSTGRES_STATEMENTS = (
         updated_at TEXT NOT NULL
     )
     """,
+    "CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)",
     "CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)",
     "CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC)",
 )
@@ -92,6 +96,14 @@ class _ConnectionAdapter:
         self._connection.close()
 
 
+def _migrate_sqlite(adapter: _ConnectionAdapter) -> None:
+    try:
+        adapter.execute("ALTER TABLE api_keys ADD COLUMN key_prefix TEXT")
+    except sqlite3.OperationalError:
+        pass
+    adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
+
+
 def _connect() -> _ConnectionAdapter:
     backend = settings.database_backend
     if backend == "postgres":
@@ -103,6 +115,8 @@ def _connect() -> _ConnectionAdapter:
         adapter = _ConnectionAdapter(connection, "postgres")
         for statement in POSTGRES_STATEMENTS:
             adapter.execute(statement)
+        adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_prefix TEXT")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
         return adapter
 
     if backend == "sqlite":
@@ -113,6 +127,7 @@ def _connect() -> _ConnectionAdapter:
         connection.row_factory = sqlite3.Row
         adapter = _ConnectionAdapter(connection, "sqlite")
         adapter.executescript(SQLITE_SCHEMA)
+        _migrate_sqlite(adapter)
         return adapter
 
     raise RuntimeError(
