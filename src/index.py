@@ -1,9 +1,11 @@
-from fastapi import FastAPI
+from pathlib import Path
+import sys
 
 
-app = FastAPI(title="OAE Runtime Probe")
+SRC_ROOT = Path(__file__).resolve().parent
+if str(SRC_ROOT) not in sys.path:
+    sys.path.insert(0, str(SRC_ROOT))
 
+from oae.api.app import app
 
-@app.get("/")
-def root():
-    return {"status": "ok", "runtime": "fastapi"}
+__all__ = ["app"]
