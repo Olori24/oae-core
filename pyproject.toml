@@ -12,6 +12,7 @@ dependencies = [
     "fastapi>=0.115,<1",
     "uvicorn[standard]>=0.34,<1",
     "pydantic-settings>=2.7,<3",
+    "psycopg[binary]>=3.2,<4",
 ]
 
 [project.optional-dependencies]
@@ -26,3 +27,6 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = ["sandbox", "workspace", ".git", ".pytest_cache"]
+
+[tool.vercel]
+entrypoint = "src.oae.api.app:app"
