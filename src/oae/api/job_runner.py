@@ -1,13 +1,16 @@
 import json
+import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 
 from oae.api.db import db
 from oae.api.github import GitHubPublicAnalyzer
 from oae.api.mission_results import build_result
+from oae.core.vertical_slice_mission import VerticalSliceMission
 
 
 class JobRunner:
-    """Executes only explicitly supported, read-only SaaS operations."""
+    """Executes supported SaaS engineering operations in isolated mission workspaces."""
 
     def run(self, job_id: str) -> None:
         with db() as conn:
@@ -24,7 +27,7 @@ class JobRunner:
 
         try:
             payload = json.loads(payload_json)
-            result = self._dispatch(operation, payload)
+            result = self._dispatch(operation, payload, job_id)
             status = "completed"
         except Exception as exc:
             result = {
@@ -42,7 +45,7 @@ class JobRunner:
                 (status, json.dumps(result), self._now(), job_id),
             )
 
-    def _dispatch(self, operation: str, payload: dict) -> dict:
+    def _dispatch(self, operation: str, payload: dict, job_id: str) -> dict:
         if operation == "analyze":
             repository_url = payload.get("repository_url")
             if not repository_url:
@@ -74,7 +77,6 @@ class JobRunner:
                     "review_status": "recorded",
                 },
             )
-            # Preserve the original result shape for existing API consumers.
             result.update({"count": len(findings), "findings": findings})
             return result
 
@@ -99,9 +101,37 @@ class JobRunner:
                     "verification_status": "passed" if verified else "not_verified",
                 },
             )
-            # Preserve the original result shape for existing API consumers.
             result.update({"verified": verified, "checks": checks})
             return result
+
+        if operation == "build":
+            name = payload.get("name")
+            description = payload.get("description")
+            if not name or not description:
+                raise ValueError("build requires payload.name and payload.description")
+            workspace = Path(tempfile.gettempdir()) / "oae-missions" / job_id
+            result = VerticalSliceMission().run(
+                workspace,
+                name=name,
+                description=description,
+                language=payload.get("language", "Python"),
+                framework=payload.get("framework", "FastAPI"),
+                database=payload.get("database", "SQLite"),
+                testing_framework=payload.get("testing_framework", "pytest"),
+            )
+            return build_result(
+                operation=operation,
+                payload=payload,
+                summary=(
+                    f"Application mission {name} reached {result['status']} "
+                    f"with readiness score {result['readiness_score']}."
+                ),
+                evidence={
+                    "mission": result,
+                    "workspace": str(workspace),
+                    "workspace_persistent": False,
+                },
+            )
 
         raise ValueError(f"Unsupported operation: {operation}")
 
