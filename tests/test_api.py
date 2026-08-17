@@ -12,6 +12,7 @@ def test_landing_page_is_available():
     assert "Missions" in response.text
     assert "Intelligence" in response.text
     assert "Security" in response.text
+    assert "evidence-grid" in response.text
 
 
 def test_health():
@@ -37,17 +38,38 @@ def test_tenant_job_lifecycle(tmp_path):
 
     assert client.get("/v1/me", headers=headers).status_code == 200
 
-    job = client.post(
-        "/v1/jobs", headers=headers,
+    review = client.post(
+        "/v1/jobs",
+        headers=headers,
         json={"operation": "review", "payload": {"findings": ["test gap"]}},
     )
-    assert job.status_code == 202
-    job_id = job.json()["id"]
+    assert review.status_code == 202
+    review_id = review.json()["id"]
 
-    fetched = client.get(f"/v1/jobs/{job_id}", headers=headers)
+    fetched = client.get(f"/v1/jobs/{review_id}", headers=headers)
     assert fetched.status_code == 200
+    review_result = fetched.json()["result"]
     assert fetched.json()["status"] == "completed"
-    assert fetched.json()["result"]["count"] == 1
+    assert review_result["count"] == 1
+    assert review_result["schema_version"] == "1.0"
+    assert review_result["evidence"]["finding_count"] == 1
+    assert review_result["evidence"]["review_status"] == "recorded"
+
+    verify = client.post(
+        "/v1/jobs",
+        headers=headers,
+        json={"operation": "verify", "payload": {"success": True, "checks": ["control-plane"]}},
+    )
+    assert verify.status_code == 202
+    verify_id = verify.json()["id"]
+
+    verified = client.get(f"/v1/jobs/{verify_id}", headers=headers)
+    assert verified.status_code == 200
+    verify_result = verified.json()["result"]
+    assert verify_result["verified"] is True
+    assert verify_result["schema_version"] == "1.0"
+    assert verify_result["evidence"]["verification_status"] == "passed"
+    assert verify_result["evidence"]["check_count"] == 1
 
 
 def test_invalid_api_key_is_rejected():
