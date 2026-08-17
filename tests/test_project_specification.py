@@ -28,3 +28,5 @@ def test_defaults():
 
     assert spec.docker is True
     assert spec.ci is True
+    assert spec.frontend_framework == "Next.js"
+    assert spec.frontend_language == "TypeScript"
