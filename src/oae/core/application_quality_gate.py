@@ -9,7 +9,11 @@ class ApplicationQualityGate:
         self.verifier = verifier or ApplicationVerificationEngine()
 
     def evaluate(self, root, specification: ProjectSpecification):
-        result = self.verifier.verify(root, specification)
+        result = self.verifier.verify(
+            root,
+            specification,
+            execute_frontend_build=True,
+        )
         blockers = [
             check["detail"]
             for check in result["checks"]
