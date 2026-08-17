@@ -7,8 +7,15 @@ class FrontendApplicationGenerator:
     """Generate a deterministic Next.js + TypeScript application surface."""
 
     FRONTEND_ROOT = "web"
+    SUPPORTED_FRAMEWORK = "Next.js"
+    SUPPORTED_LANGUAGE = "TypeScript"
 
     def generate(self, root, specification: ProjectSpecification):
+        if specification.frontend_framework != self.SUPPORTED_FRAMEWORK:
+            raise ValueError(f"Unsupported frontend framework: {specification.frontend_framework}")
+        if specification.frontend_language != self.SUPPORTED_LANGUAGE:
+            raise ValueError(f"Unsupported frontend language: {specification.frontend_language}")
+
         root = Path(root)
         web = root / self.FRONTEND_ROOT
         files = {
