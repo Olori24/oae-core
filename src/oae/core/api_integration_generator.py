@@ -2,40 +2,32 @@ from pathlib import Path
 
 
 class ApiIntegrationGenerator:
-    """
-    Integrates generated API routers into main.py
-    """
+    """Integrate generated API routers without coupling applications to a domain."""
 
-    def generate(self, root):
+    def generate(self, root, specification=None):
         root = Path(root)
-
         main = root / "src" / "main.py"
-
         if not main.exists():
             return
 
-        main.write_text(
-'''from fastapi import FastAPI
+        title = getattr(specification, "name", None) or "Generated Application"
+        api_dir = root / "src" / "api"
+        routers = []
+        if api_dir.exists():
+            for module in sorted(api_dir.glob("*.py")):
+                if module.name == "__init__.py":
+                    continue
+                routers.append(module.stem)
 
-from src.api.health import health
-from src.api.opportunities import router as opportunities
-from src.api.auth import router as auth
+        imports = ["from fastapi import FastAPI"]
+        includes = []
+        for module in routers:
+            imports.append(f"from src.api.{module} import router as {module}_router")
+            includes.append(f"app.include_router({module}_router)")
 
-app = FastAPI(
-    title="Opportunity Radar Africa",
-)
-
-app.include_router(health)
-
-app.include_router(opportunities)
-
-app.include_router(auth)
-
-
-if __name__ == "__main__":
-    print("=" * 40)
-    print("Opportunity Radar Africa")
-    print("Status: healthy")
-    print("=" * 40)
-'''
-        )
+        content = "\n".join(imports)
+        content += f'\n\napp = FastAPI(title={title!r})\n\n'
+        if includes:
+            content += "\n".join(includes) + "\n"
+        content += "\nif __name__ == \"__main__\":\n    print(\"Generated application is healthy\")\n"
+        main.write_text(content, encoding="utf-8")
