@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from oae.api.db import db
 from oae.api.github import GitHubPublicAnalyzer
+from oae.api.mission_results import build_result, repository_from_payload
 
 
 class JobRunner:
@@ -26,7 +27,13 @@ class JobRunner:
             result = self._dispatch(operation, payload)
             status = "completed"
         except Exception as exc:
-            result = {"error": str(exc)}
+            result = {
+                "schema_version": "1.0",
+                "operation": operation,
+                "summary": "Mission execution failed before a verified engineering result was produced.",
+                "evidence": {"error": str(exc)},
+                "error": str(exc),
+            }
             status = "failed"
 
         with db() as conn:
@@ -40,14 +47,60 @@ class JobRunner:
             repository_url = payload.get("repository_url")
             if not repository_url:
                 raise ValueError("analyze requires payload.repository_url")
-            return GitHubPublicAnalyzer().analyze(repository_url)
+            analysis = GitHubPublicAnalyzer().analyze(repository_url)
+            return {
+                **analysis,
+                **build_result(
+                    operation=operation,
+                    payload=payload,
+                    repository=analysis.get("repository"),
+                    summary=(
+                        f"Repository intelligence collected for {analysis['repository']}."
+                    ),
+                    evidence={
+                        "repository_intelligence": analysis,
+                    },
+                ),
+            }
+
         if operation == "review":
             findings = payload.get("findings", [])
             if not isinstance(findings, list):
                 raise ValueError("review requires findings to be a list")
-            return {"count": len(findings), "findings": findings[:100]}
+            findings = findings[:100]
+            return build_result(
+                operation=operation,
+                payload=payload,
+                summary=f"Engineering review recorded {len(findings)} finding(s).",
+                evidence={
+                    "finding_count": len(findings),
+                    "findings": findings,
+                    "review_status": "recorded",
+                },
+            )
+
         if operation == "verify":
-            return {"verified": bool(payload.get("success")), "checks": payload.get("checks", [])}
+            verified = bool(payload.get("success"))
+            checks = payload.get("checks", [])
+            if not isinstance(checks, list):
+                raise ValueError("verify requires checks to be a list")
+            checks = checks[:100]
+            return build_result(
+                operation=operation,
+                payload=payload,
+                summary=(
+                    "Verification checks passed."
+                    if verified
+                    else "Verification checks did not establish success."
+                ),
+                evidence={
+                    "verified": verified,
+                    "check_count": len(checks),
+                    "checks": checks,
+                    "verification_status": "passed" if verified else "not_verified",
+                },
+            )
+
         raise ValueError(f"Unsupported operation: {operation}")
 
     @staticmethod
