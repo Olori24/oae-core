@@ -15,3 +15,5 @@ class ProjectSpecification:
     testing_framework: str
     docker: bool = True
     ci: bool = True
+    frontend_framework: str = "Next.js"
+    frontend_language: str = "TypeScript"
