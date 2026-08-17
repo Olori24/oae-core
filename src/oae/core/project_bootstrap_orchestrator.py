@@ -10,6 +10,7 @@ from oae.core.dockerfile_generator import DockerfileGenerator
 from oae.core.github_actions_generator import GitHubActionsGenerator
 from oae.core.application_scaffold_generator import ApplicationScaffoldGenerator
 from oae.core.executable_application_generator import ExecutableApplicationGenerator
+from oae.core.frontend_application_generator import FrontendApplicationGenerator
 from oae.core.database_generator import DatabaseGenerator
 from oae.core.opportunity_model_generator import OpportunityModelGenerator
 from oae.core.opportunity_repository_generator import OpportunityRepositoryGenerator
@@ -33,6 +34,7 @@ class ProjectBootstrapOrchestrator:
             GitHubActionsGenerator(),
             ApplicationScaffoldGenerator(),
             ExecutableApplicationGenerator(),
+            FrontendApplicationGenerator(),
             DatabaseGenerator(),
             OpportunityModelGenerator(),
             OpportunityRepositoryGenerator(),
