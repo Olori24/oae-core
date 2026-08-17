@@ -18,11 +18,17 @@ def test_generated_application_is_executable(tmp_path):
     root = tmp_path / "demo"
     ProjectBootstrapOrchestrator().bootstrap(root, spec())
 
-    result = ApplicationVerificationEngine().verify(root, spec())
+    result = ApplicationVerificationEngine().verify(
+        root,
+        spec(),
+        execute_frontend_build=False,
+    )
 
     assert result["status"] == "verified"
-    assert result["execution"]["passed"] is True
-    assert result["execution"]["returncode"] == 0
+    assert result["execution"]["backend"]["passed"] is True
+    assert result["execution"]["backend"]["returncode"] == 0
+    assert result["execution"]["frontend"]["passed"] is True
+    assert result["execution"]["frontend"]["status"] == "ready"
 
 
 def test_verification_blocks_missing_contract(tmp_path):
