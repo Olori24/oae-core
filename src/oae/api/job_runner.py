@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from oae.api.db import db
 from oae.api.github import GitHubPublicAnalyzer
-from oae.api.mission_results import build_result, repository_from_payload
+from oae.api.mission_results import build_result
 
 
 class JobRunner:
@@ -54,12 +54,8 @@ class JobRunner:
                     operation=operation,
                     payload=payload,
                     repository=analysis.get("repository"),
-                    summary=(
-                        f"Repository intelligence collected for {analysis['repository']}."
-                    ),
-                    evidence={
-                        "repository_intelligence": analysis,
-                    },
+                    summary=f"Repository intelligence collected for {analysis['repository']}.",
+                    evidence={"repository_intelligence": analysis},
                 ),
             }
 
@@ -68,7 +64,7 @@ class JobRunner:
             if not isinstance(findings, list):
                 raise ValueError("review requires findings to be a list")
             findings = findings[:100]
-            return build_result(
+            result = build_result(
                 operation=operation,
                 payload=payload,
                 summary=f"Engineering review recorded {len(findings)} finding(s).",
@@ -78,6 +74,9 @@ class JobRunner:
                     "review_status": "recorded",
                 },
             )
+            # Preserve the original result shape for existing API consumers.
+            result.update({"count": len(findings), "findings": findings})
+            return result
 
         if operation == "verify":
             verified = bool(payload.get("success"))
@@ -85,7 +84,7 @@ class JobRunner:
             if not isinstance(checks, list):
                 raise ValueError("verify requires checks to be a list")
             checks = checks[:100]
-            return build_result(
+            result = build_result(
                 operation=operation,
                 payload=payload,
                 summary=(
@@ -100,6 +99,9 @@ class JobRunner:
                     "verification_status": "passed" if verified else "not_verified",
                 },
             )
+            # Preserve the original result shape for existing API consumers.
+            result.update({"verified": verified, "checks": checks})
+            return result
 
         raise ValueError(f"Unsupported operation: {operation}")
 
