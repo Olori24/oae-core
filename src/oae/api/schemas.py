@@ -12,7 +12,7 @@ class TenantCreated(BaseModel):
 
 
 class JobCreate(BaseModel):
-    operation: str = Field(pattern=r"^(analyze|review|verify)$")
+    operation: str = Field(pattern=r"^(analyze|review|verify|build)$")
     payload: dict = Field(default_factory=dict)
 
 
