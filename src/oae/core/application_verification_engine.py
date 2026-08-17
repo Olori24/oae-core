@@ -3,16 +3,23 @@ import subprocess
 import sys
 
 from oae.core.application_readiness_engine import ApplicationReadinessEngine
+from oae.core.frontend_build_verifier import FrontendBuildVerifier
 from oae.core.project_specification import ProjectSpecification
 
 
 class ApplicationVerificationEngine:
     """Turn generated-application readiness into executable verification."""
 
-    def __init__(self, readiness=None):
+    def __init__(self, readiness=None, frontend=None):
         self.readiness = readiness or ApplicationReadinessEngine()
+        self.frontend = frontend or FrontendBuildVerifier()
 
-    def verify(self, root, specification: ProjectSpecification):
+    def verify(
+        self,
+        root,
+        specification: ProjectSpecification,
+        execute_frontend_build=False,
+    ):
         root = Path(root)
         readiness = self.readiness.assess(root, specification)
         checks = list(readiness["checks"])
@@ -25,15 +32,25 @@ class ApplicationVerificationEngine:
                 "execution": None,
             }
 
-        execution = self._run_python_contract(root)
-        checks.append(execution)
+        backend = self._run_python_contract(root)
+        checks.append(backend)
 
-        status = "verified" if execution["passed"] else "failed"
+        frontend = self.frontend.verify(
+            root,
+            execute_build=execute_frontend_build,
+        )
+        checks.append(frontend)
+
+        passed = backend["passed"] and frontend["passed"]
+        status = "verified" if passed else "failed"
         return {
             "status": status,
             "readiness": readiness,
             "checks": checks,
-            "execution": execution,
+            "execution": {
+                "backend": backend,
+                "frontend": frontend,
+            },
         }
 
     @staticmethod
