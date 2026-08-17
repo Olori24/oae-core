@@ -7,7 +7,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
 from oae.api.routes import router
-from oae.api.ui import page
+from oae.api.ui_mission_control import page
 
 
 app = FastAPI(
@@ -32,10 +32,7 @@ app.add_middleware(
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     raw_request_id = request.headers.get("X-Request-ID", "")
-    if (
-        1 <= len(raw_request_id) <= 128
-        and all(32 <= ord(char) <= 126 for char in raw_request_id)
-    ):
+    if 1 <= len(raw_request_id) <= 128 and all(32 <= ord(char) <= 126 for char in raw_request_id):
         request_id = raw_request_id
     else:
         request_id = str(uuid4())
@@ -45,9 +42,7 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["Cache-Control"] = (
-        "no-store" if request.url.path.startswith("/v1/") else "no-cache"
-    )
+    response.headers["Cache-Control"] = "no-store" if request.url.path.startswith("/v1/") else "no-cache"
     return response
 
 
@@ -61,10 +56,7 @@ async def runtime_error_handler(request: Request, exc: RuntimeError):
         detail = "The service could not complete this request."
     return JSONResponse(
         status_code=503,
-        content={
-            "error": "service_unavailable",
-            "detail": detail,
-        },
+        content={"error": "service_unavailable", "detail": detail},
         headers={"Cache-Control": "no-store"},
     )
 
