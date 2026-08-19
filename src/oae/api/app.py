@@ -1,3 +1,5 @@
+import json
+import logging
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -10,16 +12,35 @@ from oae.api.routes import router
 from oae.api.ui_mission_control_v2 import page
 
 
+class JsonFormatter(logging.Formatter):
+    """Emit compact JSON logs suitable for production aggregation."""
+
+    def format(self, record):
+        return json.dumps(
+            {
+                "timestamp": self.formatTime(record, self.datefmt),
+                "level": record.levelname,
+                "logger": record.name,
+                "message": record.getMessage(),
+            }
+        )
+
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(JsonFormatter())
+logging.getLogger("oae").handlers.clear()
+logging.getLogger("oae").addHandler(_handler)
+logging.getLogger("oae").setLevel(logging.INFO)
+logger = logging.getLogger("oae.api")
+
+
 app = FastAPI(
     title="Open Autonomous Engineer API",
     version="0.6.0",
     description="Multi-tenant API for autonomous repository engineering.",
 )
 
-app.add_middleware(
-    TrustedHostMiddleware,
-    allowed_hosts=settings.allowed_hosts,
-)
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -36,7 +57,6 @@ async def security_headers(request: Request, call_next):
         request_id = raw_request_id
     else:
         request_id = str(uuid4())
-
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -48,8 +68,8 @@ async def security_headers(request: Request, call_next):
 
 @app.exception_handler(RuntimeError)
 async def runtime_error_handler(request: Request, exc: RuntimeError):
-    """Keep infrastructure failures machine-readable for the SaaS client."""
     message = str(exc)
+    logger.exception("runtime_error", extra={"path": request.url.path})
     if "database" in message.lower() or "postgres" in message.lower():
         detail = "Database configuration is unavailable. Check the production database integration."
     else:
