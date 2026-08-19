@@ -2,54 +2,45 @@ from pathlib import Path
 
 
 class AuthenticationGenerator:
-    """
-    Generates authentication scaffolding.
-    """
+    """Generate authentication scaffolding without shipping secret literals."""
 
     def generate(self, root):
         root = Path(root)
-
         auth = root / "src" / "auth"
         auth.mkdir(parents=True, exist_ok=True)
-
         models = root / "src" / "models"
         models.mkdir(parents=True, exist_ok=True)
-
         api = root / "src" / "api"
         api.mkdir(parents=True, exist_ok=True)
 
-        (auth / "__init__.py").write_text("")
-
+        (auth / "__init__.py").write_text("", encoding="utf-8")
         (auth / "security.py").write_text(
-"""SECRET_KEY = 'change-me'
+            '''import os
 
-ALGORITHM = 'HS256'
-
+SECRET_KEY = os.environ["SECRET_KEY"]
+ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-"""
+''',
+            encoding="utf-8",
         )
-
         (auth / "password.py").write_text(
-"""import hashlib
+            '''import hashlib
 
 
-def hash_password(password: str):
-    return hashlib.sha256(
-        password.encode()
-    ).hexdigest()
-"""
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+''',
+            encoding="utf-8",
         )
-
         (auth / "jwt.py").write_text(
-"""def create_access_token(data):
+            '''def create_access_token(data):
     return {"access_token": data}
-"""
+''',
+            encoding="utf-8",
         )
-
-        (models / "__init__.py").write_text("")
-
+        (models / "__init__.py").write_text("", encoding="utf-8")
         (models / "user.py").write_text(
-"""from sqlalchemy import Column, Integer, String
+            '''from sqlalchemy import Column, Integer, String
 from src.database.database import Base
 
 
@@ -60,16 +51,13 @@ class User(Base):
     username = Column(String(255), unique=True)
     email = Column(String(255), unique=True)
     password = Column(String(255))
-"""
+''',
+            encoding="utf-8",
         )
-
         (api / "auth.py").write_text(
-"""from fastapi import APIRouter
+            '''from fastapi import APIRouter
 
-router = APIRouter(
-    prefix="/auth",
-    tags=["Authentication"],
-)
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.post("/register")
@@ -80,7 +68,7 @@ def register():
 @router.post("/login")
 def login():
     return {"message": "Login Successful"}
-"""
+''',
+            encoding="utf-8",
         )
-
         return auth
