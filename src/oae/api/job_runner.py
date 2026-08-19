@@ -1,4 +1,5 @@
 import json
+import logging
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -9,14 +10,15 @@ from oae.api.mission_results import build_result
 from oae.core.vertical_slice_mission import VerticalSliceMission
 
 
+logger = logging.getLogger("oae.api.job_runner")
+
+
 class JobRunner:
     """Executes supported SaaS engineering operations in isolated mission workspaces."""
 
     def run(self, job_id: str) -> None:
         with db() as conn:
-            row = conn.execute(
-                "SELECT operation,payload FROM jobs WHERE id=?", (job_id,)
-            ).fetchone()
+            row = conn.execute("SELECT operation,payload FROM jobs WHERE id=?", (job_id,)).fetchone()
             if not row:
                 return
             operation, payload_json = row
@@ -30,6 +32,7 @@ class JobRunner:
             result = self._dispatch(operation, payload, job_id)
             status = "completed"
         except Exception as exc:
+            logger.exception("job_execution_failed job_id=%s operation=%s", job_id, operation)
             result = {
                 "schema_version": "1.0",
                 "operation": operation,
@@ -71,11 +74,7 @@ class JobRunner:
                 operation=operation,
                 payload=payload,
                 summary=f"Engineering review recorded {len(findings)} finding(s).",
-                evidence={
-                    "finding_count": len(findings),
-                    "findings": findings,
-                    "review_status": "recorded",
-                },
+                evidence={"finding_count": len(findings), "findings": findings, "review_status": "recorded"},
             )
             result.update({"count": len(findings), "findings": findings})
             return result
@@ -89,11 +88,7 @@ class JobRunner:
             result = build_result(
                 operation=operation,
                 payload=payload,
-                summary=(
-                    "Verification checks passed."
-                    if verified
-                    else "Verification checks did not establish success."
-                ),
+                summary="Verification checks passed." if verified else "Verification checks did not establish success.",
                 evidence={
                     "verified": verified,
                     "check_count": len(checks),
@@ -122,15 +117,8 @@ class JobRunner:
             return build_result(
                 operation=operation,
                 payload=payload,
-                summary=(
-                    f"Application mission {name} reached {result['status']} "
-                    f"with readiness score {result['readiness_score']}."
-                ),
-                evidence={
-                    "mission": result,
-                    "workspace": str(workspace),
-                    "workspace_persistent": False,
-                },
+                summary=f"Application mission {name} reached {result['status']} with readiness score {result['readiness_score']}.",
+                evidence={"mission": result, "workspace": str(workspace), "workspace_persistent": False},
             )
 
         raise ValueError(f"Unsupported operation: {operation}")
