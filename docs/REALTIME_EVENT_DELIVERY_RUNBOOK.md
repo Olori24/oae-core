@@ -6,7 +6,7 @@ This runbook activates OAE’s PostgreSQL-backed durable job workers, transactio
 
 ## Required Runtime Topology
 
-The production compose file starts four long-lived services: `api`, `worker`, `relay`, and PostgreSQL. The migration job is deliberately a one-shot tool service. All services use the same production environment file, while API and workers share the persistent workspace volume.
+The production compose file starts five long-lived services: `gateway`, `api`, `worker`, `relay`, and PostgreSQL. The migration job is deliberately a one-shot tool service. All services use the same production environment file, while API and workers share the persistent workspace volume. Only the HTTPS gateway publishes host ports; the API remains private to the Compose network.
 
 | Service | Responsibility | Required before traffic |
 |---|---|---|
@@ -15,12 +15,14 @@ The production compose file starts four long-lived services: `api`, `worker`, `r
 | `worker` | Claims, renews, retries, and finalizes leased jobs | At least one healthy instance. |
 | `relay` | Projects transactional outbox rows and powers SSE replay | At least one healthy instance. |
 | `api` | Authenticates requests and serves replay/SSE endpoints | Behind HTTPS with exact CORS and host configuration. |
+| `gateway` | Terminates HTTPS and forwards SSE without proxy buffering | DNS for `API_DOMAIN` points to this host; ports 80 and 443 are reachable. |
 
 ## Production Environment
 
-Create an uncommitted `.env.production` file owned by the deployment environment. Set unique secrets and do not reuse development values.
+Copy `.env.production.example` to an uncommitted `.env.production` file owned by the deployment environment. Set unique secrets and do not reuse development values. Replace `api.example.com` with the actual domain and ensure its DNS A/AAAA records point to the deployment host before starting the gateway.
 
 ```dotenv
+API_DOMAIN=api.example.com
 APP_ENV=production
 POSTGRES_DB=oae
 POSTGRES_USER=oae
@@ -45,7 +47,7 @@ Build the images and start PostgreSQL first. Apply migrations as a one-shot job 
 docker compose -f docker-compose.production.yml --env-file .env.production build
 docker compose -f docker-compose.production.yml --env-file .env.production up -d db
 docker compose -f docker-compose.production.yml --env-file .env.production run --rm migrate
-docker compose -f docker-compose.production.yml --env-file .env.production up -d api worker relay
+docker compose -f docker-compose.production.yml --env-file .env.production up -d api worker relay gateway
 ```
 
 Confirm each process is healthy before allowing production job submissions.

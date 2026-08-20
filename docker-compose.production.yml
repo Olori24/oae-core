@@ -18,10 +18,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     volumes:
       - oae-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     restart: unless-stopped
 
   worker:
@@ -54,6 +59,23 @@ services:
     profiles: ["tools"]
     restart: "no"
 
+  gateway:
+    image: caddy:2.8-alpine
+    env_file: .env.production
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - oae-caddy-data:/data
+      - oae-caddy-config:/config
+    restart: unless-stopped
+
 volumes:
   oae-data:
   oae-postgres:
+  oae-caddy-data:
+  oae-caddy-config:
