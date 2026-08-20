@@ -17,7 +17,9 @@ jobs:
       - name: Compile
         run: python -m compileall -q src
       - name: Test with coverage
-        run: pytest -q --cov=oae --cov-report=term-missing --cov-fail-under=70
+        run: pytest -q --cov=oae --cov-report=term-missing --cov-report=json:coverage.json
+      - name: Enforce coverage threshold
+        run: python scripts/check_coverage_threshold.py --coverage-file coverage.json --threshold 70
 
   lint:
     runs-on: ubuntu-latest
@@ -29,7 +31,7 @@ jobs:
       - name: Install ruff
         run: pip install ruff==0.12.2
       - name: Ruff
-        run: ruff check src tests
+        run: ruff check src tests scripts
 
   typecheck:
     runs-on: ubuntu-latest

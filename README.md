@@ -464,7 +464,8 @@ Run the full local quality gate:
 ```bash
 ruff check src tests
 mypy src
-pytest --cov=oae --cov-report=term-missing --cov-fail-under=70
+pytest --cov=oae --cov-report=term-missing --cov-report=json:coverage.json
+python scripts/check_coverage_threshold.py --coverage-file coverage.json --threshold 70
 ```
 
 `requirements.lock.txt` is the committed, pinned dependency graph used by local development, CI, and Docker. Regenerate it intentionally after dependency changes with `pip-compile --extra dev pyproject.toml --output-file requirements.lock.txt`, then run the full quality gate again.

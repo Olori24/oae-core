@@ -10,4 +10,5 @@ data/
 *.db
 .coverage
 htmlcov/
+coverage.json
 *.egg-info/
