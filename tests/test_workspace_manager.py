@@ -1,3 +1,5 @@
+from contextlib import contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -5,6 +7,7 @@ import pytest
 from oae.api.workspace_manager import (
     PinnedRepositoryRevision,
     PinnedRevisionNotFound,
+    PostgresWorkspaceRepository,
     WorkspaceQuotaExceeded,
 )
 from oae.api.workspace_manager import (
@@ -110,3 +113,33 @@ def test_manager_cleans_staging_when_quota_reservation_fails(tmp_path, revision)
 
     assert not any((tmp_path / ".staging").glob("*"))
     assert not (tmp_path / "tenant" / "tenant-1" / "workspace").exists()
+
+
+def test_postgres_workspace_ready_transition_emits_durable_event(monkeypatch):
+    import oae.api.workspace_manager as module
+
+    class Result:
+        rowcount = 1
+
+    class Connection:
+        def execute(self, _query, _params=()):
+            return Result()
+
+    class EventWriter:
+        def __init__(self):
+            self.events = []
+
+        def append(self, _conn, **kwargs):
+            self.events.append(kwargs)
+
+    @contextmanager
+    def fake_db():
+        yield Connection()
+
+    writer = EventWriter()
+    monkeypatch.setattr(module, "db", fake_db)
+    PostgresWorkspaceRepository(event_writer=writer).mark_ready(
+        "tenant-1", "workspace-1", datetime.now(timezone.utc)
+    )
+
+    assert writer.events[0]["event_type"] == "workspace.ready"

@@ -8,6 +8,7 @@ def test_postgres_migration_files_are_ordered_and_present():
         "0001_workspace_foundation.sql",
         "0002_durable_job_worker_foundation.sql",
         "0003_transactional_outbox_sse.sql",
+        "0004_realtime_event_metadata.sql",
     ]
 
 
@@ -45,3 +46,10 @@ def test_outbox_sse_migration_declares_durable_replay_and_relay_leases():
     assert "CREATE UNIQUE INDEX IF NOT EXISTS uq_outbox_events_aggregate_sequence" in migration
     assert "CREATE OR REPLACE FUNCTION oae_notify_realtime_event()" in migration
     assert "PERFORM pg_notify('oae_realtime_event', NEW.id)" in migration
+
+
+def test_realtime_event_metadata_migration_preserves_correlation_fields():
+    migration = migration_files()[3].read_text(encoding="utf-8")
+
+    assert "ALTER TABLE realtime_events ADD COLUMN IF NOT EXISTS correlation_id TEXT" in migration
+    assert "ALTER TABLE realtime_events ADD COLUMN IF NOT EXISTS causation_id TEXT" in migration

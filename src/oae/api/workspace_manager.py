@@ -13,6 +13,7 @@ from uuid import uuid4
 
 from oae.api.config import settings
 from oae.api.db import db
+from oae.api.domain_events import DomainEventWriter
 from oae.api.workspace_models import (
     WorkspaceManifest,
     WorkspaceManifestEntry,
@@ -96,6 +97,9 @@ class GitRevisionMaterializer:
 class PostgresWorkspaceRepository:
     """PostgreSQL workspace metadata store with transaction-scoped tenant quota reservation."""
 
+    def __init__(self, event_writer: DomainEventWriter | None = None):
+        self.event_writer = event_writer or DomainEventWriter()
+
     def get_pinned_revision(
         self, tenant_id: str, repository_id: str, revision_id: str
     ) -> PinnedRepositoryRevision | None:
@@ -176,6 +180,22 @@ class PostgresWorkspaceRepository:
                         entry.created_at,
                     ),
                 )
+            self.event_writer.append(
+                conn,
+                tenant_id=record.tenant_id,
+                aggregate_type="workspace",
+                aggregate_id=record.id,
+                event_type="workspace.provisioning",
+                payload={
+                    "purpose": record.purpose.value,
+                    "repository_id": record.repository_id,
+                    "source_revision_id": record.source_revision_id,
+                    "file_count": record.file_count,
+                    "size_bytes": record.size_bytes,
+                    "manifest_sha256": record.manifest_sha256,
+                },
+                occurred_at=record.created_at,
+            )
 
     def mark_ready(self, tenant_id: str, workspace_id: str, ready_at: datetime) -> None:
         with db() as conn:
@@ -184,16 +204,35 @@ class PostgresWorkspaceRepository:
                 "WHERE tenant_id=? AND id=? AND state='provisioning'",
                 (ready_at, tenant_id, workspace_id),
             ).rowcount
+            if changed == 1:
+                self.event_writer.append(
+                    conn,
+                    tenant_id=tenant_id,
+                    aggregate_type="workspace",
+                    aggregate_id=workspace_id,
+                    event_type="workspace.ready",
+                    payload={"ready_at": ready_at.isoformat()},
+                    occurred_at=ready_at,
+                )
         if changed != 1:
             raise WorkspaceError("Workspace readiness transition lost its provisioning ownership.")
 
     def mark_failed(self, tenant_id: str, workspace_id: str, failure_code: str) -> None:
         with db() as conn:
-            conn.execute(
+            changed = conn.execute(
                 "UPDATE workspaces SET state='failed',failure_code=? "
                 "WHERE tenant_id=? AND id=? AND state='provisioning'",
                 (failure_code, tenant_id, workspace_id),
-            )
+            ).rowcount
+            if changed == 1:
+                self.event_writer.append(
+                    conn,
+                    tenant_id=tenant_id,
+                    aggregate_type="workspace",
+                    aggregate_id=workspace_id,
+                    event_type="workspace.failed",
+                    payload={"failure_code": failure_code},
+                )
 
 
 class WorkspaceManager:

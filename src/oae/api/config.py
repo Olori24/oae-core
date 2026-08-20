@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     durable_job_lease_seconds: int = 60
     durable_job_max_attempts: int = 3
     durable_job_retry_max_seconds: int = 300
+    realtime_events_enabled: bool = False
+    outbox_relay_lease_seconds: int = 30
+    outbox_relay_batch_size: int = 50
+    outbox_relay_retry_max_seconds: int = 300
+    sse_poll_seconds: float = 1.0
+    sse_heartbeat_seconds: int = 15
+    sse_max_connection_seconds: int = 300
+    sse_replay_limit: int = 200
 
     @field_validator("app_env", "database_url", "api_key_pepper", mode="before")
     @classmethod
@@ -44,6 +52,12 @@ class Settings(BaseSettings):
         "durable_job_lease_seconds",
         "durable_job_max_attempts",
         "durable_job_retry_max_seconds",
+        "outbox_relay_lease_seconds",
+        "outbox_relay_batch_size",
+        "outbox_relay_retry_max_seconds",
+        "sse_heartbeat_seconds",
+        "sse_max_connection_seconds",
+        "sse_replay_limit",
         mode="before",
     )
     @classmethod
@@ -54,6 +68,12 @@ class Settings(BaseSettings):
                 "durable_job_lease_seconds": 60,
                 "durable_job_max_attempts": 3,
                 "durable_job_retry_max_seconds": 300,
+                "outbox_relay_lease_seconds": 30,
+                "outbox_relay_batch_size": 50,
+                "outbox_relay_retry_max_seconds": 300,
+                "sse_heartbeat_seconds": 15,
+                "sse_max_connection_seconds": 300,
+                "sse_replay_limit": 200,
             }
             return defaults[info.field_name]
         return value

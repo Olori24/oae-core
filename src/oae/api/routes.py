@@ -1,14 +1,18 @@
 import json
+import time
+from collections.abc import Callable, Iterator
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from oae.api.auth import create_api_key, require_tenant
 from oae.api.config import settings
 from oae.api.db import db
 from oae.api.durable_jobs import DurableJobRepository
 from oae.api.job_runner import JobRunner
+from oae.api.realtime_events import EventCursorExpired, RealtimeEvent, RealtimeEventStore
 from oae.api.schemas import (
     JobCreate,
     JobResponse,
@@ -22,6 +26,51 @@ from oae.api.schemas import (
 
 router = APIRouter()
 MAX_JOBS_PER_30_DAYS = 1000
+
+
+def _sse_response(
+    initial_events: list[RealtimeEvent],
+    after: int,
+    cursor_for: Callable[[RealtimeEvent], int],
+    fetch: Callable[[int], list[RealtimeEvent]],
+) -> StreamingResponse:
+    def stream() -> Iterator[str]:
+        cursor = after
+        pending = initial_events
+        heartbeat_at = time.monotonic()
+        closes_at = heartbeat_at + settings.sse_max_connection_seconds
+        while time.monotonic() < closes_at:
+            events = pending
+            pending = []
+            if not events:
+                events = fetch(cursor)
+            for event in events:
+                sequence = cursor_for(event)
+                if sequence <= cursor:
+                    continue
+                envelope = json.dumps(event.envelope(), separators=(",", ":"), sort_keys=True)
+                yield f"id: {sequence}\nevent: {event.event_type}\ndata: {envelope}\n\n"
+                cursor = sequence
+            now = time.monotonic()
+            if not events and now - heartbeat_at >= settings.sse_heartbeat_seconds:
+                yield ": keep-alive\n\n"
+                heartbeat_at = now
+            if not events:
+                time.sleep(max(settings.sse_poll_seconds, 0.1))
+        yield "event: stream.closed\ndata: {\"reason\":\"reauthentication_required\"}\n\n"
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
+
+
+def _cursor_expired_response(exc: EventCursorExpired) -> HTTPException:
+    return HTTPException(
+        status_code=410,
+        detail={"error": "event_cursor_expired", "oldest_sequence": exc.oldest_sequence},
+    )
 
 
 def _now() -> str:
@@ -269,3 +318,65 @@ def get_job(job_id: str, tenant_id: str = Depends(require_tenant)) -> JobRespons
         id=row[0], status=row[1], operation=row[2], payload=json.loads(row[3]),
         result=json.loads(row[4]) if row[4] else None, created_at=row[5], updated_at=row[6]
     )
+
+
+@router.get("/v1/events/snapshot", tags=["events"])
+def event_snapshot(tenant_id: str = Depends(require_tenant)) -> dict:
+    return RealtimeEventStore().snapshot(tenant_id)
+
+
+@router.get("/v1/events", tags=["events"])
+def stream_tenant_events(
+    after: int = Query(default=0, ge=0),
+    tenant_id: str = Depends(require_tenant),
+) -> StreamingResponse:
+    store = RealtimeEventStore()
+    try:
+        initial = store.list_tenant_events(tenant_id, after)
+    except EventCursorExpired as exc:
+        raise _cursor_expired_response(exc) from exc
+    return _sse_response(
+        initial,
+        after,
+        lambda event: event.tenant_sequence,
+        lambda cursor: store.list_tenant_events(tenant_id, cursor),
+    )
+
+
+def _stream_aggregate_events(
+    tenant_id: str,
+    aggregate_type: str,
+    aggregate_id: str,
+    after: int,
+) -> StreamingResponse:
+    store = RealtimeEventStore()
+    if not store.assert_aggregate_owned(tenant_id, aggregate_type, aggregate_id):
+        raise HTTPException(status_code=404, detail=f"{aggregate_type.title()} not found")
+    try:
+        initial = store.list_aggregate_events(tenant_id, aggregate_type, aggregate_id, after)
+    except EventCursorExpired as exc:
+        raise _cursor_expired_response(exc) from exc
+    return _sse_response(
+        initial,
+        after,
+        lambda event: event.aggregate_sequence,
+        lambda cursor: store.list_aggregate_events(tenant_id, aggregate_type, aggregate_id, cursor),
+    )
+
+
+@router.get("/v1/jobs/{job_id}/events", tags=["events"])
+def stream_job_events(
+    job_id: str,
+    after: int = Query(default=0, ge=0),
+    tenant_id: str = Depends(require_tenant),
+) -> StreamingResponse:
+    return _stream_aggregate_events(tenant_id, "job", job_id, after)
+
+
+@router.get("/v1/workspaces/{workspace_id}/events", tags=["events"])
+def stream_workspace_events(
+    workspace_id: str,
+    after: int = Query(default=0, ge=0),
+    tenant_id: str = Depends(require_tenant),
+) -> StreamingResponse:
+    return _stream_aggregate_events(tenant_id, "workspace", workspace_id, after)
