@@ -8,7 +8,16 @@ from oae.api.auth import create_api_key, require_tenant
 from oae.api.config import settings
 from oae.api.db import db
 from oae.api.job_runner import JobRunner
-from oae.api.schemas import JobCreate, JobResponse, TenantCreate, TenantCreated
+from oae.api.schemas import (
+    JobCreate,
+    JobResponse,
+    RepositoryCreate,
+    RepositoryResponse,
+    RevisionCreate,
+    RevisionResponse,
+    TenantCreate,
+    TenantCreated,
+)
 
 router = APIRouter()
 MAX_JOBS_PER_30_DAYS = 1000
@@ -20,6 +29,32 @@ def _now() -> str:
 
 def _timestamp(value: str) -> datetime:
     return datetime.fromisoformat(value)
+
+
+def _repository_response(row) -> RepositoryResponse:
+    return RepositoryResponse(
+        id=row[0],
+        provider=row[1],
+        external_id=row[2],
+        clone_url=row[3],
+        default_branch=row[4],
+        status=row[5],
+        last_synced_commit=row[6],
+        created_at=row[7],
+        updated_at=row[8],
+    )
+
+
+def _revision_response(row) -> RevisionResponse:
+    return RevisionResponse(
+        id=row[0],
+        repository_id=row[1],
+        commit_sha=row[2],
+        tree_sha=row[3],
+        branch_name=row[4],
+        manifest_sha256=row[5],
+        observed_at=row[6],
+    )
 
 
 @router.get("/health", tags=["system"])
@@ -51,6 +86,110 @@ def me(tenant_id: str = Depends(require_tenant)) -> dict[str, str]:
     if not row:
         raise HTTPException(status_code=401, detail="Tenant not found")
     return {"tenant_id": row[0], "name": row[1], "created_at": row[2]}
+
+
+@router.post("/v1/repositories", response_model=RepositoryResponse, status_code=201, tags=["repositories"])
+def create_repository(
+    data: RepositoryCreate,
+    tenant_id: str = Depends(require_tenant),
+) -> RepositoryResponse:
+    repository_id = str(uuid4())
+    now = _now()
+    with db() as conn:
+        inserted = conn.execute(
+            """
+            INSERT INTO repositories(
+                id,tenant_id,provider,external_id,clone_url,default_branch,credential_ref,
+                status,last_synced_commit,created_at,updated_at,deleted_at
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT(tenant_id,provider,external_id) DO NOTHING
+            """,
+            (
+                repository_id,
+                tenant_id,
+                data.provider,
+                data.external_id,
+                data.clone_url,
+                data.default_branch,
+                data.credential_ref,
+                "active",
+                None,
+                now,
+                now,
+                None,
+            ),
+        )
+        if inserted.rowcount == 0:
+            raise HTTPException(status_code=409, detail="Repository is already registered for this tenant")
+    return RepositoryResponse(
+        id=repository_id,
+        provider=data.provider,
+        external_id=data.external_id,
+        clone_url=data.clone_url,
+        default_branch=data.default_branch,
+        status="active",
+        last_synced_commit=None,
+        created_at=_timestamp(now),
+        updated_at=_timestamp(now),
+    )
+
+
+@router.post(
+    "/v1/repositories/{repository_id}/revisions",
+    response_model=RevisionResponse,
+    status_code=201,
+    tags=["repositories"],
+)
+def pin_repository_revision(
+    repository_id: str,
+    data: RevisionCreate,
+    tenant_id: str = Depends(require_tenant),
+) -> RevisionResponse:
+    revision_id = str(uuid4())
+    observed_at = _now()
+    with db() as conn:
+        repository = conn.execute(
+            """
+            SELECT id FROM repositories
+            WHERE id=? AND tenant_id=? AND status='active' AND deleted_at IS NULL
+            """,
+            (repository_id, tenant_id),
+        ).fetchone()
+        if not repository:
+            raise HTTPException(status_code=404, detail="Repository not found")
+        inserted = conn.execute(
+            """
+            INSERT INTO repository_revisions(
+                id,tenant_id,repository_id,commit_sha,tree_sha,branch_name,manifest_sha256,observed_at
+            ) VALUES(?,?,?,?,?,?,?,?)
+            ON CONFLICT(tenant_id,repository_id,commit_sha) DO NOTHING
+            """,
+            (
+                revision_id,
+                tenant_id,
+                repository_id,
+                data.commit_sha,
+                data.tree_sha,
+                data.branch_name,
+                data.manifest_sha256,
+                observed_at,
+            ),
+        )
+        if inserted.rowcount == 0:
+            raise HTTPException(status_code=409, detail="Revision is already pinned for this repository")
+        conn.execute(
+            "UPDATE repositories SET last_synced_commit=?, updated_at=? WHERE id=? AND tenant_id=?",
+            (data.commit_sha, observed_at, repository_id, tenant_id),
+        )
+    return RevisionResponse(
+        id=revision_id,
+        repository_id=repository_id,
+        commit_sha=data.commit_sha,
+        tree_sha=data.tree_sha,
+        branch_name=data.branch_name,
+        manifest_sha256=data.manifest_sha256,
+        observed_at=_timestamp(observed_at),
+    )
 
 
 @router.post("/v1/jobs", response_model=JobResponse, status_code=202, tags=["jobs"])

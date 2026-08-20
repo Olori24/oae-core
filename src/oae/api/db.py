@@ -28,9 +28,42 @@ CREATE TABLE IF NOT EXISTS jobs (
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS repositories (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    provider TEXT NOT NULL CHECK (provider IN ('github')),
+    external_id TEXT NOT NULL,
+    clone_url TEXT NOT NULL,
+    default_branch TEXT NOT NULL,
+    credential_ref TEXT,
+    status TEXT NOT NULL CHECK (status IN ('active', 'revoked', 'error')),
+    last_synced_commit TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    deleted_at TEXT,
+    UNIQUE (tenant_id, id),
+    UNIQUE (tenant_id, provider, external_id)
+);
+CREATE TABLE IF NOT EXISTS repository_revisions (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    repository_id TEXT NOT NULL,
+    commit_sha TEXT NOT NULL,
+    tree_sha TEXT,
+    branch_name TEXT,
+    manifest_sha256 TEXT,
+    observed_at TEXT NOT NULL,
+    UNIQUE (tenant_id, repository_id, commit_sha),
+    FOREIGN KEY (tenant_id, repository_id)
+        REFERENCES repositories (tenant_id, id)
+);
 CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_repositories_tenant_active
+    ON repositories (tenant_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_repository_revisions_tenant_repository
+    ON repository_revisions (tenant_id, repository_id, observed_at DESC);
 """
 
 POSTGRES_STATEMENTS = (
