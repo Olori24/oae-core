@@ -62,7 +62,14 @@ class FrontendBuildVerifier:
             }
 
         install = self._run(
-            [npm, "install", "--ignore-scripts", "--no-audit", "--no-fund"],
+            [
+                npm,
+                "install",
+                "--include=dev",
+                "--ignore-scripts",
+                "--no-audit",
+                "--no-fund",
+            ],
             frontend,
             timeout,
         )
