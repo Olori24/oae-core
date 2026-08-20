@@ -2,6 +2,8 @@
 
 import os
 
+pytest_plugins = ["tests.postgres_integration"]
+
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = "sqlite:///./.pytest-oae.db"
 os.environ["SECRET_KEY"] = "test-only-secret-not-for-production"
