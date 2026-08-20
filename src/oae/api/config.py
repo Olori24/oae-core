@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     workspace_quota_bytes: int = 1024 * 1024 * 1024
     workspace_quota_count: int = 20
     workspace_file_max_bytes: int = 100 * 1024 * 1024
+    durable_jobs_enabled: bool = False
+    durable_job_lease_seconds: int = 60
+    durable_job_max_attempts: int = 3
+    durable_job_retry_max_seconds: int = 300
 
     @field_validator("app_env", "database_url", "api_key_pepper", mode="before")
     @classmethod
@@ -35,11 +39,23 @@ class Settings(BaseSettings):
             return defaults[info.field_name]
         return value
 
-    @field_validator("max_job_seconds", mode="before")
+    @field_validator(
+        "max_job_seconds",
+        "durable_job_lease_seconds",
+        "durable_job_max_attempts",
+        "durable_job_retry_max_seconds",
+        mode="before",
+    )
     @classmethod
-    def parse_job_seconds(cls, value):
+    def parse_job_seconds(cls, value, info):
         if value is None or value == "":
-            return 300
+            defaults = {
+                "max_job_seconds": 300,
+                "durable_job_lease_seconds": 60,
+                "durable_job_max_attempts": 3,
+                "durable_job_retry_max_seconds": 300,
+            }
+            return defaults[info.field_name]
         return value
 
     @field_validator("cors_origins", "allowed_hosts", mode="before")

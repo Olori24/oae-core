@@ -26,6 +26,9 @@ class TenantCreated(_StrictModel):
 class JobCreate(_StrictModel):
     operation: str = Field(pattern=r"^(analyze|review|verify|build)$")
     payload: dict = Field(default_factory=dict)
+    workspace_id: str | None = Field(default=None, min_length=1, max_length=120)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+    priority: int = Field(default=100, ge=0, le=1000)
 
 
 class JobResponse(_StrictModel):

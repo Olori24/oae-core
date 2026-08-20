@@ -7,6 +7,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from oae.api.auth import create_api_key, require_tenant
 from oae.api.config import settings
 from oae.api.db import db
+from oae.api.durable_jobs import DurableJobRepository
 from oae.api.job_runner import JobRunner
 from oae.api.schemas import (
     JobCreate,
@@ -198,6 +199,23 @@ def create_job(
     background_tasks: BackgroundTasks,
     tenant_id: str = Depends(require_tenant),
 ) -> JobResponse:
+    if settings.durable_jobs_enabled:
+        durable_job = DurableJobRepository().enqueue(
+            tenant_id=tenant_id,
+            operation=data.operation,
+            payload=data.payload,
+            idempotency_key=data.idempotency_key,
+            workspace_id=data.workspace_id,
+            priority=data.priority,
+        )
+        return JobResponse(
+            id=durable_job.id,
+            status=durable_job.status,
+            operation=durable_job.operation,
+            payload=durable_job.payload,
+            created_at=durable_job.created_at,
+            updated_at=durable_job.updated_at,
+        )
     job_id = str(uuid4())
     now = _now()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
