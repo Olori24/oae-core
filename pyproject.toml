@@ -29,6 +29,7 @@ dev = [
 
 [project.scripts]
 oae-api = "oae.api.app:app"
+oae-migrate = "oae.api.migrations:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

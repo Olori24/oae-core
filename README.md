@@ -470,6 +470,17 @@ python scripts/check_coverage_threshold.py --coverage-file coverage.json --thres
 
 `requirements.lock.txt` is the committed, pinned dependency graph used by local development, CI, and Docker. Regenerate it intentionally after dependency changes with `pip-compile --extra dev pyproject.toml --output-file requirements.lock.txt`, then run the full quality gate again.
 
+### PostgreSQL migrations
+
+Production persistence is migrated through ordered SQL files in `migrations/postgres`. Set a PostgreSQL `DATABASE_URL`, inspect pending migration names, then apply them:
+
+```bash
+oae-migrate --dry-run
+oae-migrate
+```
+
+The initial migration set introduces tenant-scoped repository revisions, persistent workspace metadata and manifests, job leases/attempts, workers, and transactional outbox/event tables. Do not run production migrations against SQLite.
+
 Before a production-facing change, validate at least:
 
 ```text
