@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 jobs:
   dependency-audit:
@@ -39,17 +40,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  supply-chain:
-    name: Supply-chain posture
+  dependency-review:
+    name: Dependency change review
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
         with:
-          persist-credentials: false
-      - name: Assess repository supply-chain posture
-        uses: ossf/scorecard-action@v2.4.3
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          results_file: scorecard.sarif
-          results_format: sarif
-          publish_results: false
+          fail-on-severity: high

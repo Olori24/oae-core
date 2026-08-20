@@ -2,7 +2,7 @@
 
 ## Automated checks
 
-The `Security` workflow runs dependency auditing, secret scanning, and supply-chain posture checks on pull requests, pushes to `main`, manual dispatches, and every Monday at 05:23 UTC. A failed security check must be investigated before merge.
+The `Security` workflow runs locked dependency auditing and secret scanning on pushes to `main`, manual dispatches, and every Monday at 05:23 UTC. Pull requests also receive a dependency-change review that fails on newly introduced high-severity findings. A failed security check must be investigated before merge.
 
 ## Reporting a vulnerability
 
