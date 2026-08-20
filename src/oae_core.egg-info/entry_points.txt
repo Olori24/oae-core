@@ -1,2 +1,0 @@
-[console_scripts]
-oae-api = oae.api.app:app
