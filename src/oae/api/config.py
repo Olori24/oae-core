@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     allowed_hosts: Annotated[list[str], NoDecode] = ["*"]
     max_job_seconds: int = 300
     sentry_dsn: str = ""
+    workspace_root: str = "./data/oae-workspaces"
+    workspace_retention_days: int = 30
+    workspace_quota_bytes: int = 1024 * 1024 * 1024
+    workspace_quota_count: int = 20
+    workspace_file_max_bytes: int = 100 * 1024 * 1024
 
     @field_validator("app_env", "database_url", "api_key_pepper", mode="before")
     @classmethod
