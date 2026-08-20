@@ -1,6 +1,5 @@
 from oae.core.repository_diagnosis_v2 import RepositoryDiagnosisV2
 
-
 INTELLIGENCE = {
     "knowledge": {
         "a.py": {

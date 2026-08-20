@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 RESULT_SCHEMA_VERSION = "1.0"
 
 

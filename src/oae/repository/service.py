@@ -4,8 +4,8 @@ Repository Service.
 Central access point for repository operations.
 """
 
-from oae.repository.scanner import RepositoryScanner
 from oae.repository.rollback import RollbackEngine
+from oae.repository.scanner import RepositoryScanner
 from oae.storage.snapshot import SnapshotManager
 
 

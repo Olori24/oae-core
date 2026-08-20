@@ -11,7 +11,7 @@ class EnvironmentLoader:
 
         env_file = root / ".env"
 
-        values = {}
+        values: dict[str, str] = {}
 
         if not env_file.exists():
             return values

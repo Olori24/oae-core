@@ -427,7 +427,8 @@ git clone https://github.com/Olori24/oae-core.git
 cd oae-core
 python -m venv .venv
 . .venv/bin/activate
-pip install -e ".[dev]"
+pip install -r requirements.lock.txt
+pip install --no-deps -e .
 ```
 
 ## Configure
@@ -458,11 +459,15 @@ OAE treats tests as part of the engineering loop.
 
 The repository has a **773-test local baseline** from the current development history. New changes should preserve the existing suite and add focused coverage where behavior changes.
 
-Run:
+Run the full local quality gate:
 
 ```bash
-pytest -q
+ruff check src tests
+mypy src
+pytest --cov=oae --cov-report=term-missing --cov-fail-under=70
 ```
+
+`requirements.lock.txt` is the committed, pinned dependency graph used by local development, CI, and Docker. Regenerate it intentionally after dependency changes with `pip-compile --extra dev pyproject.toml --output-file requirements.lock.txt`, then run the full quality gate again.
 
 Before a production-facing change, validate at least:
 
@@ -499,9 +504,12 @@ The deployment must also provide production security configuration such as:
 
 - `APP_ENV=production`
 - strong `API_KEY_PEPPER`
+- a unique `SECRET_KEY` for generated applications
 - exact allowed hosts
 - exact CORS origins
 - HTTPS
+
+Optional integration variables are documented in `.env.example`: `GITHUB_TOKEN` enables higher GitHub API rate limits, `NEXT_PUBLIC_API_URL` and `OAE_API_URL` describe client/API boundaries, `VERCEL` is set by the deployment platform, and `SENTRY_DSN` enables error tracking. Error events are not sent when `SENTRY_DSN` is unset.
 
 SQLite remains a local-development convenience. It is **not** the production persistence strategy for a multi-developer SaaS deployment.
 

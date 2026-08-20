@@ -13,7 +13,7 @@ class MissionQueue:
     """
 
     def __init__(self):
-        self._queue = deque()
+        self._queue: deque[QueuedMission] = deque()
 
     def enqueue(self, objective: str):
         mission = QueuedMission(objective)

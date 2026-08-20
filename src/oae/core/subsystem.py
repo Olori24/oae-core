@@ -7,7 +7,7 @@ class Subsystem:
     """Base class for kernel-managed subsystems."""
 
     name = "subsystem"
-    dependencies = []
+    dependencies: list[str] = []
 
     def __init__(self):
         self._initialized = False

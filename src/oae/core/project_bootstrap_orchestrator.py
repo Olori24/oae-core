@@ -1,29 +1,30 @@
 from pathlib import Path
+from typing import Any
 
-from oae.core.project_skeleton_generator import ProjectSkeletonGenerator
-from oae.core.readme_generator import ReadmeGenerator
-from oae.core.gitignore_generator import GitignoreGenerator
-from oae.core.requirements_generator import RequirementsGenerator
-from oae.core.env_generator import EnvGenerator
-from oae.core.pyproject_generator import PyprojectGenerator
-from oae.core.dockerfile_generator import DockerfileGenerator
-from oae.core.github_actions_generator import GitHubActionsGenerator
+from oae.core.api_integration_generator import ApiIntegrationGenerator
 from oae.core.application_scaffold_generator import ApplicationScaffoldGenerator
+from oae.core.authentication_generator import AuthenticationGenerator
+from oae.core.database_generator import DatabaseGenerator
+from oae.core.dockerfile_generator import DockerfileGenerator
+from oae.core.env_generator import EnvGenerator
 from oae.core.executable_application_generator import ExecutableApplicationGenerator
 from oae.core.frontend_application_generator import FrontendApplicationGenerator
-from oae.core.database_generator import DatabaseGenerator
+from oae.core.github_actions_generator import GitHubActionsGenerator
+from oae.core.gitignore_generator import GitignoreGenerator
+from oae.core.opportunity_api_generator import OpportunityApiGenerator
 from oae.core.opportunity_model_generator import OpportunityModelGenerator
 from oae.core.opportunity_repository_generator import OpportunityRepositoryGenerator
-from oae.core.opportunity_api_generator import OpportunityApiGenerator
-from oae.core.authentication_generator import AuthenticationGenerator
-from oae.core.api_integration_generator import ApiIntegrationGenerator
+from oae.core.project_skeleton_generator import ProjectSkeletonGenerator
+from oae.core.pyproject_generator import PyprojectGenerator
+from oae.core.readme_generator import ReadmeGenerator
+from oae.core.requirements_generator import RequirementsGenerator
 from oae.core.schema_generator import SchemaGenerator
 
 
 class ProjectBootstrapOrchestrator:
 
     def __init__(self):
-        self.generators = [
+        self.generators: list[Any] = [
             ProjectSkeletonGenerator(),
             ReadmeGenerator(),
             GitignoreGenerator(),

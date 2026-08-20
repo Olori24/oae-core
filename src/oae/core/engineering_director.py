@@ -1,16 +1,15 @@
+from oae.agents.cto_agent import CTOAgent
+from oae.agents.engineering_action_executor import (
+    EngineeringActionExecutor,
+)
 from oae.core.autonomous_execution_pipeline import (
     AutonomousExecutionPipeline,
 )
-
-from oae.agents.cto_agent import CTOAgent
+from oae.core.engineering_decision_gate import EngineeringDecisionGate
 from oae.core.engineering_ledger import EngineeringLedger
 from oae.core.engineering_memory import EngineeringMemory
 from oae.core.engineering_recommendation_engine import (
     EngineeringRecommendationEngine,
-)
-from oae.core.engineering_decision_gate import EngineeringDecisionGate
-from oae.agents.engineering_action_executor import (
-    EngineeringActionExecutor,
 )
 
 

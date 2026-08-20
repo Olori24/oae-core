@@ -1,6 +1,5 @@
 from oae.core.python_ast_parser import PythonASTParser
 
-
 SAMPLE = """
 import os
 from pathlib import Path

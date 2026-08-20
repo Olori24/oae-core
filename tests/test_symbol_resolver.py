@@ -1,6 +1,5 @@
 from oae.core.symbol_resolver import SymbolResolver
 
-
 GRAPH = {
     "auth.py": {
         "functions": ["login", "logout"],

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from oae.core.autonomous_planner import AutonomousPlanner
 from oae.core.autonomous_executor import AutonomousExecutor
+from oae.core.autonomous_planner import AutonomousPlanner
 
 
 @dataclass

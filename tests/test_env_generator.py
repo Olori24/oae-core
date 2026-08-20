@@ -8,3 +8,5 @@ def test_generate(tmp_path):
 
     assert path.exists()
     assert "DATABASE_URL" in path.read_text()
+    assert "SECRET_KEY=" in path.read_text()
+    assert "change-me" not in path.read_text()

@@ -2,10 +2,10 @@
 Central Security Kernel for OAE.
 """
 
-from .permissions import Permissions
-from .policies import Policies
 from .approvals import Approvals
 from .audit import Audit
+from .permissions import Permissions
+from .policies import Policies
 
 
 class SecurityKernel:

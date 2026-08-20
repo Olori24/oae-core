@@ -62,7 +62,7 @@ def test_failure_mission_contains_steps():
 def test_recovery_mission_can_be_dispatched():
     pipeline = AutonomousRecoveryPipeline()
 
-    result = pipeline.handle(
+    pipeline.handle(
         {
             "passed": False,
             "returncode": 1,

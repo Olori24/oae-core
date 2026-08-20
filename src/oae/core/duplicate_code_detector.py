@@ -4,8 +4,8 @@ class DuplicateCodeDetector:
     """
 
     def analyze(self, repository_graph):
-        seen = {}
-        duplicates = []
+        seen: dict[str, str] = {}
+        duplicates: list[dict[str, object]] = []
 
         for filename, data in repository_graph.items():
             for function in data.get("functions", []):

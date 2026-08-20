@@ -1,8 +1,8 @@
-from contextlib import contextmanager
 import sqlite3
+from contextlib import contextmanager
+from typing import Any
 
 from oae.api.config import settings
-
 
 SQLITE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS tenants (
@@ -111,7 +111,7 @@ def _connect() -> _ConnectionAdapter:
             import psycopg
         except ImportError as exc:
             raise RuntimeError("Postgres is configured but psycopg is not installed") from exc
-        connection = psycopg.connect(settings.resolved_database_url)
+        connection: Any = psycopg.connect(settings.resolved_database_url)
         adapter = _ConnectionAdapter(connection, "postgres")
         for statement in POSTGRES_STATEMENTS:
             adapter.execute(statement)

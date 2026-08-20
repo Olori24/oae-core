@@ -1,6 +1,6 @@
-from oae.core.repository_orchestrator import RepositoryOrchestrator
 from oae.core.autonomous_decision_engine import AutonomousDecisionEngine
 from oae.core.engineering_journal import EngineeringJournal
+from oae.core.repository_orchestrator import RepositoryOrchestrator
 
 
 class AutonomousEngineeringExecutive:

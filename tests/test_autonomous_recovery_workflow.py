@@ -54,7 +54,7 @@ def test_recovery_mission_is_scheduled():
 
     workflow = AutonomousRecoveryWorkflow()
 
-    result = workflow.recover(
+    workflow.recover(
         {
             "passed": False,
             "returncode": 1,

@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from oae.meta.generator_registry import GeneratorRegistry
 

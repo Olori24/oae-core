@@ -24,14 +24,14 @@ class PythonASTParser:
         ]
 
     def imports(self, tree):
-        modules = []
+        modules: list[str] = []
 
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     modules.append(alias.name)
 
-            elif isinstance(node, ast.ImportFrom):
+            elif isinstance(node, ast.ImportFrom) and node.module:
                 modules.append(node.module)
 
         return [m for m in modules if m]

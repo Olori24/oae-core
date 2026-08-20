@@ -1,6 +1,6 @@
+from oae.core.circular_dependency_detector import CircularDependencyDetector
 from oae.core.dead_code_detector import DeadCodeDetector
 from oae.core.duplicate_code_detector import DuplicateCodeDetector
-from oae.core.circular_dependency_detector import CircularDependencyDetector
 
 
 class EngineeringAnalysisEngine:

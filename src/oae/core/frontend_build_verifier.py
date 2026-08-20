@@ -1,7 +1,8 @@
-from pathlib import Path
 import json
+import os
 import shutil
 import subprocess
+from pathlib import Path
 
 
 class FrontendBuildVerifier:
@@ -86,6 +87,9 @@ class FrontendBuildVerifier:
     @staticmethod
     def _run(command, cwd, timeout):
         try:
+            environment = os.environ.copy()
+            environment["NODE_ENV"] = "production"
+            environment.setdefault("NEXT_TELEMETRY_DISABLED", "1")
             result = subprocess.run(
                 command,
                 cwd=cwd,
@@ -93,6 +97,7 @@ class FrontendBuildVerifier:
                 text=True,
                 timeout=timeout,
                 check=False,
+                env=environment,
             )
             return {
                 "returncode": result.returncode,

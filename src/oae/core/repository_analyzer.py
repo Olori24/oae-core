@@ -4,7 +4,7 @@ class RepositoryAnalyzer:
     """
 
     def analyze(self, repository_profile):
-        findings = []
+        findings: list[str] = []
 
         if not repository_profile:
             return findings

@@ -1,5 +1,4 @@
 from oae.core.application_quality_gate import ApplicationQualityGate
-from oae.core.project_bootstrap_orchestrator import ProjectBootstrapOrchestrator
 from oae.core.project_specification import ProjectSpecification
 
 

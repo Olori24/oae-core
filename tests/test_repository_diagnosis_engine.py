@@ -2,7 +2,6 @@ from oae.core.repository_diagnosis_engine import (
     RepositoryDiagnosisEngine,
 )
 
-
 GRAPH = {
     "auth.py": {
         "functions": ["login", "logout"],

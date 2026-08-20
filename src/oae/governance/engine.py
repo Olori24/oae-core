@@ -13,7 +13,7 @@ class GovernanceEngine(Subsystem):
     """Coordinates governance resources."""
 
     name = "governance"
-    dependencies = []
+    dependencies: list[str] = []
 
     def __init__(self):
         super().__init__()

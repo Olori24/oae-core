@@ -4,7 +4,7 @@ class WorkloadManager:
     """
 
     def __init__(self):
-        self._workloads = {}
+        self._workloads: dict[str, int] = {}
 
     def register(self, agent_name: str):
         self._workloads.setdefault(agent_name, 0)
@@ -26,5 +26,5 @@ class WorkloadManager:
 
         return min(
             self._workloads,
-            key=self._workloads.get,
+            key=lambda agent_name: self._workloads[agent_name],
         )

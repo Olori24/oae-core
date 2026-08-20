@@ -1,9 +1,9 @@
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
-from oae.core.application_readiness_engine import ApplicationReadinessEngine
 from oae.core.application_integration_verifier import ApplicationIntegrationVerifier
+from oae.core.application_readiness_engine import ApplicationReadinessEngine
 from oae.core.frontend_build_verifier import FrontendBuildVerifier
 from oae.core.project_specification import ProjectSpecification
 

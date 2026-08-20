@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from .templates import MODULE_TEMPLATE
 
 

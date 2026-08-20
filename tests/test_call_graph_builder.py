@@ -1,6 +1,5 @@
 from oae.core.call_graph_builder import CallGraphBuilder
 
-
 SOURCE = """
 def login():
     authenticate()

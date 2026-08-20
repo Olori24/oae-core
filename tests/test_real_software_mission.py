@@ -1,4 +1,4 @@
-from examples.real_software_mission import MISSION, run
+from examples.real_software_mission import run
 
 
 def test_real_software_mission_produces_verified_candidate(tmp_path):

@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from oae.core.repository_worktree_manager import RepositoryWorktreeManager
 from oae.core.git_branch_manager import GitBranchManager
 from oae.core.real_patch_engine import RealPatchEngine
 from oae.core.repository_test_runner import RepositoryTestRunner
+from oae.core.repository_worktree_manager import RepositoryWorktreeManager
 from oae.security.kernel import SecurityKernel
 
 

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from oae.core.dependency_classifier import (
-    DependencyClassifier,
     ClassifiedDependency,
+    DependencyClassifier,
 )
 
 

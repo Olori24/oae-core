@@ -2,8 +2,8 @@
 Security subsystem for OAE.
 """
 
-from .policy import SecurityPolicy
 from .approval import ApprovalGate
+from .policy import SecurityPolicy
 
 __all__ = [
     "SecurityPolicy",

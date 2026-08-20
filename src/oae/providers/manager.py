@@ -1,7 +1,7 @@
-from .gemini import GeminiProvider
-from .openai import OpenAIProvider
 from .claude import ClaudeProvider
+from .gemini import GeminiProvider
 from .ollama import OllamaProvider
+from .openai import OpenAIProvider
 
 
 class ProviderManager:

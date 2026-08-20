@@ -80,11 +80,11 @@ def test_execution_engine_records_failure():
 
 
 def test_execution_engine_records_recovery_required_failure():
-    from oae.core.event_bus import EventBus
-    from oae.core.execution_engine import ExecutionEngine
     from oae.core.autonomous_recovery_pipeline import (
         AutonomousRecoveryPipeline,
     )
+    from oae.core.event_bus import EventBus
+    from oae.core.execution_engine import ExecutionEngine
 
 
     class FailingPipeline:

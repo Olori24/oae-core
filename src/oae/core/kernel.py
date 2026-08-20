@@ -6,8 +6,8 @@ OAE Kernel.
 from oae.core.boot_manager import BootManager
 from oae.core.event_bus import EventBus
 from oae.core.execution_engine import ExecutionEngine
-from oae.core.registry import SubsystemRegistry
 from oae.core.oae import OAE
+from oae.core.registry import SubsystemRegistry
 from oae.governance.engine import GovernanceEngine
 
 

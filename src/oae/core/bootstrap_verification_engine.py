@@ -27,21 +27,19 @@ class BootstrapVerificationEngine:
     def verify(self, root):
         root = Path(root)
 
-        report = {
-            "success": True,
-            "missing_files": [],
-            "missing_directories": [],
-        }
+        missing_files: list[str] = []
+        missing_directories: list[str] = []
 
         for file in self.REQUIRED_FILES:
             if not (root / file).exists():
-                report["missing_files"].append(file)
+                missing_files.append(file)
 
         for directory in self.REQUIRED_DIRECTORIES:
             if not (root / directory).exists():
-                report["missing_directories"].append(directory)
+                missing_directories.append(directory)
 
-        if report["missing_files"] or report["missing_directories"]:
-            report["success"] = False
-
-        return report
+        return {
+            "success": not (missing_files or missing_directories),
+            "missing_files": missing_files,
+            "missing_directories": missing_directories,
+        }

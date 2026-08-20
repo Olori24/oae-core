@@ -1,10 +1,10 @@
 from oae.core.autonomous_engineering_planner import (
     AutonomousEngineeringPlanner,
 )
-from oae.core.patch_generator import PatchGenerator
 from oae.core.autonomous_verification_pipeline import (
     AutonomousVerificationPipeline,
 )
+from oae.core.patch_generator import PatchGenerator
 
 
 class RepositoryRecoveryEngine:

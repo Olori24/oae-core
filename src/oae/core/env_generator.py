@@ -9,7 +9,8 @@ class EnvGenerator:
     CONTENT = """APP_NAME=Opportunity Radar Africa
 APP_ENV=development
 DATABASE_URL=sqlite:///app.db
-SECRET_KEY=change-me
+# Set a unique secret through the deployment environment; never commit it.
+SECRET_KEY=
 """
 
     def generate(self, root):

@@ -1,4 +1,3 @@
-import pytest
 
 from oae.core.opportunity_source_connector import (
     OpportunitySourceConnector,

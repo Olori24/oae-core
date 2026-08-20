@@ -1,7 +1,7 @@
-from oae.core.project_specification import ProjectSpecification
 from oae.core.project_skeleton_generator import (
     ProjectSkeletonGenerator,
 )
+from oae.core.project_specification import ProjectSpecification
 
 
 def test_generate(tmp_path):

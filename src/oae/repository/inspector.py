@@ -4,8 +4,8 @@ Repository Inspector.
 
 from pathlib import Path
 
-from .profile import RepositoryProfile
 from .detector_registry import DetectorRegistry
+from .profile import RepositoryProfile
 
 
 class RepositoryInspector:

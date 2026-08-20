@@ -1,5 +1,6 @@
 import subprocess
 
+
 class GitDiff:
 
     def summary(self):

@@ -1,5 +1,5 @@
-from oae.core.repository_scanner import RepositoryScanner
 from oae.core.repository_knowledge_graph import RepositoryKnowledgeGraph
+from oae.core.repository_scanner import RepositoryScanner
 
 
 class RepositoryIntelligenceBuilder:

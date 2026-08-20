@@ -4,8 +4,6 @@ class CodeChangePlanner:
     """
 
     def plan(self, mission, repository_files):
-        mission_lower = mission.lower()
-
         affected = []
 
         for file in repository_files:

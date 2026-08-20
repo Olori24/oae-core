@@ -1,4 +1,6 @@
 import ast
+from typing import Any, cast
+
 
 class EngineeringMemory:
     """
@@ -136,7 +138,7 @@ class EngineeringMemory:
 
         decisions = self.events("ENGINEERING_DECISION")
 
-        report = {
+        report: dict[str, Any] = {
             "total": len(decisions),
             "proceed": 0,
             "review": 0,
@@ -151,16 +153,21 @@ class EngineeringMemory:
             except (ValueError, SyntaxError):
                 continue
 
+            if not isinstance(data, dict):
+                continue
+
             decision = data.get("decision")
             if decision in ("proceed", "review", "hold"):
-                report[decision] += 1
+                report[decision] = int(report[decision]) + 1
 
             recommendation = data.get("recommendation", {})
             if isinstance(recommendation, dict):
                 name = recommendation.get("recommendation")
                 if name:
-                    report["recommendations"][name] = (
-                        report["recommendations"].get(name, 0) + 1
+                    recommendations = cast(dict[str, int], report["recommendations"])
+                    recommendation_name = str(name)
+                    recommendations[recommendation_name] = (
+                        recommendations.get(recommendation_name, 0) + 1
                     )
 
         return report

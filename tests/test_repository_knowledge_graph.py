@@ -2,7 +2,6 @@ from oae.core.repository_knowledge_graph import (
     RepositoryKnowledgeGraph,
 )
 
-
 FILES = {
     "auth.py": """
 import os

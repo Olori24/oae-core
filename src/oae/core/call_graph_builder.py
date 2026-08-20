@@ -9,8 +9,8 @@ class CallGraphBuilder:
     def build(self, source_code: str):
         tree = ast.parse(source_code)
 
-        graph = {}
-        current_function = None
+        graph: dict[str, list[str]] = {}
+        current_function: str | None = None
 
         class Visitor(ast.NodeVisitor):
             def visit_FunctionDef(self, node):

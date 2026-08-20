@@ -53,6 +53,7 @@ class RecoveryPriorityDispatcher:
         else:
             objective = str(mission)
 
+        objective = str(objective)
         return self.dispatcher.queue.enqueue(
             objective,
             priority,

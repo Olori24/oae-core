@@ -1,6 +1,5 @@
 from fastapi.responses import HTMLResponse
 
-
 PAGE = r'''<!doctype html>
 <html lang="en">
 <head>

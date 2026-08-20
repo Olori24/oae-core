@@ -1,12 +1,12 @@
 from copy import deepcopy
 
+from oae.core.opportunity_ingestion import OpportunityIngestion
 from oae.core.opportunity_intelligence_explanation import (
     OpportunityIntelligenceExplanation,
 )
 from oae.core.opportunity_intelligence_scorer import (
     OpportunityIntelligenceScorer,
 )
-from oae.core.opportunity_ingestion import OpportunityIngestion
 from oae.core.opportunity_ranker import OpportunityRanker
 from oae.core.opportunity_recommendation_engine import (
     OpportunityRecommendationEngine,

@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from oae.core.repository_scanner import RepositoryScanner
 

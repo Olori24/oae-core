@@ -14,7 +14,7 @@ class CapabilityResolver:
 
     def resolve(self, capability):
 
-        resolved = []
+        resolved: list[str] = []
 
         self._resolve(capability, resolved)
 

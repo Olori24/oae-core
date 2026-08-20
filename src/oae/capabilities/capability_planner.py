@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from oae.capabilities.capability import Capability
-
 
 @dataclass(slots=True)
 class CapabilityMission:

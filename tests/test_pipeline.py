@@ -1,10 +1,10 @@
-from oae.core.oae import OAE
 from oae.core.context import EngineeringContext
-from oae.core.stage_registry import StageRegistry
+from oae.core.oae import OAE
 from oae.core.pipeline import EngineeringPipeline
 from oae.core.stage import Stage
-from oae.stages.verification_stage import VerificationStage
+from oae.core.stage_registry import StageRegistry
 from oae.stages.audit_stage import AuditStage
+from oae.stages.verification_stage import VerificationStage
 
 
 class FailingStage(Stage):

@@ -5,11 +5,10 @@ import secrets
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Header, HTTPException, status
 
-from oae.api.db import db
 from oae.api.config import settings
-
+from oae.api.db import db
 
 _PBKDF2_ITERATIONS = 310_000
 _HASH_PREFIX = "pbkdf2_sha256"

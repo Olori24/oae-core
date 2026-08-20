@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     cors_origins: Annotated[list[str], NoDecode] = ["*"]
     allowed_hosts: Annotated[list[str], NoDecode] = ["*"]
     max_job_seconds: int = 300
+    sentry_dsn: str = ""
 
     @field_validator("app_env", "database_url", "api_key_pepper", mode="before")
     @classmethod

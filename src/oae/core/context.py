@@ -2,7 +2,7 @@
 Engineering context shared by all pipeline stages.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 
 class EngineeringContext:

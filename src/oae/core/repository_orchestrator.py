@@ -1,6 +1,6 @@
+from oae.core.intelligent_mission_generator import IntelligentMissionGenerator
 from oae.core.repository_analyzer import RepositoryAnalyzer
 from oae.core.repository_intelligence_engine import RepositoryIntelligenceEngine
-from oae.core.intelligent_mission_generator import IntelligentMissionGenerator
 
 
 class RepositoryOrchestrator:

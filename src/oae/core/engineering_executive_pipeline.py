@@ -1,14 +1,14 @@
-from oae.core.repository_intelligence_builder import (
-    RepositoryIntelligenceBuilder,
-)
-from oae.core.repository_diagnosis_v2 import (
-    RepositoryDiagnosisV2,
-)
 from oae.core.engineering_analysis_engine import (
     EngineeringAnalysisEngine,
 )
 from oae.core.engineering_recommendation_engine import (
     EngineeringRecommendationEngine,
+)
+from oae.core.repository_diagnosis_v2 import (
+    RepositoryDiagnosisV2,
+)
+from oae.core.repository_intelligence_builder import (
+    RepositoryIntelligenceBuilder,
 )
 from oae.core.repository_recovery_engine import (
     RepositoryRecoveryEngine,

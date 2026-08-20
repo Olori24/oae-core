@@ -1,5 +1,5 @@
-from oae.core.secure_pipeline import SecureExecutionPipeline
 from oae.core.decision_engine import Decision
+from oae.core.secure_pipeline import SecureExecutionPipeline
 from oae.security.request import ApprovalRequest
 
 

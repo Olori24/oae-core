@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from oae.core.api_integration_generator import ApiIntegrationGenerator
 from oae.core.project_specification import ProjectSpecification

@@ -1,7 +1,7 @@
-from oae.core.engineering_director import EngineeringDirector
 from oae.core.dynamic_mission_prioritizer import (
     DynamicMissionPrioritizer,
 )
+from oae.core.engineering_director import EngineeringDirector
 
 
 class MultiAgentDispatcher:

@@ -1,7 +1,7 @@
-from oae.core.project_specification import ProjectSpecification
 from oae.core.application_scaffold_generator import (
     ApplicationScaffoldGenerator,
 )
+from oae.core.project_specification import ProjectSpecification
 
 
 def test_generate(tmp_path):

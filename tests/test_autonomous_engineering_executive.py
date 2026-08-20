@@ -2,7 +2,6 @@ from oae.core.autonomous_engineering_executive import (
     AutonomousEngineeringExecutive,
 )
 
-
 FILES = {
     "auth.py": """
 import os

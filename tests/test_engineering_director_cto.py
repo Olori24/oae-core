@@ -1,5 +1,5 @@
-from oae.core.engineering_director import EngineeringDirector
 from oae.capabilities.capability_planner import CapabilityMission
+from oae.core.engineering_director import EngineeringDirector
 
 
 def test_engineering_director_review():

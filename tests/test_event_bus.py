@@ -1,5 +1,5 @@
-from oae.core.event_bus import EventBus
 from oae.core import events
+from oae.core.event_bus import EventBus
 
 
 def test_event_bus():

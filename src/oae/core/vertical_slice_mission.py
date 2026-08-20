@@ -22,6 +22,7 @@ class VerticalSliceMission:
         result = self.executor.execute(Path(root), specification)
         return {
             "mission": name,
+            "application": name,
             "status": result["status"],
             "verified": result["verified"],
             "readiness_score": result["readiness_score"],

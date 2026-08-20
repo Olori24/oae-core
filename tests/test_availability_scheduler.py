@@ -1,5 +1,5 @@
-from oae.core.availability_scheduler import AvailabilityScheduler
 from oae.core.agent_availability import AgentAvailability
+from oae.core.availability_scheduler import AvailabilityScheduler
 
 
 def test_creation():

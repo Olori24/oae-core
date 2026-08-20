@@ -1,5 +1,4 @@
 from oae.capabilities.capability import Capability
-
 from oae.capabilities.capability_planner import (
     CapabilityPlanner,
 )

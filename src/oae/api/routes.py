@@ -18,6 +18,10 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _timestamp(value: str) -> datetime:
+    return datetime.fromisoformat(value)
+
+
 @router.get("/health", tags=["system"])
 def health() -> dict[str, str]:
     with db() as conn:
@@ -70,7 +74,14 @@ def create_job(
             (job_id, tenant_id, "queued", data.operation, json.dumps(data.payload), now, now),
         )
     background_tasks.add_task(JobRunner().run, job_id)
-    return JobResponse(id=job_id, status="queued", operation=data.operation, payload=data.payload, created_at=now, updated_at=now)
+    return JobResponse(
+        id=job_id,
+        status="queued",
+        operation=data.operation,
+        payload=data.payload,
+        created_at=_timestamp(now),
+        updated_at=_timestamp(now),
+    )
 
 
 @router.get("/v1/jobs", response_model=list[JobResponse], tags=["jobs"])

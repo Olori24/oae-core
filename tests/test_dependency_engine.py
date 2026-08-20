@@ -1,5 +1,5 @@
-from oae.core.dependency_engine import DependencyEngine
 from oae.core.dependency_classifier import ClassifiedDependency
+from oae.core.dependency_engine import DependencyEngine
 
 
 def test_dependency_engine_creation():

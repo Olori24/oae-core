@@ -2,9 +2,9 @@
 Repository sandbox for safe engineering operations.
 """
 
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
 
 
 class RepositorySandbox:

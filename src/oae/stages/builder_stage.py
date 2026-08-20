@@ -2,8 +2,8 @@
 Builder stage.
 """
 
-from oae.core.stage import Stage
 from oae.builder.builder import Builder
+from oae.core.stage import Stage
 
 
 class BuilderStage(Stage):

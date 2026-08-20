@@ -3,9 +3,9 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
-COPY pyproject.toml requirements.txt README.md ./
+COPY pyproject.toml requirements.lock.txt README.md ./
 COPY src ./src
-RUN pip install --no-cache-dir -r requirements.txt && pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -r requirements.lock.txt && pip install --no-cache-dir --no-deps -e .
 
 RUN useradd --create-home --uid 10001 oae && mkdir -p /app/data && chown -R oae:oae /app
 USER oae
