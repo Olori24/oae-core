@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 from contextlib import contextmanager
 from typing import Any
 
@@ -101,6 +102,9 @@ POSTGRES_STATEMENTS = (
     "CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC)",
 )
 
+_POSTGRES_BOOTSTRAP_LOCK = threading.Lock()
+_POSTGRES_BOOTSTRAPPED_URLS: set[str] = set()
+
 
 class _ConnectionAdapter:
     """Small compatibility layer so existing repository code works on SQLite and Postgres."""
@@ -146,10 +150,7 @@ def _connect() -> _ConnectionAdapter:
             raise RuntimeError("Postgres is configured but psycopg is not installed") from exc
         connection: Any = psycopg.connect(settings.resolved_database_url)
         adapter = _ConnectionAdapter(connection, "postgres")
-        for statement in POSTGRES_STATEMENTS:
-            adapter.execute(statement)
-        adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_prefix TEXT")
-        adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
+        _bootstrap_postgres(adapter, settings.resolved_database_url)
         return adapter
 
     if backend == "sqlite":
@@ -166,6 +167,20 @@ def _connect() -> _ConnectionAdapter:
     raise RuntimeError(
         "No supported persistent database configured. Set DATABASE_URL or POSTGRES_URL."
     )
+
+
+def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
+    """Create legacy base tables once per connection URL without concurrent DDL deadlocks."""
+    with _POSTGRES_BOOTSTRAP_LOCK:
+        if database_url in _POSTGRES_BOOTSTRAPPED_URLS:
+            return
+        adapter.execute("SELECT pg_advisory_xact_lock(hashtextextended('oae:postgres-bootstrap', 0))")
+        for statement in POSTGRES_STATEMENTS:
+            adapter.execute(statement)
+        adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_prefix TEXT")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
+        adapter.commit()
+        _POSTGRES_BOOTSTRAPPED_URLS.add(database_url)
 
 
 @contextmanager

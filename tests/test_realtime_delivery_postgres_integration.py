@@ -124,7 +124,7 @@ def test_transaction_rollback_leaves_no_orphan_outbox_event(postgres_schema):
             )
             raise RuntimeError("force rollback")
 
-    rows = _rows(postgres_schema, "SELECT id FROM outbox_events WHERE tenant_id=?", (tenant_id,))
+    rows = _rows(postgres_schema, "SELECT id FROM outbox_events WHERE tenant_id=%s", (tenant_id,))
     assert rows == []
 
 
