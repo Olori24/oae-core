@@ -39,6 +39,7 @@ def test_production_environment_template_enables_durable_event_delivery_without_
 def test_caddy_keeps_sse_proxy_flush_unbuffered():
     caddyfile = (ROOT / "Caddyfile").read_text(encoding="utf-8")
 
+    assert "email {$CADDY_EMAIL}" in caddyfile
     assert "{$API_DOMAIN}" in caddyfile
     assert "reverse_proxy api:8000" in caddyfile
     assert "flush_interval -1" in caddyfile
