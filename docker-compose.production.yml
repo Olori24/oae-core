@@ -31,7 +31,9 @@ services:
 
   worker:
     build: .
-    command: ["oae-worker", "--name", "oae-worker-1", "--pool", "engineering"]
+    # Omit a fixed worker name so Compose can safely scale this service.
+    # oae-worker defaults its identity from the container hostname.
+    command: ["oae-worker", "--pool", "engineering"]
     env_file: .env.production
     depends_on:
       db:
