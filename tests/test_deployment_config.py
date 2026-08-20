@@ -43,3 +43,15 @@ def test_caddy_keeps_sse_proxy_flush_unbuffered():
     assert "{$API_DOMAIN}" in caddyfile
     assert "reverse_proxy api:8000" in caddyfile
     assert "flush_interval -1" in caddyfile
+
+
+def test_staging_caddyfile_uses_letsencrypt_staging_and_preserves_gateway_policy():
+    caddyfile = (ROOT / "Caddyfile.staging").read_text(encoding="utf-8")
+    compose = (ROOT / "docker-compose.staging.yml").read_text(encoding="utf-8")
+
+    assert "email {$CADDY_EMAIL}" in caddyfile
+    assert "acme_ca https://acme-staging-v02.api.letsencrypt.org/directory" in caddyfile
+    assert "{$API_DOMAIN}" in caddyfile
+    assert "reverse_proxy api:8000" in caddyfile
+    assert "flush_interval -1" in caddyfile
+    assert "./Caddyfile.staging:/etc/caddy/Caddyfile:ro" in compose

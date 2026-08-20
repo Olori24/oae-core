@@ -1,0 +1,4 @@
+services:
+  gateway:
+    volumes:
+      - ./Caddyfile.staging:/etc/caddy/Caddyfile:ro
