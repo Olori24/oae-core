@@ -22,7 +22,7 @@ dev = [
     "httpx>=0.28,<1",
     "pytest-cov>=6,<7",
     "ruff>=0.8,<1",
-    "mypy>=1.13,<2",
+    "mypy>=1.13,<3",
     "pip-audit>=2.8,<3",
     "pip-tools>=7.4,<8",
 ]
