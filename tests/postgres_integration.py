@@ -3,7 +3,7 @@
 import os
 from collections.abc import Iterator
 from contextlib import contextmanager
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 from uuid import uuid4
 
 import pytest
@@ -22,7 +22,9 @@ def scoped_postgres_url(base_url: str, schema: str) -> str:
     parts = urlsplit(base_url)
     query = dict(parse_qsl(parts.query, keep_blank_values=True))
     query["options"] = f"-c search_path={schema}"
-    return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+    return urlunsplit(
+        (parts.scheme, parts.netloc, parts.path, urlencode(query, quote_via=quote), parts.fragment)
+    )
 
 
 @pytest.fixture
