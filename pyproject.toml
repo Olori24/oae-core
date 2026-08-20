@@ -9,19 +9,22 @@ description = "Open Autonomous Engineer"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "fastapi>=0.115,<1",
+    "fastapi>=0.141,<1",
     "uvicorn[standard]>=0.34,<1",
     "pydantic-settings>=2.7,<3",
     "psycopg[binary]>=3.2,<4",
+    "sentry-sdk>=2.0,<3",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8,<9",
+    "pytest>=9.0.3,<10",
     "httpx>=0.28,<1",
     "pytest-cov>=6,<7",
     "ruff>=0.8,<1",
     "mypy>=1.13,<2",
+    "pip-audit>=2.8,<3",
+    "pip-tools>=7.4,<8",
 ]
 
 [project.scripts]
@@ -33,6 +36,7 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 norecursedirs = ["sandbox", "workspace", ".git", ".pytest_cache"]
+pythonpath = [".", "src"]
 
 [tool.ruff]
 line-length = 100

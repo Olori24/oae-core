@@ -9,7 +9,6 @@ from oae.api.github import GitHubPublicAnalyzer
 from oae.api.mission_results import build_result
 from oae.core.vertical_slice_mission import VerticalSliceMission
 
-
 logger = logging.getLogger("oae.api.job_runner")
 
 

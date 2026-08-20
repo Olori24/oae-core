@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
+from oae.api.observability import configure_error_tracking
 from oae.api.routes import router
 from oae.api.ui_mission_control_v2 import page
 
@@ -32,6 +33,7 @@ logging.getLogger("oae").handlers.clear()
 logging.getLogger("oae").addHandler(_handler)
 logging.getLogger("oae").setLevel(logging.INFO)
 logger = logging.getLogger("oae.api")
+configure_error_tracking(settings.sentry_dsn)
 
 
 app = FastAPI(
