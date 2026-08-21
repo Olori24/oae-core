@@ -1,0 +1,45 @@
+name: Bug report
+description: Report a reproducible OAE behavior defect.
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping improve OAE. Do not include API keys, credentials, database URLs, private repository URLs, tenant identifiers, or sensitive logs. Report security concerns privately through SECURITY.md instead.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Expected and observed outcome
+      description: State what you expected, what happened instead, and the user or operator impact.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Safe reproduction steps
+      description: Provide the smallest repeatable sequence. Remove secrets and private data.
+      placeholder: |
+        1. Configure an isolated test tenant.
+        2. Submit a bounded operation.
+        3. Observe the returned state or event stream behavior.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - API and tenant boundary
+        - Repository, revision, or workspace lifecycle
+        - Durable jobs or worker leasing
+        - Outbox relay or SSE delivery
+        - Deployment, Caddy, or configuration
+        - Documentation or developer experience
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Safe evidence
+      description: Include sanitized request IDs, status codes, test names, or redacted trace excerpts.

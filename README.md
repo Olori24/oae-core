@@ -285,6 +285,7 @@ The README is the entry point. The documents below provide the next level of det
 | [Event-delivery runbook](docs/REALTIME_EVENT_DELIVERY_RUNBOOK.md) | Activate or operate workers, relay, and SSE delivery |
 | [TLS dry-run procedure](docs/CADDY_TLS_DRY_RUN.md) | Validate Caddy and staging ACME before production certificate issuance |
 | [Production handoff](docs/PRODUCTION_HANDOFF.md) | Move from a staging TLS proof to a protected host activation and browser-live verification |
+| [Developer collaboration guide](docs/DEVELOPER_COLLABORATION.md) | Contribute through bounded changes, evidence-led reviews, and tenant-safe issue workflows |
 | [Architecture decisions](docs/adr/README.md) | Review durable technical decisions and their rationale |
 | [Repository standards](docs/governance/repository-standard.md) | Follow repository-level engineering expectations |
 | [Project charter](docs/OAE_PROJECT_CHARTER.md) | Read the product thesis and long-term direction |

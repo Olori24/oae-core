@@ -1,0 +1,39 @@
+name: Engineering workflow proposal
+description: Propose a bounded, verifiable OAE capability.
+title: "proposal: "
+labels: ["proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        OAE favors explicit engineering boundaries and evidence. Describe the operating problem before proposing an implementation. Do not include credentials, private repository data, or customer-sensitive content.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Engineering problem
+      description: What repeatable engineering or operator problem should OAE solve?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Verifiable outcome
+      description: Describe the observable API, artifact, state transition, or operator evidence that would establish success.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Boundary considerations
+      options:
+        - label: The proposal can preserve tenant isolation.
+          required: true
+        - label: The proposal does not require storing credentials in the OAE database.
+          required: true
+        - label: The proposal identifies its durable-state, event-delivery, or deployment impact where applicable.
+          required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives or constraints
+      description: Explain simpler alternatives, operational limits, or reasons the capability should remain out of scope.
