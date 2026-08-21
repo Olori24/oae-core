@@ -189,6 +189,70 @@ def test_tenant_cannot_pin_revisions_for_another_tenant_repository(tmp_path):
     assert response.status_code == 404
 
 
+def test_tenant_can_list_repository_lineage_and_workspace_inventory(tmp_path):
+    import oae.api.auth as auth
+    import oae.api.db as database
+
+    db_path = tmp_path / "repository-inventory.db"
+    database.settings.database_url = f"sqlite:///{db_path}"
+    auth.settings.database_url = f"sqlite:///{db_path}"
+    client = TestClient(app)
+
+    owner = client.post("/v1/tenants", json={"name": "Inventory Owner"})
+    other = client.post("/v1/tenants", json={"name": "Other Inventory Tenant"})
+    owner_headers = {"Authorization": f"Bearer {owner.json()['api_key']}"}
+    other_headers = {"Authorization": f"Bearer {other.json()['api_key']}"}
+    owner_id = owner.json()["tenant_id"]
+    repository = client.post(
+        "/v1/repositories",
+        headers=owner_headers,
+        json={
+            "provider": "github",
+            "external_id": "Olori24/oae-core",
+            "clone_url": "https://github.com/Olori24/oae-core.git",
+        },
+    ).json()
+    revision = client.post(
+        f"/v1/repositories/{repository['id']}/revisions",
+        headers=owner_headers,
+        json={"commit_sha": "a" * 40, "branch_name": "main"},
+    ).json()
+
+    now = "2026-08-21T08:00:00+00:00"
+    with database.db() as conn:
+        conn.execute(
+            """
+            INSERT INTO workspaces(
+                id,tenant_id,repository_id,source_revision_id,parent_workspace_id,purpose,state,storage_uri,
+                manifest_uri,manifest_sha256,size_bytes,file_count,retention_expires_at,created_at,ready_at,
+                deleted_at,failure_code,failure_detail_redacted
+            ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,
+            (
+                "workspace-1", owner_id, repository["id"], revision["id"], None, "source", "ready",
+                "file:///tmp/oae/workspace-1", "file:///tmp/oae/workspace-1/manifest.json", "b" * 64,
+                2048, 3, "2026-09-21T08:00:00+00:00", now, now, None, None, None,
+            ),
+        )
+
+    repositories = client.get("/v1/repositories", headers=owner_headers)
+    assert repositories.status_code == 200
+    assert [item["id"] for item in repositories.json()] == [repository["id"]]
+    revisions = client.get(f"/v1/repositories/{repository['id']}/revisions", headers=owner_headers)
+    assert revisions.status_code == 200
+    assert revisions.json()[0]["id"] == revision["id"]
+    workspaces = client.get("/v1/workspaces", headers=owner_headers)
+    assert workspaces.status_code == 200
+    assert workspaces.json()[0]["repository_id"] == repository["id"]
+    assert workspaces.json()[0]["size_bytes"] == 2048
+    assert client.get("/v1/workspaces/workspace-1", headers=owner_headers).status_code == 200
+
+    assert client.get("/v1/repositories", headers=other_headers).json() == []
+    assert client.get(f"/v1/repositories/{repository['id']}/revisions", headers=other_headers).status_code == 404
+    assert client.get("/v1/workspaces", headers=other_headers).json() == []
+    assert client.get("/v1/workspaces/workspace-1", headers=other_headers).status_code == 404
+
+
 def test_invalid_api_key_is_rejected():
     client = TestClient(app)
     response = client.get("/v1/me", headers={"Authorization": "Bearer invalid"})

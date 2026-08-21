@@ -58,6 +58,29 @@ CREATE TABLE IF NOT EXISTS repository_revisions (
     FOREIGN KEY (tenant_id, repository_id)
         REFERENCES repositories (tenant_id, id)
 );
+CREATE TABLE IF NOT EXISTS workspaces (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    repository_id TEXT NOT NULL,
+    source_revision_id TEXT NOT NULL,
+    parent_workspace_id TEXT,
+    purpose TEXT NOT NULL CHECK (purpose IN ('source', 'execution', 'output', 'review')),
+    state TEXT NOT NULL CHECK (state IN ('provisioning', 'ready', 'deleting', 'deleted', 'failed')),
+    storage_uri TEXT NOT NULL,
+    manifest_uri TEXT NOT NULL,
+    manifest_sha256 TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL DEFAULT 0 CHECK (size_bytes >= 0),
+    file_count INTEGER NOT NULL DEFAULT 0 CHECK (file_count >= 0),
+    retention_expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    ready_at TEXT,
+    deleted_at TEXT,
+    failure_code TEXT,
+    failure_detail_redacted TEXT,
+    UNIQUE (tenant_id, id),
+    FOREIGN KEY (tenant_id, repository_id) REFERENCES repositories (tenant_id, id),
+    FOREIGN KEY (tenant_id, source_revision_id) REFERENCES repository_revisions (tenant_id, id)
+);
 CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC);
@@ -65,6 +88,8 @@ CREATE INDEX IF NOT EXISTS idx_repositories_tenant_active
     ON repositories (tenant_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_repository_revisions_tenant_repository
     ON repository_revisions (tenant_id, repository_id, observed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_workspaces_tenant_repository
+    ON workspaces (tenant_id, repository_id, state, created_at DESC);
 """
 
 POSTGRES_STATEMENTS = (

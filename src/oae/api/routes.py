@@ -22,6 +22,7 @@ from oae.api.schemas import (
     RevisionResponse,
     TenantCreate,
     TenantCreated,
+    WorkspaceResponse,
 )
 
 router = APIRouter()
@@ -107,6 +108,27 @@ def _revision_response(row) -> RevisionResponse:
     )
 
 
+def _workspace_response(row) -> WorkspaceResponse:
+    return WorkspaceResponse(
+        id=row[0],
+        repository_id=row[1],
+        source_revision_id=row[2],
+        parent_workspace_id=row[3],
+        purpose=row[4],
+        state=row[5],
+        storage_uri=row[6],
+        manifest_uri=row[7],
+        manifest_sha256=row[8],
+        size_bytes=row[9],
+        file_count=row[10],
+        retention_expires_at=row[11],
+        created_at=row[12],
+        ready_at=row[13],
+        deleted_at=row[14],
+        failure_code=row[15],
+    )
+
+
 @router.get("/health", tags=["system"])
 def health() -> dict[str, str]:
     with db() as conn:
@@ -184,6 +206,22 @@ def create_repository(
     )
 
 
+@router.get("/v1/repositories", response_model=list[RepositoryResponse], tags=["repositories"])
+def list_repositories(tenant_id: str = Depends(require_tenant)) -> list[RepositoryResponse]:
+    with db() as conn:
+        rows = conn.execute(
+            """
+            SELECT id,provider,external_id,clone_url,default_branch,status,last_synced_commit,created_at,updated_at
+            FROM repositories
+            WHERE tenant_id=? AND deleted_at IS NULL
+            ORDER BY updated_at DESC, id DESC
+            LIMIT 100
+            """,
+            (tenant_id,),
+        ).fetchall()
+    return [_repository_response(row) for row in rows]
+
+
 @router.post(
     "/v1/repositories/{repository_id}/revisions",
     response_model=RevisionResponse,
@@ -240,6 +278,73 @@ def pin_repository_revision(
         manifest_sha256=data.manifest_sha256,
         observed_at=_timestamp(observed_at),
     )
+
+
+@router.get(
+    "/v1/repositories/{repository_id}/revisions",
+    response_model=list[RevisionResponse],
+    tags=["repositories"],
+)
+def list_repository_revisions(
+    repository_id: str,
+    tenant_id: str = Depends(require_tenant),
+) -> list[RevisionResponse]:
+    with db() as conn:
+        repository = conn.execute(
+            "SELECT id FROM repositories WHERE id=? AND tenant_id=? AND deleted_at IS NULL",
+            (repository_id, tenant_id),
+        ).fetchone()
+        if not repository:
+            raise HTTPException(status_code=404, detail="Repository not found")
+        rows = conn.execute(
+            """
+            SELECT id,repository_id,commit_sha,tree_sha,branch_name,manifest_sha256,observed_at
+            FROM repository_revisions
+            WHERE tenant_id=? AND repository_id=?
+            ORDER BY observed_at DESC, id DESC
+            LIMIT 100
+            """,
+            (tenant_id, repository_id),
+        ).fetchall()
+    return [_revision_response(row) for row in rows]
+
+
+@router.get("/v1/workspaces", response_model=list[WorkspaceResponse], tags=["workspaces"])
+def list_workspaces(
+    repository_id: str | None = Query(default=None, min_length=1, max_length=120),
+    tenant_id: str = Depends(require_tenant),
+) -> list[WorkspaceResponse]:
+    query = """
+        SELECT id,repository_id,source_revision_id,parent_workspace_id,purpose,state,storage_uri,manifest_uri,
+               manifest_sha256,size_bytes,file_count,retention_expires_at,created_at,ready_at,deleted_at,failure_code
+        FROM workspaces
+        WHERE tenant_id=?
+    """
+    params: tuple[str, ...] = (tenant_id,)
+    if repository_id is not None:
+        query += " AND repository_id=?"
+        params = (tenant_id, repository_id)
+    query += " ORDER BY created_at DESC, id DESC LIMIT 100"
+    with db() as conn:
+        rows = conn.execute(query, params).fetchall()
+    return [_workspace_response(row) for row in rows]
+
+
+@router.get("/v1/workspaces/{workspace_id}", response_model=WorkspaceResponse, tags=["workspaces"])
+def get_workspace(workspace_id: str, tenant_id: str = Depends(require_tenant)) -> WorkspaceResponse:
+    with db() as conn:
+        row = conn.execute(
+            """
+            SELECT id,repository_id,source_revision_id,parent_workspace_id,purpose,state,storage_uri,manifest_uri,
+                   manifest_sha256,size_bytes,file_count,retention_expires_at,created_at,ready_at,deleted_at,failure_code
+            FROM workspaces
+            WHERE id=? AND tenant_id=?
+            """,
+            (workspace_id, tenant_id),
+        ).fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Workspace not found")
+    return _workspace_response(row)
 
 
 @router.post("/v1/jobs", response_model=JobResponse, status_code=202, tags=["jobs"])

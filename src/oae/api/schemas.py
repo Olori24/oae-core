@@ -121,3 +121,22 @@ class RevisionResponse(_StrictModel):
     branch_name: str | None = None
     manifest_sha256: str | None = None
     observed_at: datetime
+
+
+class WorkspaceResponse(_StrictModel):
+    id: str
+    repository_id: str
+    source_revision_id: str
+    parent_workspace_id: str | None = None
+    purpose: Literal["source", "execution", "output", "review"]
+    state: Literal["provisioning", "ready", "deleting", "deleted", "failed"]
+    storage_uri: str
+    manifest_uri: str
+    manifest_sha256: str
+    size_bytes: int = Field(ge=0)
+    file_count: int = Field(ge=0)
+    retention_expires_at: datetime
+    created_at: datetime
+    ready_at: datetime | None = None
+    deleted_at: datetime | None = None
+    failure_code: str | None = None
