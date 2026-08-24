@@ -1,8 +1,7 @@
+import http.client
 import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 from oae.core.project_specification import ProjectSpecification
@@ -10,6 +9,10 @@ from oae.core.project_specification import ProjectSpecification
 
 class ApplicationIntegrationVerifier:
     """Verify that a generated FastAPI backend can serve its health contract."""
+
+    _LOOPBACK_HOST = "127.0.0.1"
+    _HEALTH_PORT = 8765
+    _MAX_HEALTH_RESPONSE_BYTES = 8_192
 
     def verify(self, root, specification: ProjectSpecification, timeout=30):
         root = Path(root)
@@ -28,7 +31,16 @@ class ApplicationIntegrationVerifier:
         if not (root / "src" / "api" / "health.py").is_file():
             return self._blocked("Missing generated health contract")
 
-        command = [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8765"]
+        command = [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "main:app",
+            "--host",
+            self._LOOPBACK_HOST,
+            "--port",
+            str(self._HEALTH_PORT),
+        ]
         process = subprocess.Popen(
             command,
             cwd=root / "src",
@@ -45,10 +57,9 @@ class ApplicationIntegrationVerifier:
                 if process.poll() is not None:
                     break
                 try:
-                    with urllib.request.urlopen("http://127.0.0.1:8765/health", timeout=2) as result:
-                        response = result.read().decode("utf-8")
+                    response = self._read_loopback_health()
                     break
-                except (urllib.error.URLError, TimeoutError) as exc:
+                except (http.client.HTTPException, OSError, TimeoutError, ValueError) as exc:
                     last_error = str(exc)
                     time.sleep(0.25)
 
@@ -74,6 +85,25 @@ class ApplicationIntegrationVerifier:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 process.kill()
+
+    @classmethod
+    def _read_loopback_health(cls) -> str:
+        """Read only the fixed local health endpoint with a bounded response body."""
+        connection = http.client.HTTPConnection(cls._LOOPBACK_HOST, cls._HEALTH_PORT, timeout=2)
+        try:
+            connection.request("GET", "/health", headers={"Accept": "application/json"})
+            result = connection.getresponse()
+            if result.status != 200:
+                raise ValueError(f"Loopback health endpoint returned HTTP {result.status}")
+            content_type = result.getheader("Content-Type", "").lower()
+            if "application/json" not in content_type:
+                raise ValueError("Loopback health endpoint did not return JSON")
+            body = result.read(cls._MAX_HEALTH_RESPONSE_BYTES + 1)
+            if len(body) > cls._MAX_HEALTH_RESPONSE_BYTES:
+                raise ValueError("Loopback health endpoint exceeded the response size limit")
+            return body.decode("utf-8")
+        finally:
+            connection.close()
 
     @staticmethod
     def _blocked(detail):

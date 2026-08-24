@@ -1,4 +1,36 @@
-from oae.api.migrations import migration_files
+from contextlib import contextmanager
+
+from oae.api.migrations import (
+    CREATE_MIGRATION_TABLE_SQL,
+    INSERT_MIGRATION_SQL,
+    SELECT_APPLIED_MIGRATIONS_SQL,
+    apply_postgres_migrations,
+    migration_files,
+)
+
+
+class _MigrationCursor:
+    def __init__(self):
+        self.calls = []
+
+    def execute(self, query, params=()):
+        self.calls.append((query, params))
+
+    def fetchall(self):
+        return []
+
+
+class _MigrationConnection:
+    def __init__(self):
+        self.cursor_instance = _MigrationCursor()
+        self.committed = False
+
+    @contextmanager
+    def cursor(self):
+        yield self.cursor_instance
+
+    def commit(self):
+        self.committed = True
 
 
 def test_postgres_migration_files_are_ordered_and_present():
@@ -74,3 +106,16 @@ def test_principal_role_migration_tracks_decision_and_revocation_metadata():
     assert "ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_role TEXT" in migration
     assert "ALTER TABLE worker_authorizations ADD COLUMN IF NOT EXISTS decided_role TEXT" in migration
     assert "ALTER TABLE worker_authorizations ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ" in migration
+
+
+def test_migration_ledger_uses_fixed_queries_for_its_fixed_table_name():
+    connection = _MigrationConnection()
+
+    assert apply_postgres_migrations(connection, migrations=[]) == []
+    queries = [query for query, _ in connection.cursor_instance.calls]
+
+    assert queries == [CREATE_MIGRATION_TABLE_SQL, SELECT_APPLIED_MIGRATIONS_SQL]
+    assert "{" not in CREATE_MIGRATION_TABLE_SQL
+    assert "{" not in SELECT_APPLIED_MIGRATIONS_SQL
+    assert "%s" in INSERT_MIGRATION_SQL
+    assert connection.committed is True

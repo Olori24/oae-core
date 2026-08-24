@@ -44,6 +44,8 @@ def test_public_analyzer_rejects_non_github_urls():
         "https://example.com/owner/repo",
         "https://github.com/owner",
         "https://github.com/owner/repo/issues/1",
+        "https://github.com/owner/repo?redirect=https://example.com",
+        "https://github.com/owner/repo#fragment",
     ):
         try:
             analyzer.analyze(url)
@@ -51,3 +53,14 @@ def test_public_analyzer_rejects_non_github_urls():
             pass
         else:
             raise AssertionError(f"Expected ValueError for {url}")
+
+
+def test_public_analyzer_refuses_non_github_api_fetch_before_network_access():
+    analyzer = GitHubPublicAnalyzer()
+
+    try:
+        analyzer._get("https://example.com/metadata")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Expected the analyzer to reject a non-GitHub API URL")

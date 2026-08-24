@@ -7,7 +7,12 @@ from fastapi.testclient import TestClient
 
 from oae.api.app import app
 from oae.api.outbox_relay import OutboxEvent, OutboxRelay
-from oae.api.realtime_events import EventCursorExpired, RealtimeEvent, RealtimeEventStore
+from oae.api.realtime_events import (
+    AGGREGATE_OWNERSHIP_QUERIES,
+    EventCursorExpired,
+    RealtimeEvent,
+    RealtimeEventStore,
+)
 
 
 class _Result:
@@ -116,8 +121,10 @@ class ReplayConnection:
         self.oldest = oldest
         self.rows = rows or []
         self.owned = owned
+        self.calls = []
 
     def execute(self, query, _params=()):
+        self.calls.append((query, _params))
         if "MIN(tenant_sequence)" in query or "MIN(aggregate_sequence)" in query:
             return _Result((self.oldest,))
         if "SELECT 1 FROM" in query:
@@ -166,6 +173,17 @@ def test_realtime_store_checks_aggregate_ownership(monkeypatch, realtime_enabled
 
     monkeypatch.setattr(module, "db", lambda: _fake_db(ReplayConnection(owned=False)))
     assert RealtimeEventStore().assert_aggregate_owned("tenant-1", "job", "job-1") is False
+
+
+def test_realtime_store_uses_fixed_aggregate_ownership_queries(monkeypatch, realtime_enabled):
+    connection = ReplayConnection(owned=True)
+    import oae.api.realtime_events as module
+
+    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    assert RealtimeEventStore().assert_aggregate_owned("tenant-1", "workspace", "workspace-1") is True
+
+    assert AGGREGATE_OWNERSHIP_QUERIES["workspace"] in [query for query, _ in connection.calls]
+    assert RealtimeEventStore().assert_aggregate_owned("tenant-1", "workspace; DROP TABLE jobs", "id") is False
 
 
 def test_authenticated_sse_route_emits_durable_event_and_hides_foreign_aggregate(monkeypatch, tmp_path):

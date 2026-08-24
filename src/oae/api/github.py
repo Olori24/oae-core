@@ -3,16 +3,43 @@ import os
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+GITHUB_WEB_ORIGIN = "github.com"
+GITHUB_API_ORIGIN = "api.github.com"
+GITHUB_API_PREFIX = "/repos/"
+MAX_GITHUB_RESPONSE_BYTES = 2_000_000
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    """Fail closed when an API response attempts to redirect a repository read."""
+
+    def redirect_request(self, request, fp, code, msg, headers, newurl):
+        return None
 
 
 class GitHubPublicAnalyzer:
     """Read-only analyzer for public GitHub repositories."""
 
+    def __init__(self, opener=None):
+        self._opener = opener or build_opener(_NoRedirect())
+
     def analyze(self, repository_url: str) -> dict:
         parsed = urlparse(repository_url)
-        if parsed.scheme != "https" or parsed.netloc.lower() != "github.com":
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != GITHUB_WEB_ORIGIN
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+        ):
             raise ValueError("repository_url must be an https GitHub URL")
+        try:
+            if parsed.port is not None:
+                raise ValueError("repository_url must not specify a port")
+        except ValueError as exc:
+            raise ValueError("repository_url must be an https GitHub URL") from exc
         parts = [p for p in parsed.path.strip("/").split("/") if p]
         if len(parts) != 2 or any(p in {".", ".."} for p in parts):
             raise ValueError("repository_url must point to github.com/owner/repository")
@@ -43,8 +70,8 @@ class GitHubPublicAnalyzer:
             "analyzed_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    @staticmethod
-    def _get(url: str) -> dict:
+    def _get(self, url: str) -> dict:
+        self._validate_api_url(url)
         token = os.getenv("GITHUB_TOKEN", "").strip()
         headers = {
             "Accept": "application/vnd.github+json",
@@ -56,8 +83,14 @@ class GitHubPublicAnalyzer:
 
         request = Request(url, headers=headers)
         try:
-            with urlopen(request, timeout=15) as response:
-                return json.loads(response.read().decode("utf-8"))
+            with self._opener.open(request, timeout=15) as response:
+                content_type = response.headers.get("Content-Type", "").lower()
+                if "application/json" not in content_type:
+                    raise RuntimeError("GitHub API response was not JSON")
+                body = response.read(MAX_GITHUB_RESPONSE_BYTES + 1)
+                if len(body) > MAX_GITHUB_RESPONSE_BYTES:
+                    raise RuntimeError("GitHub API response exceeded the size limit")
+                return json.loads(body.decode("utf-8"))
         except HTTPError as exc:
             if exc.code == 403:
                 raise RuntimeError(
@@ -66,3 +99,21 @@ class GitHubPublicAnalyzer:
             raise RuntimeError(f"GitHub request failed: HTTP {exc.code}") from exc
         except (URLError, TimeoutError) as exc:
             raise RuntimeError(f"GitHub request failed: {exc}") from exc
+
+    @staticmethod
+    def _validate_api_url(url: str) -> None:
+        parsed = urlparse(url)
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != GITHUB_API_ORIGIN
+            or parsed.username
+            or parsed.password
+            or not parsed.path.startswith(GITHUB_API_PREFIX)
+            or parsed.fragment
+        ):
+            raise ValueError("GitHub API URL must target the expected HTTPS repository endpoint")
+        try:
+            if parsed.port is not None:
+                raise ValueError("GitHub API URL must not specify a port")
+        except ValueError as exc:
+            raise ValueError("GitHub API URL must target the expected HTTPS repository endpoint") from exc

@@ -3,6 +3,31 @@ from oae.core.executable_application_generator import ExecutableApplicationGener
 from oae.core.project_specification import ProjectSpecification
 
 
+class _LoopbackHealthResponse:
+    status = 200
+
+    def getheader(self, name, default=None):
+        return "application/json" if name == "Content-Type" else default
+
+    def read(self, _size):
+        return b'{"status":"healthy"}'
+
+
+class _LoopbackHealthConnection:
+    def __init__(self):
+        self.requested = None
+        self.closed = False
+
+    def request(self, method, path, headers):
+        self.requested = (method, path, headers)
+
+    def getresponse(self):
+        return _LoopbackHealthResponse()
+
+    def close(self):
+        self.closed = True
+
+
 def spec():
     return ProjectSpecification(
         name="Integration Demo",
@@ -23,3 +48,16 @@ def test_health_endpoint_is_live(tmp_path):
     assert result["passed"] is True
     assert result["status"] == "passed"
     assert '"status":"healthy"' in result["detail"].replace(" ", "")
+
+
+def test_health_reader_uses_only_the_fixed_loopback_health_contract(monkeypatch):
+    import oae.core.application_integration_verifier as module
+
+    connection = _LoopbackHealthConnection()
+    monkeypatch.setattr(module.http.client, "HTTPConnection", lambda host, port, timeout: connection)
+
+    response = ApplicationIntegrationVerifier._read_loopback_health()
+
+    assert response == '{"status":"healthy"}'
+    assert connection.requested == ("GET", "/health", {"Accept": "application/json"})
+    assert connection.closed is True

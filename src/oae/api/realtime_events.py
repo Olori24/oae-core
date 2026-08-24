@@ -21,6 +21,12 @@ class EventCursorExpired(RealtimeEventsError):
         super().__init__("The requested event cursor has expired.")
 
 
+AGGREGATE_OWNERSHIP_QUERIES = {
+    "job": "SELECT 1 FROM jobs WHERE id=? AND tenant_id=?",
+    "workspace": "SELECT 1 FROM workspaces WHERE id=? AND tenant_id=?",
+}
+
+
 @dataclass(frozen=True)
 class RealtimeEvent:
     id: str
@@ -148,12 +154,12 @@ class RealtimeEventStore:
 
     def assert_aggregate_owned(self, tenant_id: str, aggregate_type: str, aggregate_id: str) -> bool:
         self._require_available()
-        table = {"job": "jobs", "workspace": "workspaces"}.get(aggregate_type)
-        if table is None:
+        query = AGGREGATE_OWNERSHIP_QUERIES.get(aggregate_type)
+        if query is None:
             return False
         with db() as conn:
             row = conn.execute(
-                f"SELECT 1 FROM {table} WHERE id=? AND tenant_id=?",  # noqa: S608
+                query,
                 (aggregate_id, tenant_id),
             ).fetchone()
         return row is not None

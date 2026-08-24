@@ -8,6 +8,13 @@ from oae.api.config import settings
 
 MIGRATIONS_DIRECTORY = Path(__file__).parents[3] / "migrations" / "postgres"
 MIGRATION_TABLE = "oae_schema_migrations"
+CREATE_MIGRATION_TABLE_SQL = (
+    "CREATE TABLE IF NOT EXISTS oae_schema_migrations ("
+    "name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now()"
+    ")"
+)
+SELECT_APPLIED_MIGRATIONS_SQL = "SELECT name FROM oae_schema_migrations"
+INSERT_MIGRATION_SQL = "INSERT INTO oae_schema_migrations (name) VALUES (%s)"
 
 
 def migration_files(directory: Path = MIGRATIONS_DIRECTORY) -> list[Path]:
@@ -20,18 +27,14 @@ def apply_postgres_migrations(connection, migrations: Iterable[Path] | None = No
     pending = list(migrations) if migrations is not None else migration_files()
     applied: list[str] = []
     with connection.cursor() as cursor:
-        cursor.execute(
-            f"CREATE TABLE IF NOT EXISTS {MIGRATION_TABLE} ("
-            "name TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT now()"
-            ")"
-        )
-        cursor.execute(f"SELECT name FROM {MIGRATION_TABLE}")
+        cursor.execute(CREATE_MIGRATION_TABLE_SQL)
+        cursor.execute(SELECT_APPLIED_MIGRATIONS_SQL)
         completed = {row[0] for row in cursor.fetchall()}
         for migration in pending:
             if migration.name in completed:
                 continue
             cursor.execute(migration.read_text(encoding="utf-8"))
-            cursor.execute(f"INSERT INTO {MIGRATION_TABLE} (name) VALUES (%s)", (migration.name,))
+            cursor.execute(INSERT_MIGRATION_SQL, (migration.name,))
             applied.append(migration.name)
     connection.commit()
     return applied
