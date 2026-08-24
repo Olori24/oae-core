@@ -25,6 +25,26 @@ An operator must choose an approved model only after license, security, quality,
 
 Keep the gateway disabled until there is a private model host on an isolated network. Add an explicit allowlisted model name only after it is installed from an authorized upstream, its license is reviewed, and its immutable image or artifact digest is recorded outside the application database. Configure the endpoint and secret management on the host, not in Git or browser-local storage.
 
+For the first controlled profile, OAE uses `qwen3:8b` in `docker-compose.open-weight.yml`. The overlay provides an internal-only Ollama service and a separate one-shot `ollama-pull-qwen3` tool profile. It deliberately publishes no model-service port. Before running the pull profile, confirm the Ollama image tag, Qwen artifact provenance, and available host capacity. This repository does not pull the artifact automatically.
+
+On the private host, copy the approved environment configuration, set `OPEN_WEIGHT_MODEL_ENABLED=true`, then start the private service and run the one-shot pull tool. After recording its operator-approved provenance, run the smoke test from the API container so the Compose-only hostname is not exposed outside the private network.
+
+```bash
+docker compose --env-file .env.production \
+  -f docker-compose.production.yml -f docker-compose.open-weight.yml \
+  --profile open-weight up -d ollama
+
+docker compose --env-file .env.production \
+  -f docker-compose.production.yml -f docker-compose.open-weight.yml \
+  --profile open-weight-tools run --rm ollama-pull-qwen3
+
+docker compose --env-file .env.production \
+  -f docker-compose.production.yml -f docker-compose.open-weight.yml \
+  exec -T api python -m oae.providers.open_weight_smoke_test
+```
+
+The final command uses a fixed non-sensitive prompt and emits audit metadata only. It is valid only after OAE itself is running with the `OPEN_WEIGHT_MODEL_*` variables enabled and the allowlist includes exactly the approved profile. A real result must be retained as redacted evidence; it must not be represented by a unit-test fixture.
+
 Run a request-boundary test with a synthetic, non-sensitive prompt. Verify that an allowlisted `analyze`, `review`, or `verify` request produces a response and a redacted audit record. Verify separately that an empty tenant, a non-allowlisted model, an oversized prompt, and a `build` operation are denied before network access. Only after those checks may OAE consider adding a separately authorized API route or durable-event projection.
 
 > A model response is planning material, not execution authority or verification evidence. OAE’s `UNDERSTAND → PLAN → AUTHORIZE → EXECUTE → VERIFY → RECORD` sequence remains unchanged.

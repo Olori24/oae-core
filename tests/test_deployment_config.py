@@ -69,3 +69,15 @@ def test_staging_caddyfile_uses_letsencrypt_staging_and_preserves_gateway_policy
     assert "reverse_proxy api:8000" in caddyfile
     assert "flush_interval -1" in caddyfile
     assert "./Caddyfile.staging:/etc/caddy/Caddyfile:ro" in compose
+
+
+def test_open_weight_overlay_keeps_ollama_private_and_pins_the_smoke_profile():
+    compose = (ROOT / "docker-compose.open-weight.yml").read_text(encoding="utf-8")
+
+    assert "ollama/ollama:0.11.3" in compose
+    assert 'profiles: ["open-weight"]' in compose
+    assert 'profiles: ["open-weight-tools"]' in compose
+    assert 'command: ["pull", "qwen3:8b"]' in compose
+    assert '      - "11434"' in compose
+    assert "ports:" not in compose
+    assert "oae-ollama-models" in compose
