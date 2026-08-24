@@ -1,5 +1,4 @@
 import threading
-import time
 
 from oae.api import postgres_pool
 
@@ -21,7 +20,7 @@ def test_pool_never_exceeds_maximum(monkeypatch):
     monkeypatch.setattr(postgres_pool.settings, "postgres_pool_max_size", 2)
     monkeypatch.setattr(postgres_pool.settings, "postgres_pool_timeout_seconds", 0.05)
     pool = postgres_pool.PostgresConnectionPool("postgresql://test")
-    monkeypatch.setattr(pool, "_new_connection", _FakeConnection)
+    monkeypatch.setattr(pool, "_new_connection", lambda: _FakeConnection())
 
     pool.warm()
     first = pool.acquire()
@@ -53,7 +52,7 @@ def test_pool_reuses_connection_and_rolls_back_before_return(monkeypatch):
     monkeypatch.setattr(postgres_pool.settings, "postgres_pool_min_size", 0)
     monkeypatch.setattr(postgres_pool.settings, "postgres_pool_max_size", 1)
     pool = postgres_pool.PostgresConnectionPool("postgresql://test")
-    monkeypatch.setattr(pool, "_new_connection", _FakeConnection)
+    monkeypatch.setattr(pool, "_new_connection", lambda: _FakeConnection())
 
     first = pool.acquire()
     pool.release(first)
