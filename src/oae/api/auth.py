@@ -2,6 +2,9 @@ import base64
 import hashlib
 import hmac
 import secrets
+import threading
+import time
+from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -18,6 +21,10 @@ _MAX_API_KEY_LENGTH = 256
 _PRINCIPAL_ROLES = frozenset({"owner", "operator", "approver", "viewer"})
 _REQUESTER_ROLES = frozenset({"owner", "operator"})
 _APPROVER_ROLES = frozenset({"owner", "approver"})
+_AUTH_CACHE_LOCK = threading.Lock()
+_AUTH_CACHE: OrderedDict[str, tuple[float, "TenantPrincipal"]] = OrderedDict()
+_AUTH_CACHE_HITS = 0
+_AUTH_CACHE_MISSES = 0
 
 
 @dataclass(frozen=True)
@@ -41,12 +48,69 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+_PROCESS_CACHE_SECRET = secrets.token_bytes(32)
+
+
+def _cache_key(raw: str) -> str:
+    """Derive a non-reversible cache key; never retain the plaintext API key."""
+    secret = settings.api_key_pepper.encode("utf-8") or _PROCESS_CACHE_SECRET
+    return hmac.new(secret, raw.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _cache_get(raw: str) -> TenantPrincipal | None:
+    global _AUTH_CACHE_HITS, _AUTH_CACHE_MISSES
+    key = _cache_key(raw)
+    now = time.monotonic()
+    with _AUTH_CACHE_LOCK:
+        item = _AUTH_CACHE.get(key)
+        if item is None:
+            _AUTH_CACHE_MISSES += 1
+            return None
+        expires_at, principal = item
+        if expires_at <= now:
+            _AUTH_CACHE.pop(key, None)
+            _AUTH_CACHE_MISSES += 1
+            return None
+        _AUTH_CACHE.move_to_end(key)
+        _AUTH_CACHE_HITS += 1
+        return principal
+
+
+def _cache_put(raw: str, principal: TenantPrincipal) -> None:
+    key = _cache_key(raw)
+    with _AUTH_CACHE_LOCK:
+        _AUTH_CACHE[key] = (time.monotonic() + settings.auth_cache_ttl_seconds, principal)
+        _AUTH_CACHE.move_to_end(key)
+        while len(_AUTH_CACHE) > settings.auth_cache_max_entries:
+            _AUTH_CACHE.popitem(last=False)
+
+
+def _cache_invalidate_key(key_id: str) -> None:
+    with _AUTH_CACHE_LOCK:
+        stale = [
+            cache_key
+            for cache_key, (_, principal) in _AUTH_CACHE.items()
+            if principal.key_id == key_id
+        ]
+        for cache_key in stale:
+            _AUTH_CACHE.pop(cache_key, None)
+
+
+def auth_cache_metrics() -> dict[str, int | float]:
+    with _AUTH_CACHE_LOCK:
+        total = _AUTH_CACHE_HITS + _AUTH_CACHE_MISSES
+        return {
+            "entries": len(_AUTH_CACHE),
+            "hits": _AUTH_CACHE_HITS,
+            "misses": _AUTH_CACHE_MISSES,
+            "hit_ratio": (_AUTH_CACHE_HITS / total) if total else 0.0,
+        }
+
+
 def hash_key(raw: str) -> str:
     """Hash an API key with a per-key random salt."""
     salt = secrets.token_bytes(16)
-    digest = hashlib.pbkdf2_hmac(
-        "sha256", raw.encode("utf-8"), salt, _PBKDF2_ITERATIONS
-    )
+    digest = hashlib.pbkdf2_hmac("sha256", raw.encode("utf-8"), salt, _PBKDF2_ITERATIONS)
     return "$".join(
         (
             _HASH_PREFIX,
@@ -66,12 +130,9 @@ def _verify_hash(raw: str, stored: str) -> bool:
             expected = base64.urlsafe_b64decode(parts[3] + "===")
         except (TypeError, ValueError):
             return False
-        actual = hashlib.pbkdf2_hmac(
-            "sha256", raw.encode("utf-8"), salt, iterations
-        )
+        actual = hashlib.pbkdf2_hmac("sha256", raw.encode("utf-8"), salt, iterations)
         return hmac.compare_digest(actual, expected)
 
-    # Backward compatibility for keys issued by the previous HMAC scheme.
     if not settings.api_key_pepper:
         return False
     legacy = hmac.new(
@@ -140,6 +201,8 @@ def revoke_principal_api_key(*, tenant_id: str, key_id: str) -> bool:
             "UPDATE api_keys SET revoked_at=? WHERE id=? AND tenant_id=? AND revoked_at IS NULL",
             (_now(), key_id, tenant_id),
         ).rowcount
+    if changed == 1:
+        _cache_invalidate_key(key_id)
     return changed == 1
 
 
@@ -153,6 +216,10 @@ def require_principal(authorization: str | None = Header(default=None)) -> Tenan
     if not raw or len(raw) > _MAX_API_KEY_LENGTH:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
+    cached = _cache_get(raw)
+    if cached is not None:
+        return cached
+
     prefix = raw[:_KEY_PREFIX_LENGTH]
     with db() as conn:
         rows = conn.execute(
@@ -162,7 +229,6 @@ def require_principal(authorization: str | None = Header(default=None)) -> Tenan
             """,
             (prefix,),
         ).fetchall()
-        # Existing keys created before prefix indexing remain valid during migration.
         if not rows:
             rows = conn.execute(
                 """
@@ -176,12 +242,14 @@ def require_principal(authorization: str | None = Header(default=None)) -> Tenan
             role = str(row[4])
             if role not in _PRINCIPAL_ROLES:
                 break
-            return TenantPrincipal(
+            principal = TenantPrincipal(
                 key_id=str(row[0]),
                 tenant_id=str(row[1]),
                 principal_id=str(row[3]),
                 role=role,
             )
+            _cache_put(raw, principal)
+            return principal
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API key")
 
 
