@@ -1,7 +1,7 @@
 import sqlite3
 import threading
 from contextlib import contextmanager
-from typing import Any
+from typing import Any, Callable
 
 from oae.api.config import settings
 
@@ -138,9 +138,10 @@ _POSTGRES_BOOTSTRAPPED_URLS: set[str] = set()
 class _ConnectionAdapter:
     """Small compatibility layer so existing repository code works on SQLite and Postgres."""
 
-    def __init__(self, connection, backend: str):
+    def __init__(self, connection, backend: str, release: Callable[[Any], None] | None = None):
         self._connection = connection
         self.backend = backend
+        self._release = release
 
     def execute(self, query: str, params=()):
         if self.backend == "postgres":
@@ -159,7 +160,11 @@ class _ConnectionAdapter:
         self._connection.rollback()
 
     def close(self):
-        self._connection.close()
+        if self._release is not None:
+            release, self._release = self._release, None
+            release(self._connection)
+        else:
+            self._connection.close()
 
 
 def _migrate_sqlite(adapter: _ConnectionAdapter) -> None:
@@ -182,12 +187,17 @@ def _connect() -> _ConnectionAdapter:
     backend = settings.database_backend
     if backend == "postgres":
         try:
-            import psycopg
+            from oae.api.postgres_pool import _get_pool
         except ImportError as exc:
-            raise RuntimeError("Postgres is configured but psycopg is not installed") from exc
-        connection: Any = psycopg.connect(settings.resolved_database_url)
-        adapter = _ConnectionAdapter(connection, "postgres")
-        _bootstrap_postgres(adapter, settings.resolved_database_url)
+            raise RuntimeError("Postgres pool is not available") from exc
+        pool = _get_pool()
+        connection = pool.getconn(timeout=settings.postgres_pool_timeout_seconds)
+        adapter = _ConnectionAdapter(connection, "postgres", release=pool.putconn)
+        try:
+            _bootstrap_postgres(adapter, settings.resolved_database_url)
+        except Exception:
+            adapter.close()
+            raise
         return adapter
 
     if backend == "sqlite":
@@ -207,7 +217,7 @@ def _connect() -> _ConnectionAdapter:
 
 
 def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
-    """Create legacy base tables once per connection URL without concurrent DDL deadlocks."""
+    """Create legacy base tables once per database URL without concurrent DDL deadlocks."""
     with _POSTGRES_BOOTSTRAP_LOCK:
         if database_url in _POSTGRES_BOOTSTRAPPED_URLS:
             return
