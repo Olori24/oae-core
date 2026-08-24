@@ -9,6 +9,10 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
+from oae.api.distributed_rate_limits import (
+    DistributedRateLimitExceeded,
+    enforce_distributed_rate_limit,
+)
 from oae.api.health import router as health_router
 from oae.api.observability import configure_error_tracking
 from oae.api.postgres_pool import close_pool
@@ -58,7 +62,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
 )
 
 
@@ -69,6 +73,22 @@ async def security_headers(request: Request, call_next):
         request_id = raw_request_id
     else:
         request_id = str(uuid4())
+
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path.startswith("/v1/"):
+        client_host = request.client.host if request.client else "unknown"
+        try:
+            enforce_distributed_rate_limit(
+                scope="mutating-api-ip",
+                subject=client_host,
+                limit=settings.api_control_rate_limit_per_minute,
+            )
+        except DistributedRateLimitExceeded:
+            return JSONResponse(
+                status_code=429,
+                content={"error": "rate_limited", "detail": "Too many control-plane requests."},
+                headers={"Retry-After": "60", "X-Request-ID": request_id, "Cache-Control": "no-store"},
+            )
+
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
