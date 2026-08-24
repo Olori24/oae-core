@@ -258,6 +258,24 @@ Before enabling production traffic, verify database health, worker and relay log
 
 Before enabling governed build execution, follow [Phase 2 real-host validation](docs/REAL_HOST_PHASE_2_VALIDATION.md). It covers applying migrations `0005` and `0006`, issuing separate principals, proving no self-approval, validating revocation, exercising durable worker enforcement, walking opaque cursors, and confirming the intentionally local rate-limit response. Do not enable the enforcement flag based on local tests alone.
 
+The repository includes two host-side aids for that procedure. On the isolated staging host, run the preflight first, then collect evidence only after the governed validation has completed. Both tools report configuration names and redacted output only; they must never be pointed at a local development host as proof of a real deployment.
+
+```bash
+python scripts/staging_preflight.py \
+  --env-file .env.production \
+  --stage bootstrap \
+  --expected-revision 0cd01e638cfe2355a1d3d3f22490fe888ae65276 \
+  --report /var/lib/oae-evidence/preflight.json
+
+# Run only after the real-host validation, using a protected evidence directory.
+python scripts/collect_staging_telemetry.py \
+  --env-file .env.production \
+  --output-dir /var/lib/oae-evidence/governed-run-001 \
+  --trace-id governed-run-001
+```
+
+For an honest sandbox rehearsal, add `--execution-context sandbox` to the preflight. Host-only checks then remain `UNKNOWN`, not passed. The [staging evidence template](docs/STAGING_TELEMETRY_EVIDENCE_TEMPLATE.md) defines the required PASS, FAIL, and UNKNOWN record for a real run.
+
 ### TLS staging dry run
 
 Before a real domain is placed behind the production issuer, use the isolated [Caddy TLS dry-run procedure](docs/CADDY_TLS_DRY_RUN.md). It uses Let’s Encrypt’s staging CA, a disposable hostname, and the `Caddyfile.staging` Compose override so configuration experiments do not consume production issuance limits.
@@ -312,6 +330,8 @@ The README is the entry point. The documents below provide the next level of det
 | [Engineering change record, August 2026](docs/ENGINEERING_CHANGE_RECORD_2026_08.md) | Review the completed hardening work and its evidence boundary |
 | [Production-platform baseline](docs/PRODUCTION_PLATFORM_MANDATE_BASELINE.md) | Distinguish verified code controls from unmeasured and real-host-only claims |
 | [Phase 2 real-host validation](docs/REAL_HOST_PHASE_2_VALIDATION.md) | Prove principal, approval, revocation, enforcement, pagination, and rate-limit behavior on staging |
+| [Staging validation recommendation](docs/GOVERNED_EXECUTION_STAGING_RECOMMENDATION.md) | Select the minimum host posture and activation hold points for governed execution |
+| [Staging evidence template](docs/STAGING_TELEMETRY_EVIDENCE_TEMPLATE.md) | Record redacted, trace-linked real-host control evidence |
 | [Developer collaboration guide](docs/DEVELOPER_COLLABORATION.md) | Contribute through bounded changes, evidence-led reviews, and tenant-safe issue workflows |
 | [Architecture decisions](docs/adr/README.md) | Review durable technical decisions and their rationale |
 | [Repository standards](docs/governance/repository-standard.md) | Follow repository-level engineering expectations |

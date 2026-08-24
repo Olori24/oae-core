@@ -36,6 +36,20 @@ def test_production_environment_template_enables_durable_event_delivery_without_
         assert setting in environment
 
 
+def test_staging_environment_template_keeps_governed_worker_enforcement_off_initially():
+    environment = (ROOT / ".env.staging.example").read_text(encoding="utf-8")
+
+    required = (
+        "APP_ENV=staging",
+        "ALLOWED_HOSTS=[\"staging-api.example.com\"]",
+        "CORS_ORIGINS=[\"https://oaeengineer-3nncbrhe.manus.space\"]",
+        "WORKER_AUTHORIZATION_ENFORCEMENT_ENABLED=false",
+        "API_CONTROL_RATE_LIMIT_PER_MINUTE=60",
+    )
+    for setting in required:
+        assert setting in environment
+
+
 def test_caddy_keeps_sse_proxy_flush_unbuffered():
     caddyfile = (ROOT / "Caddyfile").read_text(encoding="utf-8")
 
