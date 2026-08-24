@@ -43,10 +43,22 @@ class PostgresConnectionPool:
         except ImportError as exc:
             raise RuntimeError("Postgres is configured but psycopg is not installed") from exc
         conn = psycopg.connect(self.database_url, connect_timeout=max(1, int(self.timeout)))
-        created_at = time.monotonic()
-        self._births[id(conn)] = created_at
+        self._births[id(conn)] = time.monotonic()
         self._created += 1
         return conn
+
+    def warm(self) -> None:
+        """Create the configured minimum number of idle connections."""
+        with self._condition:
+            while self._total < self.min_size:
+                self._total += 1
+                try:
+                    conn = self._new_connection()
+                except Exception:
+                    self._total -= 1
+                    self._condition.notify()
+                    raise
+                self._idle.put_nowait(_PooledConnection(conn, self._births[id(conn)]))
 
     def _expired(self, item: _PooledConnection) -> bool:
         return time.monotonic() - item.created_at >= self.max_lifetime
@@ -168,6 +180,7 @@ def _get_pool() -> PostgresConnectionPool:
         if _pool is not None:
             _pool.close()
         _pool = PostgresConnectionPool(url)
+        _pool.warm()
         _pool_url = url
         return _pool
 
