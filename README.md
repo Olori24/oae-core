@@ -24,6 +24,7 @@ OAE helps teams understand repositories, turn evidence into explicit engineering
 - [Architecture](#architecture)
 - [Quick start](#quick-start)
 - [API orientation](#api-orientation)
+- [Authorization and API control boundaries](#authorization-and-api-control-boundaries)
 - [Durable jobs and live events](#durable-jobs-and-live-events)
 - [Production deployment](#production-deployment)
 - [Security posture](#security-posture)
@@ -57,13 +58,17 @@ OAE is an active **v0.6.0 controlled-beta core**. The following capabilities are
 | Repository foundations | Tenant-scoped repository registration and immutable revision pinning | Credentials are represented only by external `credential_ref` values; they are not stored in the database |
 | Workspace lifecycle | Persistent workspace manifests, quota reservation, retention, and cleanup controls | Shared storage is checked before commitment and cleaned up on failed provisioning |
 | Durable job delivery | PostgreSQL-backed job leasing, heartbeats, retries, attempt records, and worker recovery | Enabled only after tracked PostgreSQL migrations and healthy worker processes |
+| Governed build authorization | Tenant-scoped approval requests, separate owner, operator, approver, and viewer API principals, revocation, and optional worker-side enforcement | Build enforcement is inactive by default and must be proven on PostgreSQL staging before it is enabled |
 | Transactional events | Atomic outbox writes, leased relay projection, authenticated Server-Sent Events (SSE), cursor replay, and snapshots | Events remain tenant-scoped; stale cursors recover through an authenticated snapshot path |
+| Inventory control boundaries | Opaque cursors for repository, revision, workspace, and job inventories plus bounded process-local protection for selected control writes | The rate guard is not distributed and must be complemented by edge or shared-store limits for horizontal scale |
 | Production edge | Docker Compose topology with PostgreSQL, API, worker, relay, migration job, and Caddy HTTPS gateway | The API port remains private; the gateway alone exposes host ports 80 and 443 |
 | Quality and supply-chain controls | CI tests, coverage threshold enforcement, Ruff, mypy, dependency audit, secret scanning, and dependency-change review | A passing check is a gate, not a replacement for production validation |
 
 ### Deliberate beta limits
 
 OAE does **not** present itself as an unrestricted remote shell or an automatic code-publishing system. The public beta is intentionally constrained to read-oriented engineering workflows while the stronger isolation, authorization, verification, and recovery guarantees are matured. Do not treat future-looking material in the roadmap as a shipped capability.
+
+Build execution has an additional guard path: it can require an active tenant-scoped worker authorization from a principal distinct from the requester. That guard is deliberately disabled by default until the PostgreSQL migrations, principal-key lifecycle, approval flow, revocation flow, and durable worker claims have been exercised through the staging procedure.
 
 ## Architecture
 
@@ -176,11 +181,18 @@ curl -sS "$OAE_URL/v1/me" \
   -H "Authorization: Bearer $OAE_API_KEY"
 ```
 
+The first key is an `owner` principal. An owner can issue a separate `operator`, `approver`, or `viewer` key through `POST /v1/principal-keys`. Store every returned key once in an approved secret store. Requester and approver responsibilities are deliberately separate; an authorization requester cannot approve the same request.
+
 | Endpoint | Purpose |
 |---|---|
 | `GET /health` | Checks API and database availability |
 | `POST /v1/tenants` | Creates a tenant and returns a one-time API key |
 | `GET /v1/me` | Returns the authenticated tenant identity |
+| `POST /v1/principal-keys` | An owner issues a one-time key for an operator, approver, or viewer principal |
+| `POST /v1/principal-keys/{key_id}/revoke` | An owner revokes an issued principal key other than the active owner key |
+| `POST /v1/worker-authorizations` | An owner or operator requests a governed build authorization in durable PostgreSQL mode |
+| `POST /v1/worker-authorizations/{authorization_id}/approve` | A distinct owner or approver principal approves a pending request |
+| `POST /v1/worker-authorizations/{authorization_id}/revoke` | An owner or approver revokes an active authorization |
 | `POST /v1/repositories` | Registers a tenant-scoped repository connection |
 | `POST /v1/repositories/{repository_id}/revisions` | Pins an observed repository revision |
 | `POST /v1/jobs` | Queues a supported engineering operation |
@@ -191,6 +203,14 @@ curl -sS "$OAE_URL/v1/me" \
 | `GET /v1/workspaces/{workspace_id}/events` | Opens an SSE stream for one authorized workspace |
 
 Use the interactive [`/docs`](http://127.0.0.1:8000/docs) reference as the authoritative request and response contract for the running version.
+
+## Authorization and API control boundaries
+
+Authorization governance is opt-in and requires PostgreSQL with durable jobs. When `WORKER_AUTHORIZATION_ENFORCEMENT_ENABLED=true`, a build request must carry an active tenant-matching authorization and a durable worker must confirm the same active record before it can claim work. An expired, revoked, wrong-operation, cross-tenant, or self-approved authorization is not valid execution authority.
+
+The authorization state machine is deliberately narrow: `pending` requests can become `approved` or `rejected`; active approvals can become `revoked`; expiry is checked at execution time. Each state transition emits a tenant-scoped durable event. This is an execution guard, not a substitute for an organization’s complete identity, policy, or change-management system.
+
+List routes support `limit` and an opaque `after` cursor. When another page exists, OAE returns `X-Next-Cursor`. Selected control writes use a small process-local limit and return `429` with `Retry-After: 60` when the local budget is exhausted. The guard reduces accidental or single-process abuse but is not safe to treat as a horizontally distributed rate-limit service.
 
 ## Durable jobs and live events
 
@@ -236,6 +256,8 @@ docker compose -f docker-compose.production.yml --env-file .env.production ps
 
 Before enabling production traffic, verify database health, worker and relay logs, HTTPS reachability, and one low-risk end-to-end job. The API container intentionally has no public `8000:8000` host binding; Caddy is the only public edge and uses unbuffered forwarding for SSE. The authoritative procedure, rollback controls, and feature-flag preconditions are in the [production runbook](docs/REALTIME_EVENT_DELIVERY_RUNBOOK.md).
 
+Before enabling governed build execution, follow [Phase 2 real-host validation](docs/REAL_HOST_PHASE_2_VALIDATION.md). It covers applying migrations `0005` and `0006`, issuing separate principals, proving no self-approval, validating revocation, exercising durable worker enforcement, walking opaque cursors, and confirming the intentionally local rate-limit response. Do not enable the enforcement flag based on local tests alone.
+
 ### TLS staging dry run
 
 Before a real domain is placed behind the production issuer, use the isolated [Caddy TLS dry-run procedure](docs/CADDY_TLS_DRY_RUN.md). It uses Let’s Encrypt’s staging CA, a disposable hostname, and the `Caddyfile.staging` Compose override so configuration experiments do not consume production issuance limits.
@@ -248,6 +270,8 @@ Security is an architectural boundary, not a feature tier. OAE’s controls are 
 |---|---|
 | Tenant isolation | Every owned record is scoped to a tenant; authenticated retrieval checks ownership |
 | API keys | Returned once, stored as hashes, and sent with `Authorization: Bearer` |
+| Principal roles | Owners issue separate operator, approver, and viewer keys; an authorization requester cannot approve the same request |
+| Governed build work | Optional PostgreSQL enforcement checks active, tenant-matching authorization before build execution and durable worker claim |
 | Repository credentials | Store an external secret reference only; never persist raw credentials in OAE tables |
 | Production exposure | API, worker, relay, and database remain private to the Compose network; Caddy exposes 80/443 |
 | Real-time delivery | SSE is authenticated, cursor-based, replayable, and protected from proxy buffering |
@@ -285,6 +309,9 @@ The README is the entry point. The documents below provide the next level of det
 | [Event-delivery runbook](docs/REALTIME_EVENT_DELIVERY_RUNBOOK.md) | Activate or operate workers, relay, and SSE delivery |
 | [TLS dry-run procedure](docs/CADDY_TLS_DRY_RUN.md) | Validate Caddy and staging ACME before production certificate issuance |
 | [Production handoff](docs/PRODUCTION_HANDOFF.md) | Move from a staging TLS proof to a protected host activation and browser-live verification |
+| [Engineering change record, August 2026](docs/ENGINEERING_CHANGE_RECORD_2026_08.md) | Review the completed hardening work and its evidence boundary |
+| [Production-platform baseline](docs/PRODUCTION_PLATFORM_MANDATE_BASELINE.md) | Distinguish verified code controls from unmeasured and real-host-only claims |
+| [Phase 2 real-host validation](docs/REAL_HOST_PHASE_2_VALIDATION.md) | Prove principal, approval, revocation, enforcement, pagination, and rate-limit behavior on staging |
 | [Developer collaboration guide](docs/DEVELOPER_COLLABORATION.md) | Contribute through bounded changes, evidence-led reviews, and tenant-safe issue workflows |
 | [Architecture decisions](docs/adr/README.md) | Review durable technical decisions and their rationale |
 | [Repository standards](docs/governance/repository-standard.md) | Follow repository-level engineering expectations |

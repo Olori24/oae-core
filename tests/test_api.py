@@ -253,6 +253,33 @@ def test_tenant_can_list_repository_lineage_and_workspace_inventory(tmp_path):
     assert client.get("/v1/workspaces/workspace-1", headers=other_headers).status_code == 404
 
 
+def test_repository_inventory_uses_opaque_cursor_pagination(tmp_path):
+    import oae.api.auth as auth
+    import oae.api.db as database
+
+    db_path = tmp_path / "repository-pagination.db"
+    database.settings.database_url = f"sqlite:///{db_path}"
+    auth.settings.database_url = f"sqlite:///{db_path}"
+    client = TestClient(app)
+    tenant = client.post("/v1/tenants", json={"name": "Pagination Owner"})
+    headers = {"Authorization": f"Bearer {tenant.json()['api_key']}"}
+    for repository in ("Olori24/oae-core", "Olori24/oae-frontend"):
+        assert client.post(
+            "/v1/repositories",
+            headers=headers,
+            json={"provider": "github", "external_id": repository, "clone_url": f"https://github.com/{repository}.git"},
+        ).status_code == 201
+
+    first = client.get("/v1/repositories?limit=1", headers=headers)
+    assert first.status_code == 200
+    assert len(first.json()) == 1
+    cursor = first.headers["X-Next-Cursor"]
+    second = client.get(f"/v1/repositories?limit=1&after={cursor}", headers=headers)
+    assert second.status_code == 200
+    assert len(second.json()) == 1
+    assert second.json()[0]["id"] != first.json()[0]["id"]
+
+
 def test_invalid_api_key_is_rejected():
     client = TestClient(app)
     response = client.get("/v1/me", headers={"Authorization": "Bearer invalid"})

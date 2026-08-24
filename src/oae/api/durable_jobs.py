@@ -42,6 +42,7 @@ class JobLease:
     attempt_number: int
     max_attempts: int
     lease_expires_at: datetime
+    authorization_id: str | None = None
 
 
 class DurableJobRepository:
@@ -58,6 +59,7 @@ class DurableJobRepository:
         payload: dict[str, Any],
         idempotency_key: str | None = None,
         workspace_id: str | None = None,
+        authorization_id: str | None = None,
         priority: int = 100,
         correlation_id: str | None = None,
     ) -> EnqueuedJob:
@@ -70,9 +72,9 @@ class DurableJobRepository:
             row = conn.execute(
                 """
                 INSERT INTO jobs(
-                    id,tenant_id,status,operation,payload,created_at,updated_at,workspace_id,
+                    id,tenant_id,status,operation,payload,created_at,updated_at,workspace_id,authorization_id,
                     idempotency_key,priority,attempt_count,max_attempts,scheduled_at,correlation_id
-                ) VALUES(?,?, 'queued', ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
+                ) VALUES(?,?, 'queued', ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)
                 ON CONFLICT(tenant_id,idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING
                 RETURNING id,tenant_id,status,operation,payload,created_at,updated_at
                 """,
@@ -84,6 +86,7 @@ class DurableJobRepository:
                     now,
                     now,
                     workspace_id,
+                    authorization_id,
                     idempotency_key,
                     priority,
                     settings.durable_job_max_attempts,
@@ -154,8 +157,20 @@ class DurableJobRepository:
             row = conn.execute(
                 """
                 WITH candidate AS (
-                    SELECT id FROM jobs
+                    SELECT job.id FROM jobs AS job
                     WHERE status IN ('queued','retry_scheduled') AND scheduled_at <= now()
+                      AND (
+                        NOT ?
+                        OR job.operation <> 'build'
+                        OR EXISTS (
+                          SELECT 1 FROM worker_authorizations authorization
+                          WHERE authorization.id=job.authorization_id
+                            AND authorization.tenant_id=job.tenant_id
+                            AND authorization.operation=job.operation
+                            AND authorization.status='approved'
+                            AND authorization.expires_at > now()
+                        )
+                      )
                     ORDER BY priority ASC,scheduled_at ASC,created_at ASC
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
@@ -167,9 +182,9 @@ class DurableJobRepository:
                 FROM candidate
                 WHERE job.id=candidate.id
                 RETURNING job.id,job.tenant_id,job.operation,job.payload,job.attempt_count,
-                    job.max_attempts,job.lease_expires_at
+                    job.max_attempts,job.lease_expires_at,job.authorization_id
                 """,
-                (worker_id, token, settings.durable_job_lease_seconds),
+                (settings.worker_authorization_enforcement_enabled, worker_id, token, settings.durable_job_lease_seconds),
             ).fetchone()
             if not row:
                 return None
@@ -183,6 +198,7 @@ class DurableJobRepository:
                 attempt_number=int(row[4]),
                 max_attempts=int(row[5]),
                 lease_expires_at=self._as_datetime(row[6]),
+                authorization_id=str(row[7]) if len(row) > 7 and row[7] else None,
             )
             conn.execute(
                 """
@@ -204,7 +220,7 @@ class DurableJobRepository:
                 aggregate_type="job",
                 aggregate_id=lease.job_id,
                 event_type="job.claimed",
-                payload={"attempt_number": lease.attempt_number, "worker_id": worker_id},
+                payload={"attempt_number": lease.attempt_number, "worker_id": worker_id, "authorization_id": lease.authorization_id},
             )
             self.event_writer.append(
                 conn,

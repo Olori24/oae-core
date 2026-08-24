@@ -9,6 +9,8 @@ def test_postgres_migration_files_are_ordered_and_present():
         "0002_durable_job_worker_foundation.sql",
         "0003_transactional_outbox_sse.sql",
         "0004_realtime_event_metadata.sql",
+        "0005_worker_authorization_foundation.sql",
+        "0006_principal_and_authorization_decision_metadata.sql",
     ]
 
 
@@ -53,3 +55,22 @@ def test_realtime_event_metadata_migration_preserves_correlation_fields():
 
     assert "ALTER TABLE realtime_events ADD COLUMN IF NOT EXISTS correlation_id TEXT" in migration
     assert "ALTER TABLE realtime_events ADD COLUMN IF NOT EXISTS causation_id TEXT" in migration
+
+
+def test_worker_authorization_migration_binds_approvals_to_tenant_scoped_jobs():
+    migration = migration_files()[4].read_text(encoding="utf-8")
+
+    assert "CREATE TABLE IF NOT EXISTS worker_authorizations" in migration
+    assert "tenant_id TEXT NOT NULL REFERENCES tenants(id)" in migration
+    assert "status IN ('pending', 'approved', 'rejected', 'revoked', 'expired')" in migration
+    assert "ALTER TABLE jobs ADD COLUMN IF NOT EXISTS authorization_id TEXT" in migration
+    assert "FOREIGN KEY (tenant_id, authorization_id)" in migration
+
+
+def test_principal_role_migration_tracks_decision_and_revocation_metadata():
+    migration = migration_files()[5].read_text(encoding="utf-8")
+
+    assert "ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_id TEXT" in migration
+    assert "ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_role TEXT" in migration
+    assert "ALTER TABLE worker_authorizations ADD COLUMN IF NOT EXISTS decided_role TEXT" in migration
+    assert "ALTER TABLE worker_authorizations ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ" in migration

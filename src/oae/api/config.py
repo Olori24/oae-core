@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     database_url: str = ""
     # Kept for backward compatibility. New API keys use per-key salted PBKDF2.
     api_key_pepper: str = ""
+    api_control_rate_limit_per_minute: int = 60
     cors_origins: Annotated[list[str], NoDecode] = ["*"]
     allowed_hosts: Annotated[list[str], NoDecode] = ["*"]
     max_job_seconds: int = 300
@@ -23,6 +24,7 @@ class Settings(BaseSettings):
     workspace_quota_count: int = 20
     workspace_file_max_bytes: int = 100 * 1024 * 1024
     durable_jobs_enabled: bool = False
+    worker_authorization_enforcement_enabled: bool = False
     durable_job_lease_seconds: int = 60
     durable_job_max_attempts: int = 3
     durable_job_retry_max_seconds: int = 300
@@ -49,6 +51,7 @@ class Settings(BaseSettings):
 
     @field_validator(
         "max_job_seconds",
+        "api_control_rate_limit_per_minute",
         "durable_job_lease_seconds",
         "durable_job_max_attempts",
         "durable_job_retry_max_seconds",
@@ -65,6 +68,7 @@ class Settings(BaseSettings):
         if value is None or value == "":
             defaults = {
                 "max_job_seconds": 300,
+                "api_control_rate_limit_per_minute": 60,
                 "durable_job_lease_seconds": 60,
                 "durable_job_max_attempts": 3,
                 "durable_job_retry_max_seconds": 300,

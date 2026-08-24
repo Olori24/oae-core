@@ -23,12 +23,25 @@ class TenantCreated(_StrictModel):
     api_key: str
 
 
+class PrincipalKeyCreate(_StrictModel):
+    principal_role: Literal["operator", "approver", "viewer"]
+    principal_id: str | None = Field(default=None, min_length=2, max_length=120)
+
+
+class PrincipalKeyCreated(_StrictModel):
+    id: str
+    principal_id: str
+    principal_role: str = Field(pattern=r"^(operator|approver|viewer)$")
+    api_key: str
+
+
 class JobCreate(_StrictModel):
     operation: str = Field(pattern=r"^(analyze|review|verify|build)$")
     payload: dict = Field(default_factory=dict)
     workspace_id: str | None = Field(default=None, min_length=1, max_length=120)
     idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
     priority: int = Field(default=100, ge=0, le=1000)
+    authorization_id: str | None = Field(default=None, min_length=1, max_length=120)
 
 
 class JobResponse(_StrictModel):
@@ -39,6 +52,33 @@ class JobResponse(_StrictModel):
     result: dict | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class WorkerAuthorizationCreate(_StrictModel):
+    operation: Literal["build"]
+    scope: dict[str, str] = Field(default_factory=dict, max_length=20)
+    expires_in_seconds: int = Field(default=3600, ge=60, le=7 * 24 * 60 * 60)
+
+
+class WorkerAuthorizationDecision(_StrictModel):
+    decision_reason_redacted: str | None = Field(default=None, min_length=1, max_length=500)
+
+
+class WorkerAuthorizationResponse(_StrictModel):
+    id: str
+    operation: Literal["build"]
+    scope: dict[str, str]
+    requester: str
+    status: Literal["pending", "approved", "rejected", "revoked", "expired"]
+    requested_at: datetime
+    expires_at: datetime
+    decided_at: datetime | None = None
+    decided_by: str | None = None
+    decided_role: str | None = None
+    decision_reason_redacted: str | None = None
+    revoked_at: datetime | None = None
+    revoked_by: str | None = None
+    revoked_role: str | None = None
 
 
 class RepositoryCreate(_StrictModel):

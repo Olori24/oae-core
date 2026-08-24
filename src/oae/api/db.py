@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS api_keys (
     tenant_id TEXT NOT NULL REFERENCES tenants(id),
     key_prefix TEXT,
     key_hash TEXT NOT NULL UNIQUE,
+    principal_id TEXT,
+    principal_role TEXT,
     created_at TEXT NOT NULL,
     revoked_at TEXT
 );
@@ -106,6 +108,8 @@ POSTGRES_STATEMENTS = (
         tenant_id TEXT NOT NULL REFERENCES tenants(id),
         key_prefix TEXT,
         key_hash TEXT NOT NULL UNIQUE,
+        principal_id TEXT,
+        principal_role TEXT,
         created_at TEXT NOT NULL,
         revoked_at TEXT
     )
@@ -163,6 +167,14 @@ def _migrate_sqlite(adapter: _ConnectionAdapter) -> None:
         adapter.execute("ALTER TABLE api_keys ADD COLUMN key_prefix TEXT")
     except sqlite3.OperationalError:
         pass
+    for statement in (
+        "ALTER TABLE api_keys ADD COLUMN principal_id TEXT",
+        "ALTER TABLE api_keys ADD COLUMN principal_role TEXT",
+    ):
+        try:
+            adapter.execute(statement)
+        except sqlite3.OperationalError:
+            pass
     adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
 
 
@@ -203,6 +215,8 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
         for statement in POSTGRES_STATEMENTS:
             adapter.execute(statement)
         adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_prefix TEXT")
+        adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_id TEXT")
+        adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_role TEXT")
         adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
         adapter.commit()
         _POSTGRES_BOOTSTRAPPED_URLS.add(database_url)
