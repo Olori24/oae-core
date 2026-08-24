@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     workspace_quota_bytes: int = 1024 * 1024 * 1024
     workspace_quota_count: int = 20
     workspace_file_max_bytes: int = 100 * 1024 * 1024
+    postgres_pool_min_size: int = 2
+    postgres_pool_max_size: int = 10
+    postgres_pool_timeout_seconds: float = 5.0
+    postgres_pool_max_lifetime_seconds: float = 1800.0
     durable_jobs_enabled: bool = False
     worker_authorization_enforcement_enabled: bool = False
     durable_job_lease_seconds: int = 60
@@ -59,6 +63,10 @@ class Settings(BaseSettings):
     @field_validator(
         "max_job_seconds",
         "api_control_rate_limit_per_minute",
+        "postgres_pool_min_size",
+        "postgres_pool_max_size",
+        "postgres_pool_timeout_seconds",
+        "postgres_pool_max_lifetime_seconds",
         "durable_job_lease_seconds",
         "durable_job_max_attempts",
         "durable_job_retry_max_seconds",
@@ -80,6 +88,10 @@ class Settings(BaseSettings):
             defaults = {
                 "max_job_seconds": 300,
                 "api_control_rate_limit_per_minute": 60,
+                "postgres_pool_min_size": 2,
+                "postgres_pool_max_size": 10,
+                "postgres_pool_timeout_seconds": 5.0,
+                "postgres_pool_max_lifetime_seconds": 1800.0,
                 "durable_job_lease_seconds": 60,
                 "durable_job_max_attempts": 3,
                 "durable_job_retry_max_seconds": 300,
@@ -119,14 +131,26 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.strip("[]").split(",") if item.strip()]
         raise TypeError("Expected a list or string")
 
+    @field_validator("postgres_pool_min_size", "postgres_pool_max_size")
+    @classmethod
+    def validate_pool_sizes(cls, value, info):
+        if value < 0:
+            raise ValueError(f"{info.field_name} must be non-negative")
+        return value
+
+    @field_validator("postgres_pool_timeout_seconds", "postgres_pool_max_lifetime_seconds")
+    @classmethod
+    def validate_pool_durations(cls, value, info):
+        if value <= 0:
+            raise ValueError(f"{info.field_name} must be positive")
+        return value
+
     @property
     def resolved_database_url(self) -> str:
         """Resolve the production database from explicit and integration env names."""
         if self.database_url:
             return self.database_url
 
-        # Vercel storage integrations can apply a custom prefix to the
-        # generated DATABASE_URL. For example, OAE_DB_DATABASE_URL.
         for name in (
             "OAE_DB_DATABASE_URL",
             "OAE_DB_URL",
