@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     postgres_pool_max_lifetime_seconds: float = 1800.0
     durable_jobs_enabled: bool = False
     worker_authorization_enforcement_enabled: bool = False
+    durable_worker_concurrency: int = 4
+    durable_worker_poll_seconds: float = 1.0
     durable_job_lease_seconds: int = 60
     durable_job_max_attempts: int = 3
     durable_job_retry_max_seconds: int = 300
@@ -67,6 +69,7 @@ class Settings(BaseSettings):
         "auth_cache_max_entries",
         "postgres_pool_min_size",
         "postgres_pool_max_size",
+        "durable_worker_concurrency",
         "durable_job_lease_seconds",
         "durable_job_max_attempts",
         "durable_job_retry_max_seconds",
@@ -91,6 +94,7 @@ class Settings(BaseSettings):
                 "auth_cache_max_entries": 10_000,
                 "postgres_pool_min_size": 2,
                 "postgres_pool_max_size": 10,
+                "durable_worker_concurrency": 4,
                 "durable_job_lease_seconds": 60,
                 "durable_job_max_attempts": 3,
                 "durable_job_retry_max_seconds": 300,
@@ -114,12 +118,18 @@ class Settings(BaseSettings):
         "auth_cache_ttl_seconds",
         "postgres_pool_timeout_seconds",
         "postgres_pool_max_lifetime_seconds",
+        "durable_worker_poll_seconds",
         mode="before",
     )
     @classmethod
     def parse_positive_float(cls, value, info):
         if value is None or value == "":
-            return {"auth_cache_ttl_seconds": 5.0, "postgres_pool_timeout_seconds": 5.0, "postgres_pool_max_lifetime_seconds": 1800.0}[info.field_name]
+            return {
+                "auth_cache_ttl_seconds": 5.0,
+                "postgres_pool_timeout_seconds": 5.0,
+                "postgres_pool_max_lifetime_seconds": 1800.0,
+                "durable_worker_poll_seconds": 1.0,
+            }[info.field_name]
         value = float(value)
         if value <= 0:
             raise ValueError(f"{info.field_name} must be positive")
@@ -152,6 +162,13 @@ class Settings(BaseSettings):
     def validate_pool_sizes(cls, value, info):
         if value < 0:
             raise ValueError(f"{info.field_name} must be non-negative")
+        return value
+
+    @field_validator("durable_worker_concurrency")
+    @classmethod
+    def validate_worker_concurrency(cls, value):
+        if value > 64:
+            raise ValueError("durable_worker_concurrency cannot exceed 64")
         return value
 
     @property
