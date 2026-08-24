@@ -1,5 +1,6 @@
 import json
 import logging
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -9,6 +10,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
 from oae.api.observability import configure_error_tracking
+from oae.api.postgres_pool import close_pool
 from oae.api.routes import router
 from oae.api.ui_mission_control_v2 import page
 
@@ -36,10 +38,17 @@ logger = logging.getLogger("oae.api")
 configure_error_tracking(settings.sentry_dsn)
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    close_pool()
+
+
 app = FastAPI(
     title="Open Autonomous Engineer API",
     version="0.6.0",
     description="Multi-tenant API for autonomous repository engineering.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
@@ -72,14 +81,14 @@ async def security_headers(request: Request, call_next):
 async def runtime_error_handler(request: Request, exc: RuntimeError):
     message = str(exc)
     logger.exception("runtime_error", extra={"path": request.url.path})
-    if "database" in message.lower() or "postgres" in message.lower():
-        detail = "Database configuration is unavailable. Check the production database integration."
+    if "database" in message.lower() or "postgres" in message.lower() or "pool" in message.lower():
+        detail = "Database capacity is temporarily unavailable. Retry the request shortly."
     else:
         detail = "The service could not complete this request."
     return JSONResponse(
         status_code=503,
         content={"error": "service_unavailable", "detail": detail},
-        headers={"Cache-Control": "no-store"},
+        headers={"Cache-Control": "no-store", "Retry-After": "5"},
     )
 
 
