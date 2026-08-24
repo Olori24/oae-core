@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
+from oae.api.health import router as health_router
 from oae.api.observability import configure_error_tracking
 from oae.api.postgres_pool import close_pool
 from oae.api.routes import router
@@ -92,6 +93,7 @@ async def runtime_error_handler(request: Request, exc: RuntimeError):
     )
 
 
+app.include_router(health_router)
 app.include_router(router)
 
 
