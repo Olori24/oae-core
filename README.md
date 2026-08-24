@@ -332,6 +332,7 @@ The README is the entry point. The documents below provide the next level of det
 | [Phase 2 real-host validation](docs/REAL_HOST_PHASE_2_VALIDATION.md) | Prove principal, approval, revocation, enforcement, pagination, and rate-limit behavior on staging |
 | [Staging validation recommendation](docs/GOVERNED_EXECUTION_STAGING_RECOMMENDATION.md) | Select the minimum host posture and activation hold points for governed execution |
 | [Staging evidence template](docs/STAGING_TELEMETRY_EVIDENCE_TEMPLATE.md) | Record redacted, trace-linked real-host control evidence |
+| [Governed open-weight model gateway](docs/OPEN_WEIGHT_MODEL_GATEWAY.md) | Evaluate a private, allowlisted model endpoint without granting it execution authority |
 | [Developer collaboration guide](docs/DEVELOPER_COLLABORATION.md) | Contribute through bounded changes, evidence-led reviews, and tenant-safe issue workflows |
 | [Architecture decisions](docs/adr/README.md) | Review durable technical decisions and their rationale |
 | [Repository standards](docs/governance/repository-standard.md) | Follow repository-level engineering expectations |

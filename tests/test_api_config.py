@@ -27,3 +27,9 @@ def test_oae_db_alias_is_supported(monkeypatch):
 
     assert settings.resolved_database_url == "postgresql://example.test/oae"
     assert settings.database_backend == "postgres"
+
+
+def test_settings_default_to_an_empty_open_weight_model_allowlist():
+    settings = Settings(open_weight_model_allowed_models="")
+
+    assert settings.open_weight_model_allowed_models == []

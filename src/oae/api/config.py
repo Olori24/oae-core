@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     sse_heartbeat_seconds: int = 15
     sse_max_connection_seconds: int = 300
     sse_replay_limit: int = 200
+    open_weight_model_enabled: bool = False
+    open_weight_model_endpoint: str = ""
+    open_weight_model_allowed_models: Annotated[list[str], NoDecode] = []
+    open_weight_model_timeout_seconds: int = 30
+    open_weight_model_max_prompt_chars: int = 12_000
+    open_weight_model_max_output_tokens: int = 1_024
+    open_weight_model_max_response_chars: int = 16_000
 
     @field_validator("app_env", "database_url", "api_key_pepper", mode="before")
     @classmethod
@@ -61,6 +68,10 @@ class Settings(BaseSettings):
         "sse_heartbeat_seconds",
         "sse_max_connection_seconds",
         "sse_replay_limit",
+        "open_weight_model_timeout_seconds",
+        "open_weight_model_max_prompt_chars",
+        "open_weight_model_max_output_tokens",
+        "open_weight_model_max_response_chars",
         mode="before",
     )
     @classmethod
@@ -78,21 +89,26 @@ class Settings(BaseSettings):
                 "sse_heartbeat_seconds": 15,
                 "sse_max_connection_seconds": 300,
                 "sse_replay_limit": 200,
+                "open_weight_model_timeout_seconds": 30,
+                "open_weight_model_max_prompt_chars": 12_000,
+                "open_weight_model_max_output_tokens": 1_024,
+                "open_weight_model_max_response_chars": 16_000,
             }
             return defaults[info.field_name]
         return value
 
-    @field_validator("cors_origins", "allowed_hosts", mode="before")
+    @field_validator("cors_origins", "allowed_hosts", "open_weight_model_allowed_models", mode="before")
     @classmethod
-    def parse_list_setting(cls, value):
+    def parse_list_setting(cls, value, info):
+        default = [] if info.field_name == "open_weight_model_allowed_models" else ["*"]
         if value is None:
-            return ["*"]
+            return default
         if isinstance(value, list):
             return value
         if isinstance(value, str):
             value = value.strip()
             if not value:
-                return ["*"]
+                return default
             if value.startswith("["):
                 try:
                     parsed = json.loads(value)
