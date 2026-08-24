@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Run a realistic OAE API load test against a deployed environment.
+"""Run a realistic OAE API workload against a deployed environment.
 
-This harness never fabricates infrastructure metrics. It measures HTTP behavior only;
-operator-supplied infrastructure metrics must be collected from the deployment.
-
-Usage:
-  python scripts/load_test.py --base-url https://api.example.com --keys-file keys.txt --users 100
+HTTP results are MEASURED. Infrastructure metrics must be collected from the
+actual deployment; this script never invents CPU, memory, database, queue, or
+provider numbers.
 """
 
 from __future__ import annotations
@@ -30,20 +28,46 @@ class Result:
     error: str | None = None
 
 
-async def request(client: httpx.AsyncClient, method: str, path: str, headers: dict[str, str], **kwargs) -> Result:
+async def request(client: httpx.AsyncClient, method: str, path: str, headers: dict[str, str], **kwargs) -> tuple[Result, httpx.Response | None]:
     started = time.perf_counter()
     try:
         response = await client.request(method, path, headers=headers, **kwargs)
-        return Result(path, (time.perf_counter() - started) * 1000, response.status_code)
+        return Result(path, (time.perf_counter() - started) * 1000, response.status_code), response
     except Exception as exc:
-        return Result(path, (time.perf_counter() - started) * 1000, 0, type(exc).__name__)
+        return Result(path, (time.perf_counter() - started) * 1000, 0, type(exc).__name__), None
 
 
-async def virtual_user(client: httpx.AsyncClient, api_key: str, index: int) -> list[Result]:
+async def virtual_user(
+    client: httpx.AsyncClient,
+    api_key: str,
+    index: int,
+    execute_jobs: bool,
+    job_operation: str,
+) -> list[Result]:
     headers = {"Authorization": f"Bearer {api_key}", "X-Request-ID": f"load-{index}"}
-    results = [await request(client, "GET", "/v1/me", headers)]
-    results.append(await request(client, "GET", "/v1/repositories?limit=25", headers))
-    results.append(await request(client, "GET", "/health/ready", {}))
+    results: list[Result] = []
+    result, _ = await request(client, "GET", "/v1/me", headers)
+    results.append(result)
+    result, _ = await request(client, "GET", "/v1/repositories?limit=25", headers)
+    results.append(result)
+    result, _ = await request(client, "GET", "/v1/jobs?limit=25", headers)
+    results.append(result)
+    if execute_jobs:
+        idempotency = f"load-{index}-{time.time_ns()}"
+        result, response = await request(
+            client,
+            "POST",
+            "/v1/jobs",
+            headers,
+            json={"operation": job_operation, "payload": {}, "idempotency_key": idempotency},
+        )
+        results.append(result)
+        if response is not None and response.status_code == 202:
+            body = response.json()
+            job_id = body.get("id")
+            if job_id:
+                result, _ = await request(client, "GET", f"/v1/jobs/{job_id}", headers)
+                results.append(result)
     return results
 
 
@@ -59,7 +83,7 @@ def percentile(values: list[float], p: float) -> float:
     return values[low] + (values[high] - values[low]) * (rank - low)
 
 
-async def run(base_url: str, keys: list[str], users: int, timeout: float) -> dict[str, object]:
+async def run(base_url: str, keys: list[str], users: int, timeout: float, execute_jobs: bool, job_operation: str) -> dict[str, object]:
     if not keys:
         raise SystemExit("keys-file must contain at least one API key")
     if users < 1:
@@ -68,8 +92,8 @@ async def run(base_url: str, keys: list[str], users: int, timeout: float) -> dic
     limits = httpx.Limits(max_connections=max(users, 100), max_keepalive_connections=max(users, 100))
     async with httpx.AsyncClient(base_url=base_url.rstrip("/"), timeout=timeout, limits=limits) as client:
         started = time.perf_counter()
-        batches = [virtual_user(client, keys[i % len(keys)], i) for i in range(users)]
-        nested = await asyncio.gather(*batches)
+        tasks = [virtual_user(client, keys[i % len(keys)], i, execute_jobs, job_operation) for i in range(users)]
+        nested = await asyncio.gather(*tasks)
         elapsed = time.perf_counter() - started
 
     results = [item for batch in nested for item in batch]
@@ -95,6 +119,7 @@ async def run(base_url: str, keys: list[str], users: int, timeout: float) -> dic
         "base_url": base_url,
         "virtual_users": users,
         "api_keys_used": len(keys),
+        "workload": "read-only" if not execute_jobs else f"read+jobs:{job_operation}",
         "elapsed_seconds": round(elapsed, 3),
         "requests": len(results),
         "successful_requests": len(successful),
@@ -116,10 +141,12 @@ def main() -> int:
     parser.add_argument("--keys-file", type=Path, required=True)
     parser.add_argument("--users", type=int, default=100)
     parser.add_argument("--timeout", type=float, default=30.0)
+    parser.add_argument("--execute-jobs", action="store_true")
+    parser.add_argument("--job-operation", choices=["analyze", "review", "verify"], default="analyze")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     keys = [line.strip() for line in args.keys_file.read_text().splitlines() if line.strip()]
-    report = asyncio.run(run(args.base_url, keys, args.users, args.timeout))
+    report = asyncio.run(run(args.base_url, keys, args.users, args.timeout, args.execute_jobs, args.job_operation))
     rendered = json.dumps(report, indent=2)
     print(rendered)
     if args.output:
