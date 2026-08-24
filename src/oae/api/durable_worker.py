@@ -52,7 +52,13 @@ class DurableWorker:
         if not lease:
             return False
 
-        classification = classify_operation(lease.operation)
+        try:
+            classification = classify_operation(lease.operation)
+        except ValueError:
+            logger.error("job_operation_policy_missing job_id=%s operation=%s", lease.job_id, lease.operation)
+            self._record_failure(lease, "operation_policy_missing")
+            return True
+
         if classification == OperationClass.HUMAN_APPROVAL_REQUIRED:
             logger.warning("job_requires_human_approval job_id=%s", lease.job_id)
             self._record_failure(lease, "operation_requires_human_approval")
