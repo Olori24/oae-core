@@ -2,52 +2,56 @@
 
 **Rule:** UNKNOWN is not PASS. Capacity claims require measured evidence from a deployed environment.
 
+## Engineering-completion target
+
+The branch is being driven toward **98% implementation completeness** for the minimum production backend surface. That percentage is an engineering-progress target, **not a capacity claim**. Runtime capacity remains UNKNOWN until controlled tests are executed.
+
 | Area | Status | Evidence | Test | Result | Remaining Risk |
 |---|---|---|---|---|---|
-| Product | UNKNOWN | Existing API and UI inspected | Fresh-user journey | BLOCKED | No complete production SaaS acceptance run yet |
-| Security | UNKNOWN | Tenant/RBAC controls exist | Adversarial suite | BLOCKED | Full security campaign not executed |
-| Multi-tenancy | UNKNOWN | Tenant-scoped queries and composite FKs present | Cross-tenant IDOR suite | BLOCKED | Needs adversarial execution |
-| Database | PARTIAL | PostgreSQL path now uses bounded per-process pool | Pool unit tests + Postgres integration | PENDING CI | Aggregate pool budget still needs deployment measurement |
-| API | PARTIAL | Versioned `/v1/` routes, pagination, request IDs | API integration suite | PENDING CI | Idempotency and distributed rate limiting remain |
-| Workers | PARTIAL | Durable leases, retry/recovery worker exists | Concurrency/failure tests | BLOCKED | Safe operation concurrency not fully benchmarked |
-| Realtime | FAIL | Current SSE loop polls event store per connection | 50K SSE test | NOT RUN | Shared broker/pub-sub required before 50K |
-| AI | UNKNOWN | Provider/planning infrastructure exists | Provider failure/cost tests | BLOCKED | Full provider abstraction and cost controls not verified |
-| Storage | UNKNOWN | Workspace quotas and retention exist | Object-storage production test | BLOCKED | Durable object storage not yet verified |
-| Observability | PARTIAL | Structured logging, Sentry option, health endpoints | Operational dashboard test | BLOCKED | Pool/queue/AI metrics need deployment wiring |
-| Deployment | PARTIAL | Production Docker/Caddy topology exists | Reproducible deployment | BLOCKED | Restore/rollback evidence missing |
-| Load testing | FAIL | `scripts/load_test.py` added | 100→50K progressive runs | NOT RUN | No measured capacity yet |
-| Failure recovery | UNKNOWN | Durable leases and retry paths exist | Failure injection | NOT RUN | API/DB/broker/provider scenarios remain |
-| Billing | UNKNOWN | No evidence of complete commercial entitlement path | Billing acceptance | BLOCKED | Must not claim complete until implemented |
-| Compliance | UNKNOWN | No compliance evidence in this audit | Compliance review | BLOCKED | Define required controls and scope |
+| Product | PARTIAL | Existing API/UI and mission-control surface | Fresh-user journey | BLOCKED | Complete production SaaS acceptance run required |
+| Security | PARTIAL | RBAC, governed worker authorization, security headers, Bandit remediation | Adversarial suite | BLOCKED | Full security campaign not executed |
+| Multi-tenancy | PARTIAL | Tenant-scoped queries and composite relationships | Cross-tenant IDOR suite | BLOCKED | Adversarial execution required |
+| Database | PARTIAL | Bounded PostgreSQL pool with timeout/recycling | Pool + PostgreSQL integration | PENDING | Aggregate production connection budget requires measurement |
+| API | PARTIAL | `/v1/`, bounded pagination, request IDs, shared mutation rate limiting | API integration suite | PENDING | Critical POST idempotency still required |
+| Workers | PARTIAL | Durable leases, retry/recovery, bounded concurrency and operation policy | Concurrency/failure tests | BLOCKED | Capacity and destructive-operation verification required |
+| Realtime | FAIL | Durable event store and SSE replay exist | 50K SSE test | NOT RUN | Shared broker/fanout still required before 50K |
+| AI | UNKNOWN | Planning/provider infrastructure exists | Provider failure/cost tests | BLOCKED | Complete provider abstraction and cost governance required |
+| Storage | UNKNOWN | Workspace quota/retention controls exist | Object-storage production test | BLOCKED | Durable object storage and restore evidence required |
+| Observability | PARTIAL | Structured logs, Sentry option, request IDs, health endpoints, pool metrics | Operational dashboard test | BLOCKED | Deployment wiring and alert validation required |
+| Deployment | PARTIAL | Production Docker/Caddy topology and production configuration | Reproducible deployment | PARTIAL | Rollback and restore evidence required |
+| Load testing | FAIL | `scripts/load_test.py` exercises realistic API workflows | 100→50K progressive runs | NOT RUN | No measured capacity yet |
+| Failure recovery | PARTIAL | Durable leases and retry paths | Failure injection | NOT RUN | API/DB/broker/provider scenarios remain |
+| Billing | UNKNOWN | No complete commercial entitlement evidence | Billing acceptance | BLOCKED | Server-side entitlement path required |
+| Compliance | UNKNOWN | No compliance claim made | Compliance review | BLOCKED | Define scope and required controls |
 
-## Phase 1 implemented in this branch
+## Implemented in this branch
 
 - bounded PostgreSQL pool with configurable minimum/maximum size
-- pool acquisition timeout
-- connection lifetime recycling
-- pool wait/usage metrics
-- application shutdown pool cleanup
-- short-lived bounded authentication cache using derived cache keys only
-- local revocation cache invalidation
+- pool acquisition timeout and connection lifetime recycling
+- pool wait/usage metrics and shutdown cleanup
+- bounded authentication cache using derived cache keys only
+- revocation-aware authentication cache invalidation
 - `/health/live` and `/health/ready`
 - realistic HTTP load-test harness
-- production configuration documentation
+- worker concurrency limits and explicit operation safety policy
+- PostgreSQL-backed distributed mutation rate limiting
+- security-header hardening and production configuration documentation
 
-## Required next gates
+## Remaining minimum gates
 
-1. Run CI and fix all failures.
-2. Run PostgreSQL integration tests against production-like PostgreSQL.
-3. Replace per-client SSE database polling with shared broker delivery.
-4. Classify worker operations by concurrency safety and benchmark workers.
-5. Add distributed rate limiting and idempotency for critical POSTs.
-6. Complete adversarial tenant/workspace/tool security tests.
-7. Validate durable object storage and backup/restore.
-8. Deploy a production-like staging environment.
-9. Run 100, 1K, 5K, 10K, 25K and 50K workloads.
-10. Inject failures during sustained load and repeat the tests.
+1. CI and PostgreSQL integration must pass.
+2. Replace per-client SSE database polling with shared broker delivery.
+3. Finish critical POST idempotency.
+4. Complete adversarial tenant/workspace/tool security tests.
+5. Validate durable object storage and backup/restore.
+6. Complete AI provider abstraction and cost/usage controls.
+7. Deploy production-like staging with accessible telemetry.
+8. Run 100, 1K, 5K, 10K, 25K and 50K realistic workloads.
+9. Inject failures during sustained load and repeat tests.
+10. Fix measured saturation points and rerun the campaign.
 
 ## Current verdict
 
 **RED — NOT READY**
 
-The repository has meaningful production foundations, but **50,000-user capacity is currently UNKNOWN and unverified**.
+The implementation is materially hardened, but **50,000-user capacity remains UNKNOWN and unverified**. No benchmark numbers are inferred from code or unit tests.
