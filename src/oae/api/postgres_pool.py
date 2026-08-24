@@ -29,6 +29,7 @@ class PostgresConnectionPool:
         self.max_lifetime = settings.postgres_pool_max_lifetime_seconds
         self._idle: queue.LifoQueue[_PooledConnection] = queue.LifoQueue(maxsize=self.max_size)
         self._condition = threading.Condition()
+        self._births: dict[int, float] = {}
         self._total = 0
         self._closed = False
         self._waiters = 0
@@ -36,14 +37,16 @@ class PostgresConnectionPool:
         self._wait_seconds = 0.0
         self._created = 0
 
-    def _new_connection(self) -> _PooledConnection:
+    def _new_connection(self):
         try:
             import psycopg
         except ImportError as exc:
             raise RuntimeError("Postgres is configured but psycopg is not installed") from exc
         conn = psycopg.connect(self.database_url, connect_timeout=max(1, int(self.timeout)))
+        created_at = time.monotonic()
+        self._births[id(conn)] = created_at
         self._created += 1
-        return _PooledConnection(conn, time.monotonic())
+        return conn
 
     def _expired(self, item: _PooledConnection) -> bool:
         return time.monotonic() - item.created_at >= self.max_lifetime
@@ -64,6 +67,7 @@ class PostgresConnectionPool:
                         try:
                             item.connection.close()
                         finally:
+                            self._births.pop(id(item.connection), None)
                             self._total -= 1
                         continue
                     return item.connection
@@ -84,7 +88,7 @@ class PostgresConnectionPool:
             self._wait_seconds += time.monotonic() - started
 
         try:
-            return self._new_connection().connection
+            return self._new_connection()
         except Exception:
             with self._condition:
                 self._total -= 1
@@ -99,16 +103,19 @@ class PostgresConnectionPool:
                 connection.close()
             finally:
                 with self._condition:
+                    self._births.pop(id(connection), None)
                     self._total -= 1
                     self._condition.notify()
-                return
+            return
 
-        item = _PooledConnection(connection, getattr(connection, "_oae_created_at", time.monotonic()))
+        created_at = self._births.get(id(connection), time.monotonic())
+        item = _PooledConnection(connection, created_at)
         with self._condition:
             if self._closed or self._expired(item):
                 try:
                     connection.close()
                 finally:
+                    self._births.pop(id(connection), None)
                     self._total -= 1
                     self._condition.notify()
                 return
@@ -126,15 +133,17 @@ class PostgresConnectionPool:
                 try:
                     item.connection.close()
                 finally:
+                    self._births.pop(id(item.connection), None)
                     self._total -= 1
             self._condition.notify_all()
 
     def metrics(self) -> dict[str, int | float]:
         with self._condition:
+            idle = self._idle.qsize()
             return {
                 "total": self._total,
-                "idle": self._idle.qsize(),
-                "active": max(0, self._total - self._idle.qsize()),
+                "idle": idle,
+                "active": max(0, self._total - idle),
                 "max": self.max_size,
                 "waiters": self._waiters,
                 "wait_count": self._wait_count,
