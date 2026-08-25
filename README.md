@@ -260,6 +260,8 @@ Before enabling governed build execution, follow [Phase 2 real-host validation](
 
 Before the host operator runs Docker Compose, use the [environment placeholder preflight](docs/ENVIRONMENT_PLACEHOLDER_PREFLIGHT.md). It checks every declared variable and required deployment key without printing values, then returns a machine-readable PASS or FAIL result suitable for the protected staging-evidence directory.
 
+For the production-only domain and secret values, use the host-side [production secret-injection utility](docs/PRODUCTION_SECRET_INJECTION.md). It reads a protected, non-versioned source file, writes an atomic mode-0600 target, and emits names and readiness only. It does not generate secrets or replace the required host-mode checks.
+
 The repository includes two host-side aids for that procedure. On the isolated staging host, run the preflight first, then collect evidence only after the governed validation has completed. Both tools report configuration names and redacted output only; they must never be pointed at a local development host as proof of a real deployment.
 
 ```bash
