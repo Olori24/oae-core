@@ -258,6 +258,8 @@ Before enabling production traffic, verify database health, worker and relay log
 
 Before enabling governed build execution, follow [Phase 2 real-host validation](docs/REAL_HOST_PHASE_2_VALIDATION.md). It covers applying migrations `0005` and `0006`, issuing separate principals, proving no self-approval, validating revocation, exercising durable worker enforcement, walking opaque cursors, and confirming the intentionally local rate-limit response. Do not enable the enforcement flag based on local tests alone.
 
+Before the host operator runs Docker Compose, use the [environment placeholder preflight](docs/ENVIRONMENT_PLACEHOLDER_PREFLIGHT.md). It checks every declared variable and required deployment key without printing values, then returns a machine-readable PASS or FAIL result suitable for the protected staging-evidence directory.
+
 The repository includes two host-side aids for that procedure. On the isolated staging host, run the preflight first, then collect evidence only after the governed validation has completed. Both tools report configuration names and redacted output only; they must never be pointed at a local development host as proof of a real deployment.
 
 ```bash

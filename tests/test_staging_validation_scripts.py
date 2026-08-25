@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from scripts import collect_staging_telemetry, staging_preflight
+from scripts import check_environment_placeholders, collect_staging_telemetry, staging_preflight
 
 
 def test_environment_checks_reject_missing_or_placeholder_governed_configuration():
@@ -75,3 +75,76 @@ def test_sandbox_context_marks_unavailable_host_infrastructure_unknown():
 
     assert contextual[0].status == "UNKNOWN"
     assert contextual[1].status == "FAIL"
+
+
+def test_placeholder_preflight_rejects_template_values_and_resolves_derived_variables():
+    values = {
+        "APP_ENV": "staging",
+        "API_DOMAIN": "staging-api.example.com",
+        "CADDY_EMAIL": "operator@example.com",
+        "POSTGRES_DB": "oae",
+        "POSTGRES_USER": "oae",
+        "POSTGRES_PASSWORD": "replace-me",
+        "DATABASE_URL": "postgresql://oae:${POSTGRES_PASSWORD}@db:5432/oae",
+        "API_KEY_PEPPER": "change-me",
+        "ALLOWED_HOSTS": '["staging-api.example.com"]',
+        "CORS_ORIGINS": '["https://console.example.com"]',
+        "DURABLE_JOBS_ENABLED": "false",
+        "REALTIME_EVENTS_ENABLED": "false",
+        "WORKER_AUTHORIZATION_ENFORCEMENT_ENABLED": "false",
+        "OPTIONAL_WEBHOOK": "https://example.com/hook",
+    }
+
+    results = {item.name: item for item in check_environment_placeholders.assess_values(values)}
+
+    assert results["POSTGRES_PASSWORD"].status == "FAIL"
+    assert results["DATABASE_URL"].status == "FAIL"
+    assert "POSTGRES_PASSWORD" in results["DATABASE_URL"].detail
+    assert results["OPTIONAL_WEBHOOK"].status == "FAIL"
+    assert results["API_KEY_PEPPER"].category == "sensitive"
+
+
+def test_placeholder_preflight_accepts_host_ready_values_without_rendering_them(tmp_path: Path):
+    secret = "unique-host-secret-value"
+    env_file = tmp_path / ".env.staging"
+    env_file.write_text(
+        "\n".join(
+            (
+                "APP_ENV=staging",
+                "API_DOMAIN=staging.api.oae.dev",
+                "CADDY_EMAIL=ops@oae.dev",
+                "POSTGRES_DB=oae",
+                "POSTGRES_USER=oae",
+                f"POSTGRES_PASSWORD={secret}",
+                "DATABASE_URL=postgresql://oae:${POSTGRES_PASSWORD}@db:5432/oae",
+                "API_KEY_PEPPER=distinct-operator-pepper",
+                'ALLOWED_HOSTS=["staging.api.oae.dev"]',
+                'CORS_ORIGINS=["https://console.oae.dev"]',
+                "DURABLE_JOBS_ENABLED=false",
+                "REALTIME_EVENTS_ENABLED=false",
+                "WORKER_AUTHORIZATION_ENFORCEMENT_ENABLED=false",
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = check_environment_placeholders.build_report(env_file)
+    rendered = str(report)
+
+    assert report["status"] == "PASS"
+    assert report["summary"] == {"pass": 13, "fail": 0}
+    assert secret not in rendered
+    assert "distinct-operator-pepper" not in rendered
+
+
+def test_placeholder_preflight_rejects_whitespace_and_missing_environment_file(tmp_path: Path):
+    values = {key: "configured" for key in staging_preflight.REQUIRED_KEYS}
+    values["POSTGRES_PASSWORD"] = "   "
+
+    statuses = {item.name: item.status for item in check_environment_placeholders.assess_values(values)}
+    missing_report = check_environment_placeholders.build_report(tmp_path / "does-not-exist")
+
+    assert statuses["POSTGRES_PASSWORD"] == "FAIL"
+    assert missing_report["status"] == "FAIL"
+    assert missing_report["variables"] == []

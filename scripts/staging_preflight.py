@@ -175,7 +175,7 @@ def dns_check(domain: str) -> Check:
         addresses = sorted({item[4][0] for item in socket.getaddrinfo(domain, 443)})
     except socket.gaierror:
         return Check("public_dns", "FAIL", "API_DOMAIN did not resolve for HTTPS.")
-    return Check("public_dns", "PASS", f"API_DOMAIN resolved to {', '.join(addresses)}.")
+    return Check("public_dns", "PASS", f"API_DOMAIN resolved to {', '.join(map(str, addresses))}.")
 
 
 def redact(text: str) -> str:
