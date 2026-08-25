@@ -1,9 +1,9 @@
 import http.client
-import subprocess
 import sys
 import time
 from pathlib import Path
 
+from oae.core.process_security import ProcessTimeout, popen_absolute_command
 from oae.core.project_specification import ProjectSpecification
 
 
@@ -41,11 +41,10 @@ class ApplicationIntegrationVerifier:
             "--port",
             str(self._HEALTH_PORT),
         ]
-        process = subprocess.Popen(
+        process = popen_absolute_command(
             command,
             cwd=root / "src",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             text=True,
         )
 
@@ -83,7 +82,7 @@ class ApplicationIntegrationVerifier:
             process.terminate()
             try:
                 process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
+            except ProcessTimeout:
                 process.kill()
 
     @classmethod

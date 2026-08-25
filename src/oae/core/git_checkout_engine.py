@@ -1,4 +1,4 @@
-import subprocess
+from oae.core.process_security import run_git, validate_git_ref
 
 
 class GitCheckoutEngine:
@@ -7,8 +7,9 @@ class GitCheckoutEngine:
     """
 
     def checkout(self, branch, cwd=None):
-        result = subprocess.run(
-            ["git", "checkout", branch],
+        branch = validate_git_ref(branch)
+        result = run_git(
+            ["checkout", branch],
             cwd=cwd,
             capture_output=True,
             text=True,
@@ -22,8 +23,9 @@ class GitCheckoutEngine:
         }
 
     def create_and_checkout(self, branch, cwd=None):
-        result = subprocess.run(
-            ["git", "checkout", "-b", branch],
+        branch = validate_git_ref(branch)
+        result = run_git(
+            ["checkout", "-b", branch],
             cwd=cwd,
             capture_output=True,
             text=True,

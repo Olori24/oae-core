@@ -1,8 +1,9 @@
 import json
 import os
 import shutil
-import subprocess
 from pathlib import Path
+
+from oae.core.process_security import ProcessTimeout, run_absolute_command
 
 
 class FrontendBuildVerifier:
@@ -97,7 +98,7 @@ class FrontendBuildVerifier:
             environment = os.environ.copy()
             environment["NODE_ENV"] = "production"
             environment.setdefault("NEXT_TELEMETRY_DISABLED", "1")
-            result = subprocess.run(
+            result = run_absolute_command(
                 command,
                 cwd=cwd,
                 capture_output=True,
@@ -111,7 +112,7 @@ class FrontendBuildVerifier:
                 "stdout": result.stdout,
                 "stderr": result.stderr,
             }
-        except subprocess.TimeoutExpired as exc:
+        except ProcessTimeout as exc:
             return {
                 "returncode": 124,
                 "stdout": exc.stdout or "",

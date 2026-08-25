@@ -1,16 +1,13 @@
-import subprocess
+from oae.core.process_security import ProcessPolicyError, run_git
 
 
 class GitDiff:
 
     def summary(self):
         try:
-            output = subprocess.check_output(
-                ["git", "diff", "--stat"],
-                text=True,
-            ).strip()
+            output = run_git(["diff", "--stat"]).stdout.strip()
 
             return output if output else "No unstaged changes."
 
-        except Exception as e:
-            return str(e)
+        except (OSError, ProcessPolicyError) as exc:
+            return str(exc)

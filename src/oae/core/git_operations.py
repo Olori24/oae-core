@@ -1,4 +1,4 @@
-import subprocess
+from oae.core.process_security import ProcessPolicyError, run_git
 
 
 class GitOperations:
@@ -7,12 +7,14 @@ class GitOperations:
     """
 
     def run(self, *args, cwd=None):
-        result = subprocess.run(
-            ["git", *args],
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = run_git(args, cwd=cwd)
+        except ProcessPolicyError as exc:
+            return {
+                "returncode": 126,
+                "stdout": "",
+                "stderr": str(exc),
+            }
 
         return {
             "returncode": result.returncode,

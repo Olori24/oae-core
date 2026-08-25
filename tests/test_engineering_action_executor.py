@@ -65,9 +65,9 @@ def test_run_tests_operation():
     executor = EngineeringActionExecutor()
     results = executor.execute([{
         "operation": "run_tests",
-        "command": ["python", "-c", "print('OAE TEST PASS')"],
+        "command": ["python", "--version"],
     }])
     assert results[0]["status"] == "completed"
     assert results[0]["result"]["returncode"] == 0
     assert results[0]["result"]["passed"] is True
-    assert "OAE TEST PASS" in results[0]["result"]["stdout"]
+    assert "Python" in results[0]["result"]["stdout"]

@@ -1,4 +1,4 @@
-import subprocess
+from oae.core.process_security import ProcessPolicyError, run_allowed_test_command
 
 
 class RepositoryTestRunner:
@@ -8,13 +8,15 @@ class RepositoryTestRunner:
 
     def run(self, command=None, cwd=None):
         command = command or ["python", "--version"]
-
-        result = subprocess.run(
-            command,
-            cwd=cwd,
-            capture_output=True,
-            text=True,
-        )
+        try:
+            result = run_allowed_test_command(command, cwd=cwd)
+        except ProcessPolicyError as exc:
+            return {
+                "returncode": 126,
+                "passed": False,
+                "stdout": "",
+                "stderr": str(exc),
+            }
 
         return {
             "returncode": result.returncode,

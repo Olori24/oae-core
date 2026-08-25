@@ -1,10 +1,10 @@
-import subprocess
 import sys
 from pathlib import Path
 
 from oae.core.application_integration_verifier import ApplicationIntegrationVerifier
 from oae.core.application_readiness_engine import ApplicationReadinessEngine
 from oae.core.frontend_build_verifier import FrontendBuildVerifier
+from oae.core.process_security import run_absolute_command
 from oae.core.project_specification import ProjectSpecification
 
 
@@ -68,7 +68,7 @@ class ApplicationVerificationEngine:
     @staticmethod
     def _run_python_contract(root):
         main = root / "src" / "main.py"
-        completed = subprocess.run(
+        completed = run_absolute_command(
             [sys.executable, str(main)],
             cwd=root,
             capture_output=True,

@@ -1,4 +1,4 @@
-import subprocess
+from oae.core.process_security import ProcessPolicyError, run_git
 
 
 class GitStatus:
@@ -6,10 +6,7 @@ class GitStatus:
     def status(self):
 
         try:
-            output = subprocess.check_output(
-                ["git", "status", "--short"],
-                text=True,
-            ).strip()
+            output = run_git(["status", "--short"]).stdout.strip()
 
             if not output:
                 return {
@@ -24,8 +21,8 @@ class GitStatus:
                 "files": files,
             }
 
-        except Exception as e:
+        except (OSError, ProcessPolicyError) as exc:
             return {
                 "clean": False,
-                "error": str(e),
+                "error": str(exc),
             }

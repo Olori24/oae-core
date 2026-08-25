@@ -1,5 +1,6 @@
-import subprocess
 from pathlib import Path
+
+from oae.core.process_security import repository_name_from_url, run_git, validate_repository_url
 
 
 class RepositoryCloneEngine:
@@ -12,21 +13,25 @@ class RepositoryCloneEngine:
         self.workspace.mkdir(parents=True, exist_ok=True)
 
     def clone(self, url):
-        name = url.rstrip("/").split("/")[-1]
-
-        if name.endswith(".git"):
-            name = name[:-4]
-
-        destination = self.workspace / name
+        clone_url = validate_repository_url(url)
+        name = repository_name_from_url(clone_url)
+        workspace = self.workspace.resolve()
+        destination = (workspace / name).resolve()
+        if destination.parent != workspace:
+            raise ValueError("Repository destination escaped the configured workspace.")
 
         if destination.exists():
-            subprocess.run(
-                ["git", "-C", str(destination), "pull"],
+            if not (destination / ".git").is_dir():
+                raise ValueError("Existing repository destination is not a Git worktree.")
+            run_git(
+                ["pull", "--ff-only"],
+                cwd=destination,
                 check=True,
             )
         else:
-            subprocess.run(
-                ["git", "clone", url, str(destination)],
+            run_git(
+                ["clone", clone_url, str(destination)],
+                cwd=workspace,
                 check=True,
             )
 

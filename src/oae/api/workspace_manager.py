@@ -4,7 +4,6 @@ import hashlib
 import json
 import mimetypes
 import shutil
-import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -21,6 +20,7 @@ from oae.api.workspace_models import (
     WorkspaceRecord,
     WorkspaceState,
 )
+from oae.core.process_security import run_git, validate_git_ref, validate_repository_url
 
 EXCLUDED_DIRECTORY_NAMES = {".git", ".next", "__pycache__", "node_modules"}
 
@@ -73,20 +73,25 @@ class GitRevisionMaterializer:
 
     def materialize(self, revision: PinnedRepositoryRevision, target: Path) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            ["git", "clone", "--no-checkout", "--filter=blob:none", revision.clone_url, str(target)],
+        clone_url = validate_repository_url(revision.clone_url)
+        commit_sha = validate_git_ref(revision.commit_sha)
+        run_git(
+            ["clone", "--no-checkout", "--filter=blob:none", clone_url, str(target.resolve())],
+            cwd=target.parent,
             check=True,
             capture_output=True,
             text=True,
         )
-        subprocess.run(
-            ["git", "-C", str(target), "fetch", "--depth", "1", "origin", revision.commit_sha],
+        run_git(
+            ["fetch", "--depth", "1", "origin", commit_sha],
+            cwd=target,
             check=True,
             capture_output=True,
             text=True,
         )
-        subprocess.run(
-            ["git", "-C", str(target), "checkout", "--detach", revision.commit_sha],
+        run_git(
+            ["checkout", "--detach", commit_sha],
+            cwd=target,
             check=True,
             capture_output=True,
             text=True,

@@ -1,16 +1,13 @@
-import subprocess
+from oae.core.process_security import ProcessPolicyError, run_git
 
 
 class GitBranch:
 
     def current(self):
         try:
-            branch = subprocess.check_output(
-                ["git", "branch", "--show-current"],
-                text=True,
-            ).strip()
+            branch = run_git(["branch", "--show-current"]).stdout.strip()
 
             return branch
 
-        except Exception:
+        except (OSError, ProcessPolicyError):
             return "unknown"

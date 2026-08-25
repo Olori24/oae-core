@@ -27,8 +27,8 @@ class RepositoryScanner:
                 files[str(path.relative_to(root))] = path.read_text(
                     encoding="utf-8"
                 )
-            except Exception:
-                # Skip unreadable files
+            except (OSError, UnicodeDecodeError):
+                # Skip files that cannot be read as UTF-8 source.
                 continue
 
         return files
