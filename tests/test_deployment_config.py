@@ -29,6 +29,7 @@ def test_production_environment_template_enables_durable_event_delivery_without_
         "API_KEY_PEPPER=",
         "DURABLE_JOBS_ENABLED=true",
         "REALTIME_EVENTS_ENABLED=true",
+        "WORKER_AUTHORIZATION_ENFORCEMENT_ENABLED=false",
         "WORKSPACE_ROOT=/app/data/oae-workspaces",
         "SSE_MAX_CONNECTION_SECONDS=300",
     )
