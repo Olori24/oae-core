@@ -13,11 +13,10 @@ def test_postgres_pool_uses_bounded_configuration(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "psycopg_pool", SimpleNamespace(ConnectionPool=FakePool))
     settings = db_module.settings
-    monkeypatch.setattr(settings, "database_backend", "postgres")
-    monkeypatch.setattr(settings, "resolved_database_url", "postgresql://example/test")
-    monkeypatch.setattr(settings, "postgres_pool_min_size", 2, raising=False)
-    monkeypatch.setattr(settings, "postgres_pool_max_size", 8, raising=False)
-    monkeypatch.setattr(settings, "postgres_pool_timeout", 3.0, raising=False)
+    monkeypatch.setattr(settings, "database_url", "postgresql://example/test")
+    monkeypatch.setattr(settings, "postgres_pool_min_size", 2)
+    monkeypatch.setattr(settings, "postgres_pool_max_size", 8)
+    monkeypatch.setattr(settings, "postgres_pool_timeout", 3.0)
     db_module._POSTGRES_POOLS.clear()
 
     pool = db_module._postgres_pool()
