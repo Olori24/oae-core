@@ -133,6 +133,7 @@ POSTGRES_STATEMENTS = (
 
 _POSTGRES_BOOTSTRAP_LOCK = threading.Lock()
 _POSTGRES_BOOTSTRAPPED_URLS: set[str] = set()
+_POSTGRES_POOLS: dict[str, Any] = {}
 
 
 class _ConnectionAdapter:
@@ -159,6 +160,9 @@ class _ConnectionAdapter:
         self._connection.rollback()
 
     def close(self):
+        if self.backend == "postgres":
+            # Pool connections are returned by _release_connection(), not closed here.
+            return
         self._connection.close()
 
 
@@ -178,16 +182,40 @@ def _migrate_sqlite(adapter: _ConnectionAdapter) -> None:
     adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
 
 
+def _postgres_pool():
+    try:
+        from psycopg_pool import ConnectionPool
+    except ImportError as exc:
+        raise RuntimeError("Postgres is configured but psycopg-pool is not installed") from exc
+
+    url = settings.resolved_database_url
+    pool = _POSTGRES_POOLS.get(url)
+    if pool is None:
+        min_size = max(1, int(getattr(settings, "postgres_pool_min_size", 1)))
+        max_size = max(min_size, int(getattr(settings, "postgres_pool_max_size", 10)))
+        timeout = float(getattr(settings, "postgres_pool_timeout", 10.0))
+        pool = ConnectionPool(
+            conninfo=url,
+            min_size=min_size,
+            max_size=max_size,
+            timeout=timeout,
+            open=True,
+        )
+        _POSTGRES_POOLS[url] = pool
+    return pool
+
+
 def _connect() -> _ConnectionAdapter:
     backend = settings.database_backend
     if backend == "postgres":
-        try:
-            import psycopg
-        except ImportError as exc:
-            raise RuntimeError("Postgres is configured but psycopg is not installed") from exc
-        connection: Any = psycopg.connect(settings.resolved_database_url)
+        pool = _postgres_pool()
+        connection = pool.getconn()
         adapter = _ConnectionAdapter(connection, "postgres")
-        _bootstrap_postgres(adapter, settings.resolved_database_url)
+        try:
+            _bootstrap_postgres(adapter, settings.resolved_database_url)
+        except Exception:
+            pool.putconn(connection)
+            raise
         return adapter
 
     if backend == "sqlite":
@@ -207,7 +235,7 @@ def _connect() -> _ConnectionAdapter:
 
 
 def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
-    """Create legacy base tables once per connection URL without concurrent DDL deadlocks."""
+    """Create legacy base tables once per database URL."""
     with _POSTGRES_BOOTSTRAP_LOCK:
         if database_url in _POSTGRES_BOOTSTRAPPED_URLS:
             return
@@ -222,6 +250,15 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
         _POSTGRES_BOOTSTRAPPED_URLS.add(database_url)
 
 
+def _release_connection(adapter: _ConnectionAdapter) -> None:
+    if adapter.backend == "postgres":
+        pool = _POSTGRES_POOLS.get(settings.resolved_database_url)
+        if pool is not None:
+            pool.putconn(adapter._connection)
+        return
+    adapter.close()
+
+
 @contextmanager
 def db():
     conn = _connect()
@@ -232,4 +269,4 @@ def db():
         conn.rollback()
         raise
     finally:
-        conn.close()
+        _release_connection(conn)
