@@ -10,10 +10,10 @@ def test_release_returns_postgres_connection_to_pool(monkeypatch):
 
     connection = object()
     db_module._POSTGRES_POOLS.clear()
-    db_module._POSTGRES_POOLS['postgresql://example/test'] = FakePool()
-    monkeypatch.setattr(db_module.settings, 'resolved_database_url', 'postgresql://example/test')
+    db_module._POSTGRES_POOLS["postgresql://example/test"] = FakePool()
+    monkeypatch.setattr(db_module.settings, "database_url", "postgresql://example/test")
 
-    adapter = db_module._ConnectionAdapter(connection, 'postgres')
+    adapter = db_module._ConnectionAdapter(connection, "postgres")
     db_module._release_connection(adapter)
 
     assert returned == [connection]
