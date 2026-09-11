@@ -11,9 +11,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     app_env: str = "development"
     database_url: str = ""
-    # Kept for backward compatibility. New API keys use per-key salted PBKDF2.
     api_key_pepper: str = ""
     api_control_rate_limit_per_minute: int = 60
+    auth_cache_ttl_seconds: float = 5.0
+    auth_cache_max_entries: int = 10_000
     cors_origins: Annotated[list[str], NoDecode] = ["*"]
     allowed_hosts: Annotated[list[str], NoDecode] = ["*"]
     max_job_seconds: int = 300
@@ -23,8 +24,14 @@ class Settings(BaseSettings):
     workspace_quota_bytes: int = 1024 * 1024 * 1024
     workspace_quota_count: int = 20
     workspace_file_max_bytes: int = 100 * 1024 * 1024
+    postgres_pool_min_size: int = 2
+    postgres_pool_max_size: int = 10
+    postgres_pool_timeout_seconds: float = 5.0
+    postgres_pool_max_lifetime_seconds: float = 1800.0
     durable_jobs_enabled: bool = False
     worker_authorization_enforcement_enabled: bool = False
+    durable_worker_concurrency: int = 4
+    durable_worker_poll_seconds: float = 1.0
     durable_job_lease_seconds: int = 60
     durable_job_max_attempts: int = 3
     durable_job_retry_max_seconds: int = 300
@@ -59,6 +66,10 @@ class Settings(BaseSettings):
     @field_validator(
         "max_job_seconds",
         "api_control_rate_limit_per_minute",
+        "auth_cache_max_entries",
+        "postgres_pool_min_size",
+        "postgres_pool_max_size",
+        "durable_worker_concurrency",
         "durable_job_lease_seconds",
         "durable_job_max_attempts",
         "durable_job_retry_max_seconds",
@@ -75,11 +86,15 @@ class Settings(BaseSettings):
         mode="before",
     )
     @classmethod
-    def parse_job_seconds(cls, value, info):
+    def parse_positive_int(cls, value, info):
         if value is None or value == "":
             defaults = {
                 "max_job_seconds": 300,
                 "api_control_rate_limit_per_minute": 60,
+                "auth_cache_max_entries": 10_000,
+                "postgres_pool_min_size": 2,
+                "postgres_pool_max_size": 10,
+                "durable_worker_concurrency": 4,
                 "durable_job_lease_seconds": 60,
                 "durable_job_max_attempts": 3,
                 "durable_job_retry_max_seconds": 300,
@@ -95,6 +110,29 @@ class Settings(BaseSettings):
                 "open_weight_model_max_response_chars": 16_000,
             }
             return defaults[info.field_name]
+        if int(value) <= 0:
+            raise ValueError(f"{info.field_name} must be positive")
+        return value
+
+    @field_validator(
+        "auth_cache_ttl_seconds",
+        "postgres_pool_timeout_seconds",
+        "postgres_pool_max_lifetime_seconds",
+        "durable_worker_poll_seconds",
+        mode="before",
+    )
+    @classmethod
+    def parse_positive_float(cls, value, info):
+        if value is None or value == "":
+            return {
+                "auth_cache_ttl_seconds": 5.0,
+                "postgres_pool_timeout_seconds": 5.0,
+                "postgres_pool_max_lifetime_seconds": 1800.0,
+                "durable_worker_poll_seconds": 1.0,
+            }[info.field_name]
+        value = float(value)
+        if value <= 0:
+            raise ValueError(f"{info.field_name} must be positive")
         return value
 
     @field_validator("cors_origins", "allowed_hosts", "open_weight_model_allowed_models", mode="before")
@@ -119,28 +157,31 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.strip("[]").split(",") if item.strip()]
         raise TypeError("Expected a list or string")
 
+    @field_validator("postgres_pool_min_size", "postgres_pool_max_size")
+    @classmethod
+    def validate_pool_sizes(cls, value, info):
+        if value < 0:
+            raise ValueError(f"{info.field_name} must be non-negative")
+        return value
+
+    @field_validator("durable_worker_concurrency")
+    @classmethod
+    def validate_worker_concurrency(cls, value):
+        if value > 64:
+            raise ValueError("durable_worker_concurrency cannot exceed 64")
+        return value
+
     @property
     def resolved_database_url(self) -> str:
-        """Resolve the production database from explicit and integration env names."""
         if self.database_url:
             return self.database_url
-
-        # Vercel storage integrations can apply a custom prefix to the
-        # generated DATABASE_URL. For example, OAE_DB_DATABASE_URL.
         for name in (
-            "OAE_DB_DATABASE_URL",
-            "OAE_DB_URL",
-            "OAE_DB_POSTGRES_URL",
-            "OAE_DB",
-            "OAE_DB_URL_NON_POOLING",
-            "POSTGRES_URL",
-            "POSTGRES_PRISMA_URL",
-            "POSTGRES_URL_NON_POOLING",
+            "OAE_DB_DATABASE_URL", "OAE_DB_URL", "OAE_DB_POSTGRES_URL", "OAE_DB",
+            "OAE_DB_URL_NON_POOLING", "POSTGRES_URL", "POSTGRES_PRISMA_URL", "POSTGRES_URL_NON_POOLING",
         ):
             value = os.getenv(name, "").strip()
             if value:
                 return value
-
         if self.app_env == "production" or os.getenv("VERCEL"):
             return ""
         return "sqlite:///./oae.db"

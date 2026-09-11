@@ -1,5 +1,6 @@
 import json
 import logging
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -8,7 +9,13 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
+from oae.api.distributed_rate_limits import (
+    DistributedRateLimitExceeded,
+    enforce_distributed_rate_limit,
+)
+from oae.api.health import router as health_router
 from oae.api.observability import configure_error_tracking
+from oae.api.postgres_pool import close_pool
 from oae.api.routes import router
 from oae.api.ui_mission_control_v2 import page
 
@@ -36,10 +43,17 @@ logger = logging.getLogger("oae.api")
 configure_error_tracking(settings.sentry_dsn)
 
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    yield
+    close_pool()
+
+
 app = FastAPI(
     title="Open Autonomous Engineer API",
     version="0.6.0",
     description="Multi-tenant API for autonomous repository engineering.",
+    lifespan=lifespan,
 )
 
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
@@ -48,7 +62,7 @@ app.add_middleware(
     allow_origins=settings.cors_origins,
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+    allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
 )
 
 
@@ -59,6 +73,22 @@ async def security_headers(request: Request, call_next):
         request_id = raw_request_id
     else:
         request_id = str(uuid4())
+
+    if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path.startswith("/v1/"):
+        client_host = request.client.host if request.client else "unknown"
+        try:
+            enforce_distributed_rate_limit(
+                scope="mutating-api-ip",
+                subject=client_host,
+                limit=settings.api_control_rate_limit_per_minute,
+            )
+        except DistributedRateLimitExceeded:
+            return JSONResponse(
+                status_code=429,
+                content={"error": "rate_limited", "detail": "Too many control-plane requests."},
+                headers={"Retry-After": "60", "X-Request-ID": request_id, "Cache-Control": "no-store"},
+            )
+
     response = await call_next(request)
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -72,17 +102,18 @@ async def security_headers(request: Request, call_next):
 async def runtime_error_handler(request: Request, exc: RuntimeError):
     message = str(exc)
     logger.exception("runtime_error", extra={"path": request.url.path})
-    if "database" in message.lower() or "postgres" in message.lower():
-        detail = "Database configuration is unavailable. Check the production database integration."
+    if "database" in message.lower() or "postgres" in message.lower() or "pool" in message.lower():
+        detail = "Database capacity is temporarily unavailable. Retry the request shortly."
     else:
         detail = "The service could not complete this request."
     return JSONResponse(
         status_code=503,
         content={"error": "service_unavailable", "detail": detail},
-        headers={"Cache-Control": "no-store"},
+        headers={"Cache-Control": "no-store", "Retry-After": "5"},
     )
 
 
+app.include_router(health_router)
 app.include_router(router)
 
 
