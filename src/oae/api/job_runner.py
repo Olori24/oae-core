@@ -1,12 +1,14 @@
 import json
 import logging
 import tempfile
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 from oae.api.db import db
 from oae.api.github import GitHubPublicAnalyzer
 from oae.api.mission_results import build_result
+from oae.api.observability import telemetry
 from oae.core.vertical_slice_mission import VerticalSliceMission
 
 logger = logging.getLogger("oae.api.job_runner")
@@ -16,6 +18,7 @@ class JobRunner:
     """Executes supported SaaS engineering operations in isolated mission workspaces."""
 
     def run(self, job_id: str) -> None:
+        started = time.perf_counter()
         with db() as conn:
             row = conn.execute("SELECT operation,payload FROM jobs WHERE id=?", (job_id,)).fetchone()
             if not row:
@@ -31,7 +34,7 @@ class JobRunner:
             result = self._dispatch(operation, payload, job_id)
             status = "completed"
         except Exception as exc:
-            logger.exception("job_execution_failed job_id=%s operation=%s", job_id, operation)
+            logger.exception("job_execution_failed", extra={"job_id": job_id, "operation": operation})
             result = {
                 "schema_version": "1.0",
                 "operation": operation,
@@ -41,6 +44,12 @@ class JobRunner:
             }
             status = "failed"
 
+        duration_ms = round((time.perf_counter() - started) * 1000, 2)
+        telemetry.record_job(status)
+        logger.info(
+            "job_execution_finished",
+            extra={"job_id": job_id, "operation": operation, "status_code": 200 if status == "completed" else 500, "duration_ms": duration_ms},
+        )
         with db() as conn:
             conn.execute(
                 "UPDATE jobs SET status=?,result=?,updated_at=? WHERE id=?",
