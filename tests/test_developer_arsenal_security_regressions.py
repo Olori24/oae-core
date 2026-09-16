@@ -58,5 +58,5 @@ def test_tenant_inventory_does_not_leak_other_tenant_jobs(tmp_path):
     response = client.get("/v1/jobs", headers=other_headers)
     assert response.status_code == 200
     payload = response.json()
-    items = payload.get("items", payload if isinstance(payload, list) else [])
+    items = payload["items"] if isinstance(payload, dict) else payload
     assert job_id not in {item["id"] for item in items}
