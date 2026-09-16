@@ -39,8 +39,8 @@ class ServiceTelemetry:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._requests = Counter()
-        self._jobs = Counter()
+        self._requests: Counter[str] = Counter()
+        self._jobs: Counter[str] = Counter()
 
     def record_request(self, method: str, path: str, status_code: int) -> None:
         with self._lock:
