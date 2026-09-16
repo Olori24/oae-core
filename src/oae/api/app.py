@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -8,7 +9,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
-from oae.api.observability import configure_error_tracking
+from oae.api.observability import configure_error_tracking, telemetry
 from oae.api.routes import router
 from oae.api.ui_mission_control_v2 import page
 
@@ -23,6 +24,11 @@ class JsonFormatter(logging.Formatter):
                 "level": record.levelname,
                 "logger": record.name,
                 "message": record.getMessage(),
+                **{
+                    key: getattr(record, key)
+                    for key in ("request_id", "method", "path", "status_code", "duration_ms")
+                    if getattr(record, key, None) is not None
+                },
             }
         )
 
@@ -54,12 +60,25 @@ app.add_middleware(
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
+    started = time.perf_counter()
     raw_request_id = request.headers.get("X-Request-ID", "")
     if 1 <= len(raw_request_id) <= 128 and all(32 <= ord(char) <= 126 for char in raw_request_id):
         request_id = raw_request_id
     else:
         request_id = str(uuid4())
     response = await call_next(request)
+    duration_ms = round((time.perf_counter() - started) * 1000, 2)
+    telemetry.record_request(request.method, request.url.path, response.status_code)
+    logger.info(
+        "http_request",
+        extra={
+            "request_id": request_id,
+            "method": request.method,
+            "path": request.url.path,
+            "status_code": response.status_code,
+            "duration_ms": duration_ms,
+        },
+    )
     response.headers["X-Request-ID"] = request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"

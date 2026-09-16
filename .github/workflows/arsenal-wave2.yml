@@ -1,0 +1,31 @@
+name: Developer Arsenal — Wave 2
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  observability-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock.txt
+      - name: Install locked dependencies
+        run: python -m pip install -r requirements.lock.txt && python -m pip install --no-deps -e .
+      - name: Compile application
+        run: python -m compileall -q src tests
+      - name: Run observability regressions
+        run: pytest -q tests/test_developer_arsenal_observability.py
+      - name: Run critical API contracts when present
+        run: |
+          if [ -f tests/test_critical_api_contracts.py ]; then
+            pytest -q tests/test_critical_api_contracts.py
+          else
+            echo "No dedicated critical API contract suite present; covered by the main CI test suite."
+          fi

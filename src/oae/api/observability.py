@@ -1,8 +1,10 @@
-"""Structured operational logging and optional error-tracking configuration."""
+"""Structured operational logging and lightweight service telemetry."""
 
 import json
 import logging
 import sys
+import threading
+from collections import Counter
 from datetime import datetime, timezone
 from typing import Any
 
@@ -10,7 +12,7 @@ from typing import Any
 class JsonLogFormatter(logging.Formatter):
     """Render standard-library log records as compact JSON for aggregation."""
 
-    context_fields = ("job_id", "operation", "method", "path", "request_id")
+    context_fields = ("job_id", "operation", "method", "path", "request_id", "tenant_id", "status_code", "duration_ms")
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
@@ -30,6 +32,31 @@ class JsonLogFormatter(logging.Formatter):
 
 class _OaeJsonHandler(logging.StreamHandler):
     """Marker handler used to avoid duplicate OAE JSON handlers."""
+
+
+class ServiceTelemetry:
+    """Process-local counters for operational visibility without a new dependency."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._requests: Counter[str] = Counter()
+        self._jobs: Counter[str] = Counter()
+
+    def record_request(self, method: str, path: str, status_code: int) -> None:
+        with self._lock:
+            self._requests[f"{method} {path}"] += 1
+            self._requests[f"status:{status_code}"] += 1
+
+    def record_job(self, status: str) -> None:
+        with self._lock:
+            self._jobs[status] += 1
+
+    def snapshot(self) -> dict[str, dict[str, int]]:
+        with self._lock:
+            return {"requests": dict(self._requests), "jobs": dict(self._jobs)}
+
+
+telemetry = ServiceTelemetry()
 
 
 def configure_logging(app_env: str) -> None:
