@@ -2,9 +2,7 @@ name: HyperFrames OAE Demo
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feature/hyperframes-video-factory
+  pull_request:
     paths:
       - "examples/hyperframes-oae-demo/**"
       - "src/oae/tools/hyperframes.py"
