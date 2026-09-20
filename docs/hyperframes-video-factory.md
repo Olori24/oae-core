@@ -126,6 +126,36 @@ npx hyperframes skills update
 
 OAE should call these workflows rather than inventing a second video DSL.
 
+## Concrete proof-of-concept
+
+The repository now contains `examples/hyperframes-oae-demo/`, a 12-second
+portrait composition that explains the factory pipeline visually. It includes
+a HyperFrames motion assertion sidecar and a CI workflow that:
+
+1. checks the HyperFrames runtime;
+2. lints the composition;
+3. runs the browser verification gate;
+4. renders an MP4;
+5. verifies the file is non-empty;
+6. inspects duration, dimensions and frame rate with ffprobe; and
+7. uploads the MP4 as a workflow artifact.
+
+Run the same proof locally:
+
+```bash
+cd examples/hyperframes-oae-demo
+npx hyperframes doctor
+npx hyperframes lint --json
+npx hyperframes check --json
+npx hyperframes render --quality draft --output renders/oae-hyperframes-demo.mp4
+ffprobe -v error -show_entries format=duration:stream=width,height,r_frame_rate -of json renders/oae-hyperframes-demo.mp4
+```
+
+The important architectural boundary is now executable: OAE invokes the
+official HyperFrames CLI for lint, check and render; HyperFrames owns the
+actual frame/encode pipeline. Current HyperFrames documentation requires
+Node.js 22+ and FFmpeg for local rendering.
+
 ## Scaling path
 
 Phase 1: local/CI rendering.
