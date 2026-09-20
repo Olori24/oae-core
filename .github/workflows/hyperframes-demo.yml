@@ -1,0 +1,46 @@
+name: HyperFrames OAE Demo
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/hyperframes-video-factory
+    paths:
+      - "examples/hyperframes-oae-demo/**"
+      - "src/oae/tools/hyperframes.py"
+      - ".github/workflows/hyperframes-demo.yml"
+
+jobs:
+  render-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install FFmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: HyperFrames doctor
+        working-directory: examples/hyperframes-oae-demo
+        run: npx hyperframes doctor
+      - name: Lint composition
+        working-directory: examples/hyperframes-oae-demo
+        run: npx hyperframes lint --json
+      - name: Browser verification
+        working-directory: examples/hyperframes-oae-demo
+        run: npx hyperframes check --json
+      - name: Render proof video
+        working-directory: examples/hyperframes-oae-demo
+        run: npx hyperframes render --quality draft --output renders/oae-hyperframes-demo.mp4
+      - name: Verify MP4
+        working-directory: examples/hyperframes-oae-demo
+        run: test -s renders/oae-hyperframes-demo.mp4
+      - name: Inspect video
+        working-directory: examples/hyperframes-oae-demo
+        run: ffprobe -v error -show_entries format=duration:stream=width,height,r_frame_rate -of json renders/oae-hyperframes-demo.mp4
+      - name: Upload proof video
+        uses: actions/upload-artifact@v4
+        with:
+          name: oae-hyperframes-demo
+          path: examples/hyperframes-oae-demo/renders/oae-hyperframes-demo.mp4
