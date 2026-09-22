@@ -2,18 +2,35 @@
 
 # OAE · Open Autonomous Engineer
 
-**The governed engineering control plane for software teams.**
+**Governed engineering control plane for software teams.**
 
-OAE helps teams understand repositories, turn evidence into explicit engineering missions, run controlled work, verify outcomes, and retain an auditable operational record.
-
-[![CI](https://github.com/Olori24/oae-core/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Olori24/oae-core/actions/workflows/ci.yml)
-[![Security](https://github.com/Olori24/oae-core/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Olori24/oae-core/actions/workflows/security.yml)
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-0f172a?style=flat-square)](LICENSE)
-
-`UNDERSTAND` · `PLAN` · `AUTHORIZE` · `EXECUTE` · `VERIFY` · `RECORD`
+[![Documentation standard](https://img.shields.io/badge/README-Premium%20Standard-111827?style=flat-square)](#documentation-standard)
+[![Repository](https://img.shields.io/badge/GitHub-Olori24-181717?style=flat-square&logo=github)](https://github.com/Olori24)
 
 </div>
+
+![OAE · Open Autonomous Engineer architecture overview](./docs/assets/repo-hero.svg)
+
+> **Repository status:** Active development. This README describes implemented repository capabilities and explicitly separates shipped work from future or environment-dependent work.
+
+## Documentation standard
+
+This repository follows the portfolio documentation standard established for NSMS: clear product positioning, visual orientation, architecture, security boundaries, setup, validation evidence, maturity tracking, roadmap, and honest production-status language. Claims are kept scoped to repository evidence rather than inferred from intent.
+
+### At a glance
+
+| Area | Standard |
+|---|---|
+| Product | Clear one-sentence purpose and user value |
+| Architecture | Visual system model plus technical boundaries |
+| Security | Explicit trust, permission, tenant and secret-handling boundaries |
+| Evidence | Tests, CI, deployment and production claims separated |
+| Maturity | Implemented / pending / environment-dependent status |
+| Roadmap | Future work clearly separated from shipped capability |
+
+### Evidence language
+
+**IMPLEMENTED** means present in the repository. **TESTED** means supported by an executed test or CI result. **DEPLOYED** means a deployment target is configured or documented. **VERIFIED IN PRODUCTION** requires production evidence. **MEASURED** requires an actual measurement. Roadmap items are not represented as shipped.
 
 ---
 
