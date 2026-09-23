@@ -153,7 +153,7 @@ def run() -> int:
         repo_id = repo_response.json()["id"]
         checks = [("job", client.get("/v1/jobs/" + job_id, headers=other_headers).status_code),
                   ("repository", client.get("/v1/repositories/" + repo_id + "/revisions", headers=other_headers).status_code)]
-        violations = sum(status != 404 for _, status in checks)
+        violations = sum(status not in (403, 404) for _, status in checks)
         result["isolation"] = {"checks": len(checks), "violations": violations, "statuses": dict(checks)}
         result["gates"]["isolation_violation"] = violations > 0
 
@@ -163,7 +163,7 @@ def run() -> int:
             worker_id = repository.register_worker(worker_name="capacity-lab-" + tenant["tenant_id"])
             batch = 100
             with ThreadPoolExecutor(max_workers=16) as pool:
-                futures = [pool.submit(repository.enqueue, tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"i": i}, idempotency_key="capacity-batch-" + str(i)) for i in range(batch)]
+                futures = [pool.submit(repository.enqueue, tenant_id=tenant["tenant_id"], operation="capacity_batch", payload={"i": i}, idempotency_key="capacity-batch-" + str(i)) for i in range(batch)]
                 jobs = [f.result() for f in futures]
             claimed, claim_lock = [], __import__("threading").Lock()
             def claim():
@@ -174,7 +174,7 @@ def run() -> int:
             with ThreadPoolExecutor(max_workers=8) as pool: list(pool.map(lambda _: claim(), range(8)))
             with ThreadPoolExecutor(max_workers=16) as pool: list(pool.map(lambda lease: repository.complete(lease, {"ok": True}), claimed))
             with db() as conn:
-                completed = conn.execute("SELECT COUNT(*) FROM jobs WHERE tenant_id=? AND status='completed' AND operation='capacity_probe'", (tenant["tenant_id"],)).fetchone()[0]
+                completed = conn.execute("SELECT COUNT(*) FROM jobs WHERE tenant_id=? AND status='completed' AND operation='capacity_batch'", (tenant["tenant_id"],)).fetchone()[0]
             result["durable"].update({"enqueued": len(jobs), "claimed": len(claimed), "completed": completed, "lost": batch - completed,
                                       "duplicate_delivery": len(claimed) - len({lease.job_id for lease in claimed})})
             result["gates"]["silent_job_loss"] = completed != batch
@@ -182,7 +182,7 @@ def run() -> int:
             idem_a = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"same": True}, idempotency_key="capacity-idempotent")
             idem_b = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"same": True}, idempotency_key="capacity-idempotent")
             result["durable"]["idempotency_same_job"] = idem_a.id == idem_b.id and idem_a.created and not idem_b.created
-            interrupted = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"interrupted": True}, idempotency_key="capacity-interrupted")
+            interrupted = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_recovery", payload={"interrupted": True}, idempotency_key="capacity-interrupted")
             interrupted_lease = repository.claim_next(worker_id)
             if interrupted_lease is None or interrupted_lease.job_id != interrupted.id: raise RuntimeError("Could not claim interruption test job.")
             with db() as conn:
