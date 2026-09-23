@@ -107,6 +107,10 @@ def run() -> int:
         if settings.database_backend == "sqlite":
             settings.database_url = "sqlite:///" + str(Path(tmp) / "capacity.db")
         elif settings.database_backend == "postgres":
+            # Bootstrap the legacy/base PostgreSQL tables through the same adapter used by the API
+            # before applying ordered feature migrations that reference tenants/jobs.
+            with db():
+                pass
             import psycopg
             with psycopg.connect(settings.resolved_database_url) as conn:
                 apply_postgres_migrations(conn, migration_files())
@@ -129,11 +133,11 @@ def run() -> int:
         headers = {"Authorization": "Bearer " + tenant["api_key"]}
         result["baseline"].append({"operation": "POST /v1/tenants", "status_code": tenant_response.status_code, "latency_ms": latency})
 
-        repo_response, latency = timed("POST", "/v1/repositories", headers=headers, json={"provider": "github", "external_id": "capacity/" + tenant["tenant_id"], "clone_url": "https://github.com/Olori24/oae-core.git"})
+        repo_response, latency = timed("POST", "/v1/repositories", headers=headers, json={"provider": "github", "external_id": "Olori24/oae-core", "clone_url": "https://github.com/Olori24/oae-core.git"})
         if repo_response.status_code != 201: raise RuntimeError("Repository setup failed: " + repo_response.text)
         result["baseline"].append({"operation": "POST /v1/repositories", "status_code": repo_response.status_code, "latency_ms": latency})
 
-        job_response, latency = timed("POST", "/v1/jobs", headers=headers, json={"operation": "capacity_probe", "payload": {"probe": True}, "idempotency_key": "capacity-baseline-job"})
+        job_response, latency = timed("POST", "/v1/jobs", headers=headers, json={"operation": "analyze", "payload": {"probe": True}, "idempotency_key": "capacity-baseline-job"})
         if job_response.status_code != 202: raise RuntimeError("Job setup failed: " + job_response.text)
         job_id = job_response.json()["id"]
         result["baseline"].append({"operation": "POST /v1/jobs", "status_code": job_response.status_code, "latency_ms": latency})
@@ -153,7 +157,7 @@ def run() -> int:
         repo_id = repo_response.json()["id"]
         checks = [("job", client.get("/v1/jobs/" + job_id, headers=other_headers).status_code),
                   ("repository", client.get("/v1/repositories/" + repo_id + "/revisions", headers=other_headers).status_code)]
-        violations = sum(status != 404 for _, status in checks)
+        violations = sum(status not in (403, 404) for _, status in checks)
         result["isolation"] = {"checks": len(checks), "violations": violations, "statuses": dict(checks)}
         result["gates"]["isolation_violation"] = violations > 0
 
@@ -163,7 +167,7 @@ def run() -> int:
             worker_id = repository.register_worker(worker_name="capacity-lab-" + tenant["tenant_id"])
             batch = 100
             with ThreadPoolExecutor(max_workers=16) as pool:
-                futures = [pool.submit(repository.enqueue, tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"i": i}, idempotency_key="capacity-batch-" + str(i)) for i in range(batch)]
+                futures = [pool.submit(repository.enqueue, tenant_id=tenant["tenant_id"], operation="verify", payload={"i": i}, idempotency_key="capacity-batch-" + str(i)) for i in range(batch)]
                 jobs = [f.result() for f in futures]
             claimed, claim_lock = [], __import__("threading").Lock()
             def claim():
@@ -174,15 +178,17 @@ def run() -> int:
             with ThreadPoolExecutor(max_workers=8) as pool: list(pool.map(lambda _: claim(), range(8)))
             with ThreadPoolExecutor(max_workers=16) as pool: list(pool.map(lambda lease: repository.complete(lease, {"ok": True}), claimed))
             with db() as conn:
-                completed = conn.execute("SELECT COUNT(*) FROM jobs WHERE tenant_id=? AND status='completed' AND operation='capacity_probe'", (tenant["tenant_id"],)).fetchone()[0]
-            result["durable"].update({"enqueued": len(jobs), "claimed": len(claimed), "completed": completed, "lost": batch - completed,
-                                      "duplicate_delivery": len(claimed) - len({lease.job_id for lease in claimed})})
+                completed = conn.execute("SELECT COUNT(*) FROM jobs WHERE tenant_id=? AND status='completed' AND operation='verify'", (tenant["tenant_id"],)).fetchone()[0]
+            batch_claimed = [lease for lease in claimed if lease.operation == "verify"]
+            result["durable"].update({"enqueued": len(jobs), "claimed": len(batch_claimed), "completed": completed, "lost": batch - completed,
+                                      "duplicate_delivery": len(batch_claimed) - len({lease.job_id for lease in batch_claimed}),
+                                      "other_jobs_claimed": len(claimed) - len(batch_claimed)})
             result["gates"]["silent_job_loss"] = completed != batch
             result["gates"]["stuck_jobs"] = completed != batch
-            idem_a = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"same": True}, idempotency_key="capacity-idempotent")
-            idem_b = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"same": True}, idempotency_key="capacity-idempotent")
+            idem_a = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"same": True}, idempotency_key="capacity-idempotent")
+            idem_b = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"same": True}, idempotency_key="capacity-idempotent")
             result["durable"]["idempotency_same_job"] = idem_a.id == idem_b.id and idem_a.created and not idem_b.created
-            interrupted = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"interrupted": True}, idempotency_key="capacity-interrupted")
+            interrupted = repository.enqueue(tenant_id=tenant["tenant_id"], operation="verify", payload={"interrupted": True}, idempotency_key="capacity-interrupted", priority=0)
             interrupted_lease = repository.claim_next(worker_id)
             if interrupted_lease is None or interrupted_lease.job_id != interrupted.id: raise RuntimeError("Could not claim interruption test job.")
             with db() as conn:

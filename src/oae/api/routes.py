@@ -98,8 +98,11 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _timestamp(value: str) -> datetime:
-    return datetime.fromisoformat(value)
+def _timestamp(value: str | datetime) -> datetime:
+    if isinstance(value, datetime):
+        return value
+    # PostgreSQL legacy TEXT timestamps may be returned with a space separator.
+    return datetime.fromisoformat(value.replace(" ", "T", 1))
 
 
 def _decode_cursor(value: str | None) -> tuple[str, str] | None:
@@ -656,7 +659,7 @@ def list_jobs(
     return [
         JobResponse(
             id=r[0], status=r[1], operation=r[2], payload=json.loads(r[3]),
-            result=json.loads(r[4]) if r[4] else None, created_at=r[5], updated_at=r[6]
+            result=json.loads(r[4]) if r[4] else None, created_at=_timestamp(r[5]), updated_at=_timestamp(r[6])
         ) for r in page
     ]
 
@@ -672,7 +675,7 @@ def get_job(job_id: str, tenant_id: str = Depends(require_tenant)) -> JobRespons
         raise HTTPException(status_code=404, detail="Job not found")
     return JobResponse(
         id=row[0], status=row[1], operation=row[2], payload=json.loads(row[3]),
-        result=json.loads(row[4]) if row[4] else None, created_at=row[5], updated_at=row[6]
+        result=json.loads(row[4]) if row[4] else None, created_at=_timestamp(row[5]), updated_at=_timestamp(row[6])
     )
 
 

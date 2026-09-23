@@ -163,12 +163,12 @@ class DurableJobRepository:
                         NOT ?
                         OR job.operation <> 'build'
                         OR EXISTS (
-                          SELECT 1 FROM worker_authorizations authorization
-                          WHERE authorization.id=job.authorization_id
-                            AND authorization.tenant_id=job.tenant_id
-                            AND authorization.operation=job.operation
-                            AND authorization.status='approved'
-                            AND authorization.expires_at > now()
+                          SELECT 1 FROM worker_authorizations worker_auth
+                          WHERE worker_auth.id=job.authorization_id
+                            AND worker_auth.tenant_id=job.tenant_id
+                            AND worker_auth.operation=job.operation
+                            AND worker_auth.status='approved'
+                            AND worker_auth.expires_at > now()
                         )
                       )
                     ORDER BY priority ASC,scheduled_at ASC,created_at ASC
