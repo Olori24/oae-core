@@ -179,8 +179,10 @@ def run() -> int:
             with ThreadPoolExecutor(max_workers=16) as pool: list(pool.map(lambda lease: repository.complete(lease, {"ok": True}), claimed))
             with db() as conn:
                 completed = conn.execute("SELECT COUNT(*) FROM jobs WHERE tenant_id=? AND status='completed' AND operation='verify'", (tenant["tenant_id"],)).fetchone()[0]
-            result["durable"].update({"enqueued": len(jobs), "claimed": len(claimed), "completed": completed, "lost": batch - completed,
-                                      "duplicate_delivery": len(claimed) - len({lease.job_id for lease in claimed})})
+            batch_claimed = [lease for lease in claimed if lease.operation == "verify"]
+            result["durable"].update({"enqueued": len(jobs), "claimed": len(batch_claimed), "completed": completed, "lost": batch - completed,
+                                      "duplicate_delivery": len(batch_claimed) - len({lease.job_id for lease in batch_claimed}),
+                                      "other_jobs_claimed": len(claimed) - len(batch_claimed)})
             result["gates"]["silent_job_loss"] = completed != batch
             result["gates"]["stuck_jobs"] = completed != batch
             idem_a = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"same": True}, idempotency_key="capacity-idempotent")
