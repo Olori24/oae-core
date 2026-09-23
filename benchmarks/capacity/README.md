@@ -53,3 +53,8 @@ The report must include exact commands, environment, commit SHA, timestamps, mea
 - No unbounded stuck jobs within the benchmark timeout.
 - Existing repository CI gates remain green.
 - Benchmark itself is reproducible.
+
+
+## Harness
+
+`run_capacity_lab.py` executes the integrated baseline, concurrency, isolation, and durable-worker checks. CI runs it against PostgreSQL 16 and uploads measured JSON/Markdown artifacts.
