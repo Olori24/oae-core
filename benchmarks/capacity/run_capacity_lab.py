@@ -137,7 +137,7 @@ def run() -> int:
         if repo_response.status_code != 201: raise RuntimeError("Repository setup failed: " + repo_response.text)
         result["baseline"].append({"operation": "POST /v1/repositories", "status_code": repo_response.status_code, "latency_ms": latency})
 
-        job_response, latency = timed("POST", "/v1/jobs", headers=headers, json={"operation": "capacity_probe", "payload": {"probe": True}, "idempotency_key": "capacity-baseline-job"})
+        job_response, latency = timed("POST", "/v1/jobs", headers=headers, json={"operation": "analyze", "payload": {"probe": True}, "idempotency_key": "capacity-baseline-job"})
         if job_response.status_code != 202: raise RuntimeError("Job setup failed: " + job_response.text)
         job_id = job_response.json()["id"]
         result["baseline"].append({"operation": "POST /v1/jobs", "status_code": job_response.status_code, "latency_ms": latency})
