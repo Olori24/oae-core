@@ -167,7 +167,7 @@ def run() -> int:
             worker_id = repository.register_worker(worker_name="capacity-lab-" + tenant["tenant_id"])
             batch = 100
             with ThreadPoolExecutor(max_workers=16) as pool:
-                futures = [pool.submit(repository.enqueue, tenant_id=tenant["tenant_id"], operation="capacity_batch", payload={"i": i}, idempotency_key="capacity-batch-" + str(i)) for i in range(batch)]
+                futures = [pool.submit(repository.enqueue, tenant_id=tenant["tenant_id"], operation="analyze", payload={"i": i}, idempotency_key="capacity-batch-" + str(i)) for i in range(batch)]
                 jobs = [f.result() for f in futures]
             claimed, claim_lock = [], __import__("threading").Lock()
             def claim():
@@ -183,10 +183,10 @@ def run() -> int:
                                       "duplicate_delivery": len(claimed) - len({lease.job_id for lease in claimed})})
             result["gates"]["silent_job_loss"] = completed != batch
             result["gates"]["stuck_jobs"] = completed != batch
-            idem_a = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"same": True}, idempotency_key="capacity-idempotent")
-            idem_b = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_probe", payload={"same": True}, idempotency_key="capacity-idempotent")
+            idem_a = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"same": True}, idempotency_key="capacity-idempotent")
+            idem_b = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"same": True}, idempotency_key="capacity-idempotent")
             result["durable"]["idempotency_same_job"] = idem_a.id == idem_b.id and idem_a.created and not idem_b.created
-            interrupted = repository.enqueue(tenant_id=tenant["tenant_id"], operation="capacity_recovery", payload={"interrupted": True}, idempotency_key="capacity-interrupted")
+            interrupted = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"interrupted": True}, idempotency_key="capacity-interrupted")
             interrupted_lease = repository.claim_next(worker_id)
             if interrupted_lease is None or interrupted_lease.job_id != interrupted.id: raise RuntimeError("Could not claim interruption test job.")
             with db() as conn:
