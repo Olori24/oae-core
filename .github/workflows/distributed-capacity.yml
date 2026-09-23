@@ -1,0 +1,34 @@
+name: Distributed Capacity Lab
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Deployed OAE base URL"
+        required: true
+        type: string
+      levels:
+        description: "Comma-separated concurrency levels"
+        required: false
+        default: "10,25,50,100,250,500"
+        type: string
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      OAE_BASE_URL: ${{ inputs.base_url }}
+      OAE_DISTRIBUTED_LEVELS: ${{ inputs.levels }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.lock.txt
+      - run: python benchmarks/capacity/run_distributed_lab.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oae-distributed-capacity-report
+          path: benchmarks/capacity/distributed-results.json
