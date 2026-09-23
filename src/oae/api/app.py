@@ -1,16 +1,16 @@
 import json
 import logging
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
 from oae.api.observability import configure_error_tracking
 from oae.api.routes import router
-from oae.api.ui_mission_control_v2 import page
 
 
 class JsonFormatter(logging.Formatter):
@@ -86,6 +86,15 @@ async def runtime_error_handler(request: Request, exc: RuntimeError):
 app.include_router(router)
 
 
+_FRONTEND = Path(__file__).resolve().parents[3] / "frontend" / "index.html"
+
+
 @app.get("/", include_in_schema=False)
 def landing_page():
-    return page()
+    """Serve the OAE control-plane frontend from the repository frontend bundle."""
+    if not _FRONTEND.is_file():
+        return HTMLResponse(
+            "<h1>OAE frontend unavailable</h1><p>frontend/index.html is missing.</p>",
+            status_code=503,
+        )
+    return HTMLResponse(_FRONTEND.read_text(encoding="utf-8"))
