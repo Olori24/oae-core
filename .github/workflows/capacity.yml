@@ -29,8 +29,8 @@ jobs:
           --health-retries 20
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/oae_capacity
-      OAE_CAPACITY_LEVELS: ${{ github.event.inputs.levels || '10,25,50,100,250,500,1000' }
-      GITHUB_SHA: ${{ github.sha }
+      OAE_CAPACITY_LEVELS: ${{ github.event.inputs.levels || '10,25,50,100,250,500,1000' }}
+      GITHUB_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,7 +44,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: oae-capacity-report-${{ github.sha }
+          name: oae-capacity-report-${{ github.sha }}
           path: |
             benchmarks/capacity/results.json
             benchmarks/capacity/CAPACITY_REPORT.md
