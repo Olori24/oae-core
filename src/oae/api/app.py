@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -10,7 +11,6 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from oae.api.config import settings
 from oae.api.observability import configure_error_tracking
 from oae.api.routes import router
-from pathlib import Path
 
 
 class JsonFormatter(logging.Formatter):
