@@ -133,7 +133,7 @@ def run() -> int:
         headers = {"Authorization": "Bearer " + tenant["api_key"]}
         result["baseline"].append({"operation": "POST /v1/tenants", "status_code": tenant_response.status_code, "latency_ms": latency})
 
-        repo_response, latency = timed("POST", "/v1/repositories", headers=headers, json={"provider": "github", "external_id": "capacity/" + tenant["tenant_id"], "clone_url": "https://github.com/Olori24/oae-core.git"})
+        repo_response, latency = timed("POST", "/v1/repositories", headers=headers, json={"provider": "github", "external_id": "Olori24/oae-core", "clone_url": "https://github.com/Olori24/oae-core.git"})
         if repo_response.status_code != 201: raise RuntimeError("Repository setup failed: " + repo_response.text)
         result["baseline"].append({"operation": "POST /v1/repositories", "status_code": repo_response.status_code, "latency_ms": latency})
 
