@@ -186,7 +186,7 @@ def run() -> int:
             idem_a = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"same": True}, idempotency_key="capacity-idempotent")
             idem_b = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"same": True}, idempotency_key="capacity-idempotent")
             result["durable"]["idempotency_same_job"] = idem_a.id == idem_b.id and idem_a.created and not idem_b.created
-            interrupted = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"interrupted": True}, idempotency_key="capacity-interrupted")
+            interrupted = repository.enqueue(tenant_id=tenant["tenant_id"], operation="analyze", payload={"interrupted": True}, idempotency_key="capacity-interrupted", priority=0)
             interrupted_lease = repository.claim_next(worker_id)
             if interrupted_lease is None or interrupted_lease.job_id != interrupted.id: raise RuntimeError("Could not claim interruption test job.")
             with db() as conn:
