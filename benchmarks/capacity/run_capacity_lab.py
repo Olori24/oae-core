@@ -107,6 +107,10 @@ def run() -> int:
         if settings.database_backend == "sqlite":
             settings.database_url = "sqlite:///" + str(Path(tmp) / "capacity.db")
         elif settings.database_backend == "postgres":
+            # Bootstrap the legacy/base PostgreSQL tables through the same adapter used by the API
+            # before applying ordered feature migrations that reference tenants/jobs.
+            with db():
+                pass
             import psycopg
             with psycopg.connect(settings.resolved_database_url) as conn:
                 apply_postgres_migrations(conn, migration_files())
