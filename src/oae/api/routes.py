@@ -98,8 +98,11 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _timestamp(value: str) -> datetime:
-    return datetime.fromisoformat(value)
+def _timestamp(value: str | datetime) -> datetime:
+    if isinstance(value, datetime):
+        return value
+    # PostgreSQL legacy TEXT timestamps may be returned with a space separator.
+    return datetime.fromisoformat(value.replace(" ", "T", 1))
 
 
 def _decode_cursor(value: str | None) -> tuple[str, str] | None:
