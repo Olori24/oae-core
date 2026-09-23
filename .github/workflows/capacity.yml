@@ -1,0 +1,50 @@
+name: Capacity Lab
+on:
+  workflow_dispatch:
+    inputs:
+      levels:
+        description: "Comma-separated concurrency levels"
+        required: false
+        default: "10,25,50,100,250,500,1000"
+  pull_request:
+    paths:
+      - "benchmarks/capacity/**"
+      - "src/oae/api/**"
+jobs:
+  capacity:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: oae_capacity
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d oae_capacity"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/oae_capacity
+      OAE_CAPACITY_LEVELS: ${{ github.event.inputs.levels || '10,25,50,100,250,500,1000' }
+      GITHUB_SHA: ${{ github.sha }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install locked dependencies
+        run: pip install -r requirements.lock.txt && pip install -e . --no-deps
+      - name: Run integrated capacity lab
+        run: python benchmarks/capacity/run_capacity_lab.py
+      - name: Upload capacity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: oae-capacity-report-${{ github.sha }
+          path: |
+            benchmarks/capacity/results.json
+            benchmarks/capacity/CAPACITY_REPORT.md
