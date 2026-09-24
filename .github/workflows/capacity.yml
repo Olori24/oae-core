@@ -42,7 +42,7 @@ jobs:
         run: python benchmarks/capacity/run_capacity_lab.py
       - name: Upload capacity report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: oae-capacity-report-${{ github.sha }}
           path: |
