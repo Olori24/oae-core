@@ -13,6 +13,11 @@
 
 > **Repository status:** Active development. This README describes implemented repository capabilities and explicitly separates shipped work from future or environment-dependent work.
 
+## Engineering focus
+
+Governed engineering control plane for AI-assisted software teams.
+
+
 ## Documentation standard
 
 This repository follows the portfolio documentation standard established for NSMS: clear product positioning, visual orientation, architecture, security boundaries, setup, validation evidence, maturity tracking, roadmap, and honest production-status language. Claims are kept scoped to repository evidence rather than inferred from intent.
