@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     app_env: str = "development"
     database_url: str = ""
+    postgres_pool_min_size: int = 1
+    postgres_pool_max_size: int = 10
+    postgres_pool_timeout: float = 10.0
     # Kept for backward compatibility. New API keys use per-key salted PBKDF2.
     api_key_pepper: str = ""
     api_control_rate_limit_per_minute: int = 60
@@ -125,8 +128,6 @@ class Settings(BaseSettings):
         if self.database_url:
             return self.database_url
 
-        # Vercel storage integrations can apply a custom prefix to the
-        # generated DATABASE_URL. For example, OAE_DB_DATABASE_URL.
         for name in (
             "OAE_DB_DATABASE_URL",
             "OAE_DB_URL",
