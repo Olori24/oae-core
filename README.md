@@ -62,6 +62,8 @@ AI can generate code quickly. Engineering still requires context, constraints, e
 
 The system begins with repository facts, represents work as inspectable missions, enforces tenant and policy boundaries, and preserves the evidence needed to explain what happened. It is intentionally designed so that greater automation does not mean less human authority over consequential actions.
 
+The beta interface follows familiar developer-workspace patterns—Overview, Missions, analyzed repositories, explicit status and expandable evidence—so first-time users can focus on the engineering result instead of learning a novel command center. This applies **Jakob's Law** without overstating today's autonomy: the guided workflow creates a workspace, analyzes a public GitHub repository, and keeps the resulting snapshot in history. Follow the [Developer Beta Guide](docs/BETA_DEVELOPER_GUIDE.md) to complete that path.
+
 | Instead of… | OAE is designed to… |
 |---|---|
 | Starting with an isolated prompt | Start with repository and tenant context |
@@ -76,6 +78,7 @@ OAE is an active **v0.6.0 controlled-beta core**. The following capabilities are
 
 | Capability | What it provides | Operational boundary |
 |---|---|---|
+| Beta workspace UI | Workspace creation or API-key sign-in, public-repository analysis, readable mission history, and expandable result evidence | The guided interface is read-oriented; it does not modify or publish repositories |
 | Tenant control plane | FastAPI service with tenant creation, hashed API keys, authenticated tenant inspection, and tenant-scoped records | A tenant cannot retrieve another tenant’s jobs, repositories, workspaces, or event streams |
 | Repository foundations | Tenant-scoped repository registration and immutable revision pinning | Credentials are represented only by external `credential_ref` values; they are not stored in the database |
 | Workspace lifecycle | Persistent workspace manifests, quota reservation, retention, and cleanup controls | Shared storage is checked before commitment and cleaned up on failed provisioning |
@@ -347,6 +350,7 @@ The README is the entry point. The documents below provide the next level of det
 | Document | Use it when you need to… |
 |---|---|
 | [Developer beta guide](docs/BETA_DEVELOPER_GUIDE.md) | Follow the intended first-run and feedback workflow |
+| [UX revival plan](docs/UX_REVIVAL_PLAN.md) | Understand the Jakob's Law product and interface decisions |
 | [System architecture](docs/architecture/SYSTEM_ARCHITECTURE.md) | Understand the layered engineering-system design |
 | [Security architecture](docs/architecture/SECURITY_ARCHITECTURE.md) | Study the security and governance model |
 | [Engineering ledger](docs/ENGINEERING_LEDGER.md) | Understand durable engineering evidence and recordkeeping |

@@ -6,6 +6,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
@@ -87,11 +88,12 @@ app.include_router(router)
 
 
 _FRONTEND = Path(__file__).resolve().parents[3] / "frontend" / "index.html"
+app.mount("/assets", StaticFiles(directory=_FRONTEND.parent), name="frontend-assets")
 
 
 @app.get("/", include_in_schema=False)
 def landing_page():
-    """Serve the OAE control-plane frontend from the repository frontend bundle."""
+    """Serve the OAE evidence-first workspace from the repository frontend bundle."""
     if not _FRONTEND.is_file():
         return HTMLResponse(
             "<h1>OAE frontend unavailable</h1><p>frontend/index.html is missing.</p>",

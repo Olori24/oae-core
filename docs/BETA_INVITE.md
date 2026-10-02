@@ -13,16 +13,14 @@ This is an early developer beta. I am looking for practical feedback from people
 ### Your first test
 
 1. Open the OAE production workspace.
-2. Click **Launch workspace**.
-3. Create your developer workspace.
-4. Save the one-time API key.
-5. Enter Mission Control.
-6. Paste a public GitHub repository into the mission field.
-7. Run **Analyze repository**.
-8. Inspect the mission result and repository intelligence.
-9. Refresh the page.
-10. Sign out and sign back in with your API key.
-11. Run another analysis.
+2. Create a workspace or sign in with an existing API key.
+3. If creating a workspace, copy and securely save the one-time API key, then continue.
+4. From **Overview**, enter a public GitHub repository URL and select **Analyze repository**.
+5. Open **Missions** to follow its status and inspect the repository facts and full result.
+6. Open **Analyzed repositories** to see completed snapshots.
+7. Refresh the page and confirm the mission history remains available.
+8. Sign out and sign back in with your API key.
+9. Run another analysis.
 
 You should be able to complete the entire process without anyone walking you through it.
 
