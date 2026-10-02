@@ -28,6 +28,7 @@ _GIT_SUBCOMMANDS = frozenset(
         "commit",
         "diff",
         "fetch",
+        "init",
         "log",
         "pull",
         "push",
