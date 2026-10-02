@@ -172,7 +172,7 @@ class JobRunner:
         record, _manifest = WorkspaceManager().provision(
             tenant_id=tenant_id, repository_id=repository_id, revision_id=revision_id, purpose=WorkspacePurpose.EXECUTION
         )
-        workspace = Path(record.storage_uri.removeprefix("file://"))
+        workspace = Path(record.storage_uri.removeprefix("file://")) / "content"
         security = SecurityKernel()
         if allowed & {"create_file", "modify_file", "create_branch"}:
             security.permissions.allow("write_repository")
