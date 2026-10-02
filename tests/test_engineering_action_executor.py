@@ -36,12 +36,11 @@ def test_repository_write_requires_authorization():
 
 def test_execute_repository_operation():
     executor = authorized_executor()
-    results = executor.execute([{
-        "operation": "modify_file",
-        "path": "README.md",
-        "content": "OAE autonomous engineering test\n",
-    }])
-    assert results[0]["status"] == "completed"
+    results = executor.execute([
+        {"operation": "create_file", "path": "README.md", "content": "before\n"},
+        {"operation": "modify_file", "path": "README.md", "content": "OAE autonomous engineering test\n"},
+    ])
+    assert [result["status"] for result in results] == ["completed", "completed"]
     workspace = results[0]["workspace"]
     assert workspace["created"] is True
     assert (Path(workspace["path"]) / "README.md").read_text(encoding="utf-8") == "OAE autonomous engineering test\n"
