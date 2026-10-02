@@ -72,7 +72,7 @@ class RepositoryExecutionEngine:
                 if workspace_path is not None
                 else self.worktree.create_worktree()
             )
-            root = Path(workspace["path"]).resolve()
+            root = Path(str(workspace["path"])).resolve()
             file_path = (root / path).resolve()
             if file_path != root and root not in file_path.parents:
                 return {
