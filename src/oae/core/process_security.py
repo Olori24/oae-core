@@ -25,6 +25,7 @@ _GIT_SUBCOMMANDS = frozenset(
         "branch",
         "checkout",
         "clone",
+        "config",
         "commit",
         "diff",
         "fetch",
