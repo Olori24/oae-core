@@ -281,7 +281,10 @@ class WorkspaceManager:
             self.materializer.materialize(
                 revision, content_root, preserve_git=purpose == WorkspacePurpose.EXECUTION
             )
-            entries = self._manifest_entries(tenant_id, workspace_id, content_root, created_at)
+            entries = self._manifest_entries(
+                tenant_id, workspace_id, content_root, created_at,
+                preserve_git=purpose == WorkspacePurpose.EXECUTION,
+            )
             manifest_sha256 = self._manifest_sha256(
                 tenant_id, workspace_id, repository_id, revision_id, purpose, entries
             )
@@ -343,10 +346,12 @@ class WorkspaceManager:
         workspace_id: str,
         content_root: Path,
         created_at: datetime,
+        *,
+        preserve_git: bool = False,
     ) -> list[WorkspaceManifestEntry]:
         if not content_root.is_dir():
             raise WorkspaceError("Revision materializer did not create a workspace directory.")
-        self._remove_excluded_directories(content_root)
+        self._remove_excluded_directories(content_root, preserve_git=preserve_git)
         entries: list[WorkspaceManifestEntry] = []
         for path in sorted(content_root.rglob("*")):
             if path.is_symlink() or not path.is_file():
@@ -374,8 +379,9 @@ class WorkspaceManager:
         return entries
 
     @staticmethod
-    def _remove_excluded_directories(content_root: Path) -> None:
-        for name in EXCLUDED_DIRECTORY_NAMES:
+    def _remove_excluded_directories(content_root: Path, *, preserve_git: bool = False) -> None:
+        excluded_names = EXCLUDED_DIRECTORY_NAMES - ({".git"} if preserve_git else set())
+        for name in excluded_names:
             for directory in list(content_root.rglob(name)):
                 if directory.is_dir() and not directory.is_symlink():
                     shutil.rmtree(directory)
