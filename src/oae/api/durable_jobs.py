@@ -254,6 +254,22 @@ class DurableJobRepository:
             raise LeaseLost("The worker no longer owns this job lease.")
         return self._as_datetime(row[0])
 
+    def update_payload(self, lease: JobLease, payload: dict[str, Any]) -> None:
+        """Persist resumable job state while fencing the active worker lease."""
+        self._require_postgres()
+        with db() as conn:
+            changed = conn.execute(
+                """
+                UPDATE jobs SET payload=?,updated_at=now()
+                WHERE id=? AND tenant_id=? AND worker_id=? AND lease_token=?
+                    AND status='running' AND lease_expires_at > now()
+                """,
+                (json.dumps(payload, separators=(",", ":"), sort_keys=True), lease.job_id,
+                 lease.tenant_id, lease.worker_id, lease.lease_token),
+            ).rowcount
+            if changed != 1:
+                raise LeaseLost("The worker no longer owns this job lease.")
+
     def complete(self, lease: JobLease, result: dict[str, Any]) -> None:
         self._finish(lease, status="completed", result=result, failure_code=None)
 
