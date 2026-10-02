@@ -8,7 +8,7 @@ from oae.security.kernel import SecurityKernel
 
 
 class RepositoryExecutionEngine:
-    """Executes engineering operations inside isolated worktrees."""
+    """Executes bounded engineering operations inside an isolated workspace."""
 
     def __init__(self, security=None):
         self.security = security or SecurityKernel()
@@ -23,7 +23,26 @@ class RepositoryExecutionEngine:
         patch = self.patch_engine.generate_patch(original, modified, filename)
         return {"workspace": workspace, "branch": branch, "patch": patch, "status": "completed"}
 
-    def execute_operation(self, operation: dict):
+    def execute_operations(self, operations: list[dict], workspace_path: str | Path) -> list[dict]:
+        """Execute a bounded sequence against one caller-provided isolated workspace.
+
+        The workspace must already be provisioned by the repository lifecycle. This method
+        deliberately performs only file creation/modification and allowlisted test commands;
+        branch publication, pushes, deployments, and other external actions remain outside
+        this execution primitive.
+        """
+        root = Path(workspace_path).resolve()
+        if not root.is_dir():
+            raise ValueError("Execution workspace does not exist.")
+
+        results: list[dict] = []
+        for operation in operations:
+            item = dict(operation)
+            item["workspace_path"] = str(root)
+            results.append(self.execute_operation(item))
+        return results
+
+    def execute_operation(self, operation: dict) -> dict:
         operation_type = operation.get("operation")
 
         if operation_type in {"create_file", "modify_file"}:
@@ -39,8 +58,28 @@ class RepositoryExecutionEngine:
             if not path:
                 return {"status": "error", "operation": operation_type, "error": "Missing file path"}
 
-            workspace = self.worktree.create_worktree()
-            file_path = Path(workspace["path"]) / path
+            workspace_path = operation.get("workspace_path")
+            workspace = (
+                {"created": False, "path": str(Path(workspace_path).resolve())}
+                if workspace_path
+                else self.worktree.create_worktree()
+            )
+            root = Path(workspace["path"]).resolve()
+            file_path = (root / path).resolve()
+            if file_path != root and root not in file_path.parents:
+                return {
+                    "status": "denied",
+                    "operation": operation_type,
+                    "error": "File path escapes the execution workspace",
+                }
+            if operation_type == "modify_file" and not file_path.exists():
+                return {
+                    "status": "error",
+                    "operation": operation_type,
+                    "path": path,
+                    "error": "Target file does not exist",
+                }
+
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(content, encoding="utf-8")
             return {
@@ -52,7 +91,7 @@ class RepositoryExecutionEngine:
 
         if operation_type == "run_tests":
             command = operation.get("command", ["python", "--version"])
-            cwd = operation.get("cwd")
+            cwd = operation.get("cwd") or operation.get("workspace_path")
             result = self.test_runner.run(command=command, cwd=cwd)
             return {"status": "completed", "operation": "run_tests", "result": result}
 
