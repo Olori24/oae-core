@@ -108,6 +108,7 @@ def test_repository_mission_provisions_execution_workspace_and_executes_only_aut
             "revision_id": "rev-1",
             "commit_message": "test mission",
             "actions": [
+                {"operation": "create_branch", "branch": "oae/test-mission"},
                 {"operation": "create_file", "path": "app.py", "content": "print(1)", "workspace_path": "/escape"},
                 {"operation": "commit_changes", "workspace_path": "/escape"},
             ],
