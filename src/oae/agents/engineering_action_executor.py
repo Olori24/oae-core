@@ -40,10 +40,7 @@ class EngineeringActionExecutor:
                             "error": "Security authorization denied",
                         }
                     else:
-                        repository_workspace = self.repository_engine.worktree.create_worktree()
-                        result = self.repository_engine.execute_operation(
-                            {**action, "workspace_path": repository_workspace["path"]}
-                        )
+                        result = self.repository_engine.execute_operation(action)
                 else:
                     operation = dict(action)
                     if workspace_path is not None:
