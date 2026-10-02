@@ -51,7 +51,9 @@ class PinnedRepositoryRevision:
 class RevisionMaterializer(Protocol):
     """Materializes a pinned revision into an isolated, empty target directory."""
 
-    def materialize(self, revision: PinnedRepositoryRevision, target: Path) -> None: ...
+    def materialize(
+        self, revision: PinnedRepositoryRevision, target: Path, *, preserve_git: bool = False
+    ) -> None: ...
 
 
 class WorkspaceRepository(Protocol):
