@@ -31,7 +31,7 @@ class FakeMaterializer:
     def __init__(self):
         self.materialized_commit = None
 
-    def materialize(self, revision, target: Path, *, preserve_git: bool = False):
+    def materialize(self, revision, target: Path, **kwargs):
         self.materialized_commit = revision.commit_sha
         target.mkdir(parents=True)
         (target / "src").mkdir()
