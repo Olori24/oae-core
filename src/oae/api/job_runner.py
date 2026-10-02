@@ -109,7 +109,7 @@ class JobRunner:
             return result
 
         if operation == "repository_mission":
-            return self._run_repository_mission(payload, job_id, tenant_id=tenant_id, authorization_id=authorization_id)
+            return self._run_repository_mission(payload, job_id, tenant_id=tenant_id, authorization_id=authorization_id, lease=lease)
 
         if operation == "build":
             name = payload.get("name")
