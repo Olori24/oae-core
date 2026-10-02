@@ -161,7 +161,7 @@ class DurableJobRepository:
                     WHERE status IN ('queued','retry_scheduled') AND scheduled_at <= now()
                       AND (
                         NOT ?
-                        OR job.operation <> 'build'
+                        OR job.operation NOT IN ('build','repository_mission')
                         OR EXISTS (
                           SELECT 1 FROM worker_authorizations worker_auth
                           WHERE worker_auth.id=job.authorization_id
