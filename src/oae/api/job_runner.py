@@ -180,6 +180,10 @@ class JobRunner:
         if "commit_changes" in allowed:
             security.permissions.allow("commit_changes")
             security.approvals.approve("commit_changes")
+        if branch := payload.get("branch"):
+            if not isinstance(branch, str) or not branch or "create_branch" not in allowed:
+                raise PermissionError("branch creation is not authorized")
+            normalized_actions.insert(0, {"operation": "create_branch", "branch": branch})
         if commit_message:
             for action in normalized_actions:
                 if action["operation"] == "commit_changes":
