@@ -71,7 +71,9 @@ class WorkspaceRepository(Protocol):
 class GitRevisionMaterializer:
     """Checks out one immutable Git commit without retaining repository metadata."""
 
-    def materialize(self, revision: PinnedRepositoryRevision, target: Path) -> None:
+    def materialize(
+        self, revision: PinnedRepositoryRevision, target: Path, *, preserve_git: bool = False
+    ) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         clone_url = validate_repository_url(revision.clone_url)
         commit_sha = validate_git_ref(revision.commit_sha)
@@ -96,7 +98,8 @@ class GitRevisionMaterializer:
             capture_output=True,
             text=True,
         )
-        shutil.rmtree(target / ".git", ignore_errors=True)
+        if not preserve_git:
+            shutil.rmtree(target / ".git", ignore_errors=True)
 
 
 class PostgresWorkspaceRepository:
@@ -273,7 +276,9 @@ class WorkspaceManager:
         final_root = self._workspace_root(tenant_id, workspace_id)
         reserved = False
         try:
-            self.materializer.materialize(revision, content_root)
+            self.materializer.materialize(
+                revision, content_root, preserve_git=purpose == WorkspacePurpose.EXECUTION
+            )
             entries = self._manifest_entries(tenant_id, workspace_id, content_root, created_at)
             manifest_sha256 = self._manifest_sha256(
                 tenant_id, workspace_id, repository_id, revision_id, purpose, entries
