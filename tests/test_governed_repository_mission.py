@@ -90,7 +90,7 @@ def test_repository_mission_provisions_execution_workspace_and_executes_only_aut
             captured["security"] = security
 
         def execute(self, actions, workspace_path):
-            captured["actions"] = actions
+            captured.setdefault("actions", []).extend(actions)
             captured["workspace_path"] = workspace_path
             return [
                 {"operation": action["operation"], "status": "completed", "result": {"ok": True}}
