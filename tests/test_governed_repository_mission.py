@@ -124,3 +124,62 @@ def test_repository_mission_provisions_execution_workspace_and_executes_only_aut
     assert captured["actions"][2]["message"] == "test mission"
     assert captured["security"].permissions.allowed("write_repository")
     assert captured["security"].permissions.allowed("commit_changes")
+
+
+def test_repository_mission_checkpoints_each_action_and_resumes_existing_workspace(monkeypatch, tmp_path):
+    workspace = _record(tmp_path)
+    workspace_dir = tmp_path / "workspace" / "content"
+    workspace_dir.mkdir(parents=True)
+    state = {"payloads": []}
+
+    class FakeAuthRepo:
+        def get(self, **_kwargs):
+            return SimpleNamespace(
+                status="approved",
+                expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+                operation="repository_mission",
+                scope={"repository_id": "repo-1", "revision_id": "rev-1", "allowed_operations": "create_file"},
+            )
+
+    class FakeWorkspaceManager:
+        def provision(self, **_kwargs):
+            raise AssertionError("resume path must not provision a new workspace")
+
+        def get(self, tenant_id, workspace_id):
+            assert tenant_id == "tenant-1"
+            assert workspace_id == "workspace-1"
+            return workspace
+
+    class FakeRepo:
+        def update_payload(self, lease, payload):
+            state["payloads"].append(dict(payload))
+
+    class FakeExecutor:
+        def __init__(self, security):
+            pass
+
+        def execute(self, actions, workspace_path):
+            assert workspace_path == workspace_dir
+            return [{"operation": actions[0]["operation"], "status": "completed"}]
+
+    monkeypatch.setattr("oae.api.job_runner.WorkerAuthorizationRepository", FakeAuthRepo)
+    monkeypatch.setattr("oae.api.job_runner.WorkspaceManager", FakeWorkspaceManager)
+    monkeypatch.setattr("oae.api.job_runner.EngineeringActionExecutor", FakeExecutor)
+    monkeypatch.setattr("oae.api.job_runner.DurableJobRepository", lambda: FakeRepo())
+
+    payload = {
+        "repository_id": "repo-1",
+        "revision_id": "rev-1",
+        "actions": [
+            {"operation": "create_file", "path": "a.py", "content": "a"},
+            {"operation": "create_file", "path": "b.py", "content": "b"},
+        ],
+        "_execution_workspace_id": "workspace-1",
+        "_completed_action_indexes": [0],
+    }
+    lease = SimpleNamespace()
+    result = JobRunner()._dispatch("repository_mission", payload, "job-1", tenant_id="tenant-1", authorization_id="auth-1", lease=lease)
+
+    assert result["evidence"]["completed_action_indexes"] == [0, 1]
+    assert len(state["payloads"]) == 1
+    assert state["payloads"][0]["_completed_action_indexes"] == [0, 1]
