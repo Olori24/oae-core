@@ -121,6 +121,6 @@ def test_repository_mission_provisions_execution_workspace_and_executes_only_aut
     assert result["operation"] == "repository_mission"
     assert captured["workspace_path"] == Path(workspace.storage_uri.removeprefix("file://"))
     assert all("workspace_path" not in action for action in captured["actions"])
-    assert captured["actions"][1]["message"] == "test mission"
+    assert captured["actions"][2]["message"] == "test mission"
     assert captured["security"].permissions.allowed("write_repository")
     assert captured["security"].permissions.allowed("commit_changes")
