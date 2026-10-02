@@ -6,6 +6,7 @@ from pathlib import Path
 
 from oae.agents.engineering_action_executor import EngineeringActionExecutor
 from oae.api.db import db
+from oae.api.durable_jobs import DurableJobRepository, JobLease
 from oae.api.github import GitHubPublicAnalyzer
 from oae.api.mission_results import build_result
 from oae.api.worker_authorizations import WorkerAuthorizationRepository
@@ -55,6 +56,7 @@ class JobRunner:
     def _dispatch(
         self, operation: str, payload: dict, job_id: str, *, tenant_id: str | None = None,
         authorization_id: str | None = None,
+        lease: JobLease | None = None,
     ) -> dict:
         if operation == "analyze":
             repository_url = payload.get("repository_url")
@@ -133,7 +135,7 @@ class JobRunner:
 
         raise ValueError(f"Unsupported operation: {operation}")
 
-    def _run_repository_mission(self, payload: dict, job_id: str, *, tenant_id: str | None, authorization_id: str | None) -> dict:
+    def _run_repository_mission(self, payload: dict, job_id: str, *, tenant_id: str | None, authorization_id: str | None, lease: JobLease | None = None) -> dict:
         if not tenant_id or not authorization_id:
             raise ValueError("repository_mission requires durable tenant and authorization context")
         repository_id = payload.get("repository_id")
@@ -166,9 +168,11 @@ class JobRunner:
             normalized.pop("workspace_path", None)
             normalized_actions.append(normalized)
         ops = {a["operation"] for a in normalized_actions}
-        if "commit_changes" in ops:
-            if "create_branch" not in ops or not isinstance(commit_message, str) or not commit_message.strip():
-                raise ValueError("commit_changes requires create_branch and commit_message")
+        if "commit_changes" in ops and ("create_branch" not in ops or not isinstance(commit_message, str) or not commit_message.strip()):
+            raise ValueError("commit_changes requires create_branch and commit_message")
+        workspace_id = payload.get("_execution_workspace_id")
+        if workspace_id:
+            raise NotImplementedError("resuming an existing execution workspace requires durable workspace lookup support")
         record, _manifest = WorkspaceManager().provision(
             tenant_id=tenant_id, repository_id=repository_id, revision_id=revision_id, purpose=WorkspacePurpose.EXECUTION
         )
@@ -188,13 +192,26 @@ class JobRunner:
             for action in normalized_actions:
                 if action["operation"] == "commit_changes":
                     action.setdefault("message", commit_message)
-        results = EngineeringActionExecutor(security=security).execute(normalized_actions, workspace_path=workspace)
-        if any(item.get("status") != "completed" for item in results):
-            raise RuntimeError("repository mission did not complete all requested operations")
+        completed = {int(i) for i in payload.get("_completed_action_indexes", []) if isinstance(i, int)}
+        results = []
+        executor = EngineeringActionExecutor(security=security)
+        for index, action in enumerate(normalized_actions):
+            if index in completed:
+                continue
+            result = executor.execute([action], workspace_path=workspace)
+            if not result or result[0].get("status") != "completed":
+                raise RuntimeError(f"repository mission action {index} did not complete")
+            results.extend(result)
+            completed.add(index)
+            if lease is not None:
+                updated = dict(payload)
+                updated["_completed_action_indexes"] = sorted(completed)
+                updated["_execution_workspace_id"] = record.id
+                DurableJobRepository().update_payload(lease, updated)
         return build_result(
             operation="repository_mission", payload=payload, repository=repository_id,
             summary=f"Repository mission {job_id} completed in a tenant-scoped execution workspace.",
-            evidence={"workspace_id": record.id, "workspace": str(workspace), "actions": results, "authorization_id": authorization_id},
+            evidence={"workspace_id": record.id, "workspace": str(workspace), "actions": results, "authorization_id": authorization_id, "completed_action_indexes": sorted(completed)},
         )
 
     @staticmethod
