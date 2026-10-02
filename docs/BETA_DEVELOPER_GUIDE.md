@@ -11,29 +11,27 @@ This guide is the complete first-run path.
 ## 1. Start your workspace
 
 1. Open the OAE production URL.
-2. Select **Launch workspace**.
-3. Enter your team or developer name.
-4. Create the workspace.
-5. Copy the one-time API key immediately.
-6. Select **Enter workspace**.
+2. Enter a workspace name and select **Create workspace**, or sign in with an existing API key.
+3. When creating a workspace, copy and securely save the one-time API key before continuing.
+4. Select **I saved my key — continue** to open the workspace.
 
-The API key is shown once. OAE stores a hash of the key, not the plaintext key.
+The key is shown once. OAE stores a hash of the key, not the plaintext key. When you continue, the browser remembers the key on that device so you can return to the same workspace. Do not share it or commit it to a repository.
 
-If you close the dialog before saving the key, create a new workspace/API key rather than trying to recover the old secret.
+If you lose the key, OAE cannot recover it. Create a replacement workspace/key or use another active key issued for your workspace.
 
 ## 2. Your first mission
 
-From Mission Control:
+From **Overview**:
 
 1. Stay on **Overview**.
 2. Paste a public GitHub repository URL, for example:
    `https://github.com/psf/requests`
 3. Select **Analyze repository**.
-4. Wait for the mission to complete.
-5. Open **Missions** to inspect the complete result.
-6. Open **Repositories** to see the repository intelligence summary.
+4. OAE adds the analysis to **Missions** and refreshes its status automatically.
+5. Open the completed mission to inspect the repository facts and expand **View complete engineering result** for the raw evidence.
+6. Open **Analyzed repositories** to see completed analysis snapshots.
 
-Use a repository you are permitted to inspect. The initial public SaaS workflow is read-only.
+Use a public repository you are permitted to inspect. The guided beta flow is read-only: it does not modify or publish repository code.
 
 ## 3. What OAE should return
 
@@ -108,7 +106,7 @@ Every developer should complete this checklist:
 - [ ] Open the landing page on mobile and desktop.
 - [ ] Create a workspace without assistance.
 - [ ] Save the one-time API key.
-- [ ] Enter Mission Control.
+- [ ] Enter the workspace and stay on Overview.
 - [ ] Analyze a public GitHub repository.
 - [ ] Inspect the completed mission.
 - [ ] Refresh the page.
@@ -205,7 +203,7 @@ Create workspace
     ↓
 Save API key
     ↓
-Mission Control
+Workspace overview
     ↓
 Analyze public repository
     ↓

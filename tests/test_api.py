@@ -7,12 +7,26 @@ def test_landing_page_is_available():
     client = TestClient(app)
     response = client.get("/")
     assert response.status_code == 200
-    assert "Engineering command center" in response.text
-    assert "Start a mission" in response.text
-    assert "Missions" in response.text
-    assert "Intelligence" in response.text
-    assert "Security" in response.text
-    assert "evidence-grid" in response.text
+    assert "A clearer picture of any public repository" in response.text
+    assert "Create workspace" in response.text
+    assert "Sign in with API key" in response.text
+    assert "Analyze repository" in response.text
+    assert "Security &amp; limits" in response.text
+    assert "/assets/app.css" in response.text
+    assert "/assets/app.js" in response.text
+
+
+def test_frontend_assets_are_served():
+    client = TestClient(app)
+    css = client.get("/assets/app.css")
+    js = client.get("/assets/app.js")
+    assert css.status_code == 200
+    assert "prefers-reduced-motion" in css.text
+    assert js.status_code == 200
+    assert 'operation: "analyze"' in js.text
+    assert "repository_url: repositoryUrl" in js.text
+    assert 'operation: "review"' not in js.text
+    assert 'operation: "verify"' not in js.text
 
 
 def test_health():
