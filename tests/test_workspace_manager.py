@@ -31,7 +31,7 @@ class FakeMaterializer:
     def __init__(self):
         self.materialized_commit = None
 
-    def materialize(self, revision, target: Path):
+    def materialize(self, revision, target: Path, *, preserve_git: bool = False):
         self.materialized_commit = revision.commit_sha
         target.mkdir(parents=True)
         (target / "src").mkdir()
@@ -143,3 +143,16 @@ def test_postgres_workspace_ready_transition_emits_durable_event(monkeypatch):
     )
 
     assert writer.events[0]["event_type"] == "workspace.ready"
+
+
+def test_execution_workspace_preserves_git_metadata_for_commit(tmp_path, revision):
+    materializer = FakeMaterializer()
+    manager = ApiWorkspaceManager(root=tmp_path, repository=FakeRepository(revision), materializer=materializer)
+
+    record, _ = manager.provision(
+        "tenant-1", "repository-1", "revision-1", WorkspacePurpose.EXECUTION
+    )
+
+    workspace_root = tmp_path / "tenant" / "tenant-1" / "workspace" / record.id
+    assert (workspace_root / "content" / ".git" / "config").exists()
+
