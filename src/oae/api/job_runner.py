@@ -171,11 +171,15 @@ class JobRunner:
         if "commit_changes" in ops and ("create_branch" not in ops or not isinstance(commit_message, str) or not commit_message.strip()):
             raise ValueError("commit_changes requires create_branch and commit_message")
         workspace_id = payload.get("_execution_workspace_id")
+        manager = WorkspaceManager()
         if workspace_id:
-            raise NotImplementedError("resuming an existing execution workspace requires durable workspace lookup support")
-        record, _manifest = WorkspaceManager().provision(
-            tenant_id=tenant_id, repository_id=repository_id, revision_id=revision_id, purpose=WorkspacePurpose.EXECUTION
-        )
+            record = manager.get(tenant_id, workspace_id)
+            if record is None or record.purpose != WorkspacePurpose.EXECUTION or record.repository_id != repository_id or record.source_revision_id != revision_id:
+                raise ValueError("persisted execution workspace is missing or does not match the mission scope")
+        else:
+            record, _manifest = manager.provision(
+                tenant_id=tenant_id, repository_id=repository_id, revision_id=revision_id, purpose=WorkspacePurpose.EXECUTION
+            )
         workspace = Path(record.storage_uri.removeprefix("file://")) / "content"
         security = SecurityKernel()
         if allowed & {"create_file", "modify_file", "create_branch"}:
