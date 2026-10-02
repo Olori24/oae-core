@@ -51,7 +51,9 @@ class PinnedRepositoryRevision:
 class RevisionMaterializer(Protocol):
     """Materializes a pinned revision into an isolated, empty target directory."""
 
-    def materialize(self, revision: PinnedRepositoryRevision, target: Path) -> None: ...
+    def materialize(
+        self, revision: PinnedRepositoryRevision, target: Path, *, preserve_git: bool = False
+    ) -> None: ...
 
 
 class WorkspaceRepository(Protocol):
@@ -63,6 +65,8 @@ class WorkspaceRepository(Protocol):
 
     def reserve(self, record: WorkspaceRecord, entries: list[WorkspaceManifestEntry]) -> None: ...
 
+    def get(self, tenant_id: str, workspace_id: str) -> WorkspaceRecord | None: ...
+
     def mark_ready(self, tenant_id: str, workspace_id: str, ready_at: datetime) -> None: ...
 
     def mark_failed(self, tenant_id: str, workspace_id: str, failure_code: str) -> None: ...
@@ -71,7 +75,9 @@ class WorkspaceRepository(Protocol):
 class GitRevisionMaterializer:
     """Checks out one immutable Git commit without retaining repository metadata."""
 
-    def materialize(self, revision: PinnedRepositoryRevision, target: Path) -> None:
+    def materialize(
+        self, revision: PinnedRepositoryRevision, target: Path, *, preserve_git: bool = False
+    ) -> None:
         target.parent.mkdir(parents=True, exist_ok=True)
         clone_url = validate_repository_url(revision.clone_url)
         commit_sha = validate_git_ref(revision.commit_sha)
@@ -96,7 +102,8 @@ class GitRevisionMaterializer:
             capture_output=True,
             text=True,
         )
-        shutil.rmtree(target / ".git", ignore_errors=True)
+        if not preserve_git:
+            shutil.rmtree(target / ".git", ignore_errors=True)
 
 
 class PostgresWorkspaceRepository:
@@ -126,6 +133,21 @@ class PostgresWorkspaceRepository:
             revision_id=row[0],
             clone_url=row[2],
             commit_sha=row[3],
+        )
+
+    def get(self, tenant_id: str, workspace_id: str) -> WorkspaceRecord | None:
+        with db() as conn:
+            row = conn.execute(
+                "SELECT id,tenant_id,repository_id,source_revision_id,parent_workspace_id,purpose,state,storage_uri,manifest_uri,manifest_sha256,size_bytes,file_count,retention_expires_at,created_at,ready_at,failure_code "
+                "FROM workspaces WHERE tenant_id=? AND id=?", (tenant_id, workspace_id)
+            ).fetchone()
+        if not row:
+            return None
+        return WorkspaceRecord(
+            id=str(row[0]), tenant_id=str(row[1]), repository_id=str(row[2]), source_revision_id=str(row[3]),
+            parent_workspace_id=row[4], purpose=WorkspacePurpose(row[5]), state=WorkspaceState(row[6]),
+            storage_uri=str(row[7]), manifest_uri=str(row[8]), manifest_sha256=str(row[9]), size_bytes=int(row[10]),
+            file_count=int(row[11]), retention_expires_at=row[12], created_at=row[13], ready_at=row[14], failure_code=row[15]
         )
 
     def reserve(self, record: WorkspaceRecord, entries: list[WorkspaceManifestEntry]) -> None:
@@ -253,6 +275,9 @@ class WorkspaceManager:
         self.repository = repository or PostgresWorkspaceRepository()
         self.materializer = materializer or GitRevisionMaterializer()
 
+    def get(self, tenant_id: str, workspace_id: str) -> WorkspaceRecord | None:
+        return self.repository.get(tenant_id, workspace_id)
+
     def provision(
         self,
         tenant_id: str,
@@ -273,8 +298,13 @@ class WorkspaceManager:
         final_root = self._workspace_root(tenant_id, workspace_id)
         reserved = False
         try:
-            self.materializer.materialize(revision, content_root)
-            entries = self._manifest_entries(tenant_id, workspace_id, content_root, created_at)
+            self.materializer.materialize(
+                revision, content_root, preserve_git=purpose == WorkspacePurpose.EXECUTION
+            )
+            entries = self._manifest_entries(
+                tenant_id, workspace_id, content_root, created_at,
+                preserve_git=purpose == WorkspacePurpose.EXECUTION,
+            )
             manifest_sha256 = self._manifest_sha256(
                 tenant_id, workspace_id, repository_id, revision_id, purpose, entries
             )
@@ -336,10 +366,12 @@ class WorkspaceManager:
         workspace_id: str,
         content_root: Path,
         created_at: datetime,
+        *,
+        preserve_git: bool = False,
     ) -> list[WorkspaceManifestEntry]:
         if not content_root.is_dir():
             raise WorkspaceError("Revision materializer did not create a workspace directory.")
-        self._remove_excluded_directories(content_root)
+        self._remove_excluded_directories(content_root, preserve_git=preserve_git)
         entries: list[WorkspaceManifestEntry] = []
         for path in sorted(content_root.rglob("*")):
             if path.is_symlink() or not path.is_file():
@@ -367,8 +399,9 @@ class WorkspaceManager:
         return entries
 
     @staticmethod
-    def _remove_excluded_directories(content_root: Path) -> None:
-        for name in EXCLUDED_DIRECTORY_NAMES:
+    def _remove_excluded_directories(content_root: Path, *, preserve_git: bool = False) -> None:
+        excluded_names = EXCLUDED_DIRECTORY_NAMES - ({".git"} if preserve_git else set())
+        for name in excluded_names:
             for directory in list(content_root.rglob(name)):
                 if directory.is_dir() and not directory.is_symlink():
                     shutil.rmtree(directory)

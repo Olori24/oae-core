@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Any
 
 from oae.core.git_branch_manager import GitBranchManager
+from oae.core.git_commit_manager import GitCommitManager
 from oae.core.real_patch_engine import RealPatchEngine
 from oae.core.repository_test_runner import RepositoryTestRunner
 from oae.core.repository_worktree_manager import RepositoryWorktreeManager
@@ -15,6 +16,7 @@ class RepositoryExecutionEngine:
         self.security = security or SecurityKernel()
         self.worktree = RepositoryWorktreeManager()
         self.branch_manager = GitBranchManager()
+        self.commit_manager = GitCommitManager()
         self.patch_engine = RealPatchEngine()
         self.test_runner = RepositoryTestRunner()
 
@@ -95,6 +97,53 @@ class RepositoryExecutionEngine:
                 "operation": operation_type,
                 "path": path,
                 "workspace": workspace,
+            }
+
+        if operation_type == "create_branch":
+            if not self.security.authorize("write_repository"):
+                return {
+                    "status": "denied",
+                    "operation": operation_type,
+                    "error": "Security authorization denied",
+                }
+            workspace_path = operation.get("workspace_path")
+            branch = operation.get("branch")
+            if not workspace_path or not isinstance(branch, str):
+                return {
+                    "status": "error",
+                    "operation": operation_type,
+                    "error": "create_branch requires workspace_path and branch",
+                }
+            result = self.branch_manager.create_branch(branch, cwd=workspace_path)
+            return {"status": "completed", "operation": operation_type, "result": result}
+
+        if operation_type == "commit_changes":
+            if not self.security.authorize("commit_changes"):
+                return {
+                    "status": "denied",
+                    "operation": operation_type,
+                    "error": "Security authorization denied",
+                }
+            workspace_path = operation.get("workspace_path")
+            message = operation.get("message")
+            if not workspace_path or not isinstance(message, str):
+                return {
+                    "status": "error",
+                    "operation": operation_type,
+                    "error": "commit_changes requires workspace_path and message",
+                }
+            paths = operation.get("paths")
+            if paths is not None and not isinstance(paths, list):
+                return {
+                    "status": "error",
+                    "operation": operation_type,
+                    "error": "commit_changes paths must be a list",
+                }
+            result = self.commit_manager.commit(workspace_path, message, paths=paths)
+            return {
+                "status": "completed" if result["status"] == "committed" else "failed",
+                "operation": operation_type,
+                "result": result,
             }
 
         if operation_type == "run_tests":
