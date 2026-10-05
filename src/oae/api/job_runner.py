@@ -14,6 +14,7 @@ from oae.api.workspace_manager import WorkspaceManager
 from oae.api.workspace_models import WorkspacePurpose
 from oae.core.repository_quality_gate import RepositoryQualityGate
 from oae.core.repository_worktree import RepositoryWorktree
+from oae.core.governed_execution import run_governed_command, supported_commands
 from oae.core.vertical_slice_mission import VerticalSliceMission
 
 logger = logging.getLogger("oae.api.job_runner")
@@ -129,6 +130,10 @@ class JobRunner:
                 return self._sync_change_set(payload, tenant_id)
             if stage == "pull_request":
                 return self._create_pull_request(payload, tenant_id)
+            if stage == "execute":
+                return self._execute_command(payload, tenant_id)
+            if stage == "verify":
+                return self._verify_workspace(payload, tenant_id)
 
             name = payload.get("name")
             description = payload.get("description")
@@ -360,6 +365,82 @@ class JobRunner:
             operation="build", payload=payload, repository=str(row[1]),
             summary=f"Pull request created for change set {change_set_id}.",
             evidence={"stage":"pull_request","change_set_id":change_set_id,"pull_request":{"number":pr.get("number"),"url":pr.get("html_url"),"branch":row[2]}},
+        )
+
+    @staticmethod
+    def _execute_command(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Command execution requires a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        command = payload.get("command")
+        if not workspace_id or not command:
+            raise ValueError("execute requires workspace_id and command")
+        if command not in supported_commands():
+            raise ValueError(f"Unsupported governed command: {command}")
+        with db(tenant_id) as conn:
+            row = conn.execute(
+                "SELECT storage_uri,repository_id,state FROM workspaces WHERE id=? AND tenant_id=?",
+                (workspace_id, tenant_id),
+            ).fetchone()
+        if not row or row[2] != "ready":
+            raise ValueError("Workspace must be ready before command execution.")
+        root = JobRunner._safe_workspace_path(row[0])
+        result = run_governed_command(command, workspace=root)
+        return build_result(
+            operation="build",
+            payload=payload,
+            repository=str(row[1]),
+            summary=(
+                f"Governed command {command} passed."
+                if result["passed"]
+                else f"Governed command {command} failed verification."
+            ),
+            evidence={"stage":"execute","workspace_id":workspace_id,"execution":result},
+        )
+
+    @staticmethod
+    def _verify_workspace(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Workspace verification requires a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        commands = payload.get("commands") or ["python_compile", "ruff", "pytest"]
+        if not workspace_id:
+            raise ValueError("verify requires workspace_id")
+        if not isinstance(commands, list) or not commands or len(commands) > 8:
+            raise ValueError("verify requires 1 to 8 governed commands")
+        if any(command not in supported_commands() for command in commands):
+            raise ValueError("verify contains an unsupported governed command")
+        with db(tenant_id) as conn:
+            row = conn.execute(
+                "SELECT storage_uri,repository_id,state FROM workspaces WHERE id=? AND tenant_id=?",
+                (workspace_id, tenant_id),
+            ).fetchone()
+        if not row or row[2] != "ready":
+            raise ValueError("Workspace must be ready before verification.")
+        root = JobRunner._safe_workspace_path(row[0])
+        results = []
+        for command in commands:
+            result = run_governed_command(command, workspace=root)
+            results.append(result)
+            if not result["passed"]:
+                break
+        passed = bool(results) and all(item["passed"] for item in results)
+        return build_result(
+            operation="build",
+            payload=payload,
+            repository=str(row[1]),
+            summary=(
+                f"Workspace {workspace_id} passed {len(results)} governed verification command(s)."
+                if passed
+                else f"Workspace {workspace_id} failed governed verification."
+            ),
+            evidence={
+                "stage":"verify",
+                "workspace_id":workspace_id,
+                "verified":passed,
+                "commands":results,
+                "commands_requested":commands,
+            },
         )
 
     @staticmethod
