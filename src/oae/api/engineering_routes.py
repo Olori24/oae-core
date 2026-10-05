@@ -116,7 +116,7 @@ class PullRequestRequest(EngineeringRequest):
 class CommandExecutionRequest(EngineeringRequest):
     workspace_id: str = Field(min_length=1, max_length=120)
     authorization_id: str = Field(min_length=1, max_length=120)
-    command: Literal["python_compile", "pytest", "ruff", "mypy", "typescript_check"]
+    command: Literal["python_compile", "pytest", "ruff", "mypy", "typescript_check", "eslint_check", "vitest_check", "jest_check"]
 
 
 class WorkspaceVerificationRequest(EngineeringRequest):
