@@ -292,7 +292,9 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
             completed_steps JSONB NOT NULL DEFAULT '[]'::jsonb, failed_step TEXT,
             repair_count INTEGER NOT NULL DEFAULT 0,
             evidence JSONB NOT NULL DEFAULT '[]'::jsonb, idempotency_key TEXT,
-            correlation_id TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            correlation_id TEXT, authorization_id TEXT, active_step_id TEXT,
+            active_token TEXT, lease_until TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (tenant_id, idempotency_key)
         )""")
         adapter.execute("CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_created ON engineering_agent_runs(tenant_id, created_at DESC)")
