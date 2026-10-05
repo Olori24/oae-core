@@ -405,6 +405,7 @@ class JobRunner:
             has_linter=bool(payload.get("has_linter", True)),
             has_typecheck=bool(payload.get("has_typecheck", False)),
             has_build=bool(payload.get("has_build", False)),
+            test_runner=str(payload.get("test_runner", "none")),
             security_required=bool(payload.get("security_required", True)),
             action_inputs=payload.get("action_inputs") if isinstance(payload.get("action_inputs"), dict) else None,
         )
