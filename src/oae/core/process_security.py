@@ -23,6 +23,7 @@ _GIT_SUBCOMMANDS = frozenset(
     {
         "add",
         "branch",
+        "init",
         "checkout",
         "clone",
         "commit",
@@ -31,7 +32,11 @@ _GIT_SUBCOMMANDS = frozenset(
         "log",
         "pull",
         "push",
+        "remote",
+        "reset",
+        "rev-parse",
         "status",
+        "switch",
         "--version",
     }
 )
@@ -184,9 +189,21 @@ def run_git(
     capture_output: bool = True,
     text: bool = True,
     timeout: float | None = None,
+    commit_identity: bool = False,
 ):
     """Run a constrained Git invocation through the absolute process boundary."""
     tokens = _validate_git_arguments(arguments)
+    env = None
+    if commit_identity:
+        if tokens[0] != "commit":
+            raise ProcessPolicyError("commit_identity is valid only for git commit.")
+        env = os.environ.copy()
+        env.update({
+            "GIT_AUTHOR_NAME": "OAE Core",
+            "GIT_AUTHOR_EMAIL": "engineering@oae.invalid",
+            "GIT_COMMITTER_NAME": "OAE Core",
+            "GIT_COMMITTER_EMAIL": "engineering@oae.invalid",
+        })
     return run_absolute_command(
         [resolve_executable("git"), *tokens],
         cwd=cwd,
@@ -194,6 +211,7 @@ def run_git(
         capture_output=capture_output,
         text=text,
         timeout=timeout,
+        env=env,
     )
 
 
