@@ -103,6 +103,30 @@ class RepositoryWorktree:
                 files.append({"status": {"A": "added", "M": "modified", "D": "deleted"}.get(parts[0], "modified"), "path": parts[1]})
         return {"branch": self.branch(), "commit_sha": commit_sha, "message": message, "files": files}
 
+    def snapshot_commit(self) -> list[dict[str, str]]:
+        self._require_repo()
+        result = run_git(
+            ["diff", "HEAD^", "HEAD", "--name-status"],
+            cwd=self.root, check=True, capture_output=True, text=True,
+        )
+        files: list[dict[str, str]] = []
+        for line in result.stdout.splitlines()[:200]:
+            parts = line.split("\t", 1)
+            if len(parts) != 2:
+                continue
+            status, relative = parts
+            path = self._safe_path(relative)
+            entry = {"status": {"A": "added", "M": "modified", "D": "deleted"}.get(status, "modified"), "path": relative}
+            if entry["status"] != "deleted":
+                data = path.read_bytes()
+                if len(data) > _MAX_FILE_BYTES:
+                    raise WorktreeError("changed file exceeds the governed mutation limit")
+                entry["content"] = data.decode("utf-8")
+            files.append(entry)
+        if not files:
+            raise WorktreeError("commit contains no governed file changes")
+        return files
+
     def head(self) -> str:
         self._require_repo()
         return run_git(["rev-parse", "HEAD"], cwd=self.root, check=True, capture_output=True, text=True).stdout.strip()
