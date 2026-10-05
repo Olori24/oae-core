@@ -108,7 +108,7 @@ def create_principal_api_key(
     raw = issue_api_key(tenant_id)
     key_id = str(uuid4())
     resolved_principal_id = principal_id or key_id
-    with db() as conn:
+    with db(tenant_id) as conn:
         conn.execute(
             """
             INSERT INTO api_keys(
@@ -135,7 +135,7 @@ def create_principal_api_key(
 
 
 def revoke_principal_api_key(*, tenant_id: str, key_id: str) -> bool:
-    with db() as conn:
+    with db(tenant_id) as conn:
         changed = conn.execute(
             "UPDATE api_keys SET revoked_at=? WHERE id=? AND tenant_id=? AND revoked_at IS NULL",
             (_now(), key_id, tenant_id),
