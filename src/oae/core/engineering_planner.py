@@ -17,6 +17,7 @@ class PlanStep:
     requires: tuple[str, ...] = ()
     risk: str = "low"
     optional: bool = False
+    inputs: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -50,10 +51,15 @@ def build_engineering_plan(
     has_typecheck: bool = False,
     has_build: bool = False,
     security_required: bool = True,
+    action_inputs: dict[str, dict[str, Any]] | None = None,
 ) -> EngineeringPlan:
     objective = objective.strip()
     if not objective or len(objective) > 4000:
         raise ValueError("objective must contain 1 to 4000 characters")
+
+    action_inputs = action_inputs or {}
+    if len(action_inputs) > 32 or any(not isinstance(v, dict) for v in action_inputs.values()):
+        raise ValueError("action_inputs must contain at most 32 object entries")
 
     kind = repository_kind.strip().lower() or "unknown"
     if kind not in {"python", "node", "typescript", "mixed", "unknown"}:
@@ -102,7 +108,13 @@ def build_engineering_plan(
         "1.0",
         objective,
         kind,
-        tuple(steps),
+        tuple(
+            PlanStep(
+                step.id, step.action, step.purpose, step.requires, step.risk, step.optional,
+                action_inputs.get(step.id),
+            )
+            for step in steps
+        ),
         criteria,
         tuple(blocked),
         tuple(verification),
