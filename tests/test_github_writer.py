@@ -27,8 +27,7 @@ def test_sync_creates_remote_tree_commit_and_branch():
     result = writer.synchronize(
         base_sha="a" * 40,
         branch="oae/task",
-        files=[{"path": "src/app.py", "status": "modified", "content": "print('ok')
-"}],
+        files=[{"path": "src/app.py", "status": "modified", "content": "print('ok')\n"}],
         commit_message="feat: change",
     )
     assert result["commit_sha"] == "d" * 40

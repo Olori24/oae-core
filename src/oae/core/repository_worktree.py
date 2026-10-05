@@ -88,8 +88,8 @@ class RepositoryWorktree:
             raise WorktreeError("cannot commit a clean worktree")
         run_git(["add", "--all"], cwd=self.root, check=True, capture_output=True, text=True)
         run_git(
-            ["-c", "user.name=OAE Core", "-c", "user.email=engineering@oae.invalid", "commit", "-m", message],
-            cwd=self.root, check=True, capture_output=True, text=True,
+            ["commit", "-m", message],
+            cwd=self.root, check=True, capture_output=True, text=True, commit_identity=True,
         )
         commit_sha = self.head()
         changed = run_git(
