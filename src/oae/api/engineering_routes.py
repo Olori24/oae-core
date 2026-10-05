@@ -36,6 +36,14 @@ class WorkspaceValidationRequest(EngineeringRequest):
     workspace_id: str = Field(min_length=1, max_length=120)
     authorization_id: str = Field(min_length=1, max_length=120)
 
+class WorktreeRequest(EngineeringRequest):
+    workspace_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    branch: str | None = Field(default=None, max_length=120)
+    path: str | None = Field(default=None, max_length=4096)
+    content: str | None = None
+    message: str | None = Field(default=None, max_length=200)
+
 
 def _queue(
     *,
@@ -124,4 +132,26 @@ def check_workspace_readiness(
         authorization_id=data.authorization_id,
         stage="readiness",
         payload=data.model_dump(exclude={"authorization_id"}),
+    )
+
+
+@router.post("/workspaces/{stage}", response_model=JobResponse, status_code=202)
+def worktree_operation(
+    stage: Literal["attach", "branch", "write", "delete", "diff", "commit"],
+    data: WorktreeRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    required = {
+        "branch": data.branch,
+        "write": data.path,
+        "delete": data.path,
+        "commit": data.message,
+    }.get(stage)
+    if stage in {"branch", "write", "delete", "commit"} and not required:
+        raise HTTPException(status_code=422, detail=f"{stage} requires its corresponding payload field.")
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage=stage,
+        payload=data.model_dump(exclude={"authorization_id"}, exclude_none=True),
     )

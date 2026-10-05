@@ -11,6 +11,7 @@ from oae.api.mission_results import build_result
 from oae.api.workspace_manager import WorkspaceManager
 from oae.api.workspace_models import WorkspacePurpose
 from oae.core.repository_quality_gate import RepositoryQualityGate
+from oae.core.repository_worktree import RepositoryWorktree
 from oae.core.vertical_slice_mission import VerticalSliceMission
 
 logger = logging.getLogger("oae.api.job_runner")
@@ -120,6 +121,8 @@ class JobRunner:
                 return self._provision_workspace(payload, tenant_id)
             if stage in {"validate", "readiness"}:
                 return self._validate_workspace(payload, tenant_id, stage)
+            if stage in {"attach", "branch", "write", "delete", "diff", "commit"}:
+                return self._worktree_operation(payload, tenant_id, stage)
 
             name = payload.get("name")
             description = payload.get("description")
@@ -202,6 +205,55 @@ class JobRunner:
                 else f"Workspace {workspace_id} remains blocked by the enabled quality gates."
             ),
             evidence={"stage": stage, "quality_gate": gate},
+        )
+
+    @staticmethod
+    def _worktree_operation(payload: dict, tenant_id: str | None, stage: str) -> dict:
+        if not tenant_id:
+            raise ValueError("Worktree operations require a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        if not workspace_id:
+            raise ValueError(f"{stage} requires workspace_id")
+        with db(tenant_id) as conn:
+            row = conn.execute(
+                "SELECT storage_uri,repository_id,source_revision_id,state "
+                "FROM workspaces WHERE id=? AND tenant_id=?",
+                (workspace_id, tenant_id),
+            ).fetchone()
+            if not row:
+                raise ValueError("Workspace not found for tenant.")
+            if row[3] != "ready":
+                raise ValueError("Workspace must be ready before mutation.")
+            repo = conn.execute(
+                "SELECT clone_url FROM repositories WHERE id=? AND tenant_id=? AND status='active'",
+                (row[1], tenant_id),
+            ).fetchone()
+            revision = conn.execute(
+                "SELECT commit_sha FROM repository_revisions WHERE id=? AND tenant_id=?",
+                (row[2], tenant_id),
+            ).fetchone()
+            if not repo or not revision:
+                raise ValueError("Workspace repository revision metadata is unavailable.")
+        root = JobRunner._safe_workspace_path(row[0])
+        wt = RepositoryWorktree(root)
+        if stage == "attach":
+            result = wt.attach(clone_url=str(repo[0]), commit_sha=str(revision[0]))
+        elif stage == "branch":
+            result = wt.create_branch(str(payload.get("branch")))
+        elif stage == "write":
+            result = wt.write_file(str(payload.get("path")), str(payload.get("content", "")))
+        elif stage == "delete":
+            result = wt.delete_file(str(payload.get("path")))
+        elif stage == "diff":
+            result = wt.diff()
+        else:
+            result = wt.commit(str(payload.get("message")))
+        return build_result(
+            operation="build",
+            payload=payload,
+            repository=str(row[1]),
+            summary=f"Governed worktree {stage} operation completed.",
+            evidence={"stage": stage, "workspace_id": workspace_id, "worktree": result},
         )
 
     @staticmethod
