@@ -111,6 +111,7 @@ def record_step_result(
         )
 
     if step_id == "reverify":
+        completed = [item for item in completed if item not in {"repair", "reverify"}]
         completed.append("reverify_failed")
 
     repair_step = next(
