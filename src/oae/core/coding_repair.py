@@ -47,7 +47,7 @@ class CodingRepairBrain(CodingBrain):
         return f"""Produce the smallest safe repair proposal for OAE.
 
 OBJECTIVE:
-{objective}
+{objective[:2000]}
 
 ACTUAL GOVERNED FAILURE EVIDENCE:
 {failure_evidence}
@@ -78,7 +78,7 @@ JSON SHAPE:
 }}
 
 OBJECTIVE:
-{objective}
+{objective[:2000]}
 
 REPOSITORY CONTEXT:
 {context}
