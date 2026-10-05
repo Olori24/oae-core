@@ -24,6 +24,7 @@ from oae.api.agent_runs import AgentRunRepository
 from oae.api.durable_jobs import DurableJobRepository
 from oae.core.agent_action_executor import execute_agent_action
 from oae.core.coding_brain import CodingBrain
+from oae.core.coding_repair import CodingRepairBrain
 from oae.core.coding_executor import apply_coding_proposal
 from oae.providers.open_weight import OpenWeightModelGateway, open_weight_config_from_settings
 
@@ -154,6 +155,8 @@ class JobRunner:
                 return self._coding_proposal(payload, tenant_id)
             if stage == "coding_execute":
                 return self._coding_execute(payload, tenant_id)
+            if stage == "coding_repair":
+                return self._coding_repair(payload, tenant_id)
             if stage == "agent_run_start":
                 return self._start_agent_run(payload, tenant_id)
             if stage == "agent_run_step":
@@ -503,6 +506,69 @@ class JobRunner:
         )
 
     @staticmethod
+    def _coding_repair(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Coding repair requires a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        objective = str(payload.get("objective", "")).strip()
+        failure_evidence = payload.get("failure_evidence")
+        if not workspace_id or not objective:
+            raise ValueError("coding_repair requires workspace_id and objective")
+        if not isinstance(failure_evidence, dict) or not failure_evidence:
+            raise ValueError("coding_repair requires governed failure evidence.")
+        model = settings.coding_brain_model.strip()
+        if not model:
+            raise ValueError("Coding brain model is not configured server-side.")
+        with db(tenant_id) as conn:
+            row = conn.execute(
+                "SELECT storage_uri,state,repository_id FROM workspaces WHERE id=? AND tenant_id=?",
+                (workspace_id, tenant_id),
+            ).fetchone()
+        if not row or row[1] != "ready":
+            raise ValueError("Workspace must be ready before coding repair.")
+        root = self._safe_workspace_path(row[0])
+        gateway = OpenWeightModelGateway(open_weight_config_from_settings(settings))
+        proposal = CodingRepairBrain(gateway, model).propose_repair(
+            tenant_id=tenant_id,
+            workspace=root,
+            objective=objective,
+            failure_evidence=failure_evidence,
+        )
+        worktree = RepositoryWorktree(root)
+        mutations = apply_coding_proposal(
+            proposal=proposal,
+            workspace=root,
+            write_file=worktree.write_file,
+            delete_file=worktree.delete_file,
+        )
+        verification = []
+        for command in proposal.verification:
+            result = run_governed_command(command, workspace=root)
+            verification.append(result)
+            if not result.get("passed"):
+                break
+        verified = bool(verification) and all(item.get("passed") for item in verification)
+        return build_result(
+            operation="build",
+            payload=payload,
+            repository=str(row[2]),
+            summary=(
+                "OAE generated, applied, and verified a repair proposal."
+                if verified
+                else "OAE generated and applied a repair proposal, but verification did not pass."
+            ),
+            evidence={
+                "stage": "coding_repair",
+                "workspace_id": workspace_id,
+                "proposal": proposal.to_dict(),
+                "mutations": mutations,
+                "verification": verification,
+                "verified": verified,
+                "failure_evidence": failure_evidence,
+            },
+        )
+
+    @staticmethod
     def _coding_proposal(payload: dict, tenant_id: str | None) -> dict:
         if not tenant_id:
             raise ValueError("Coding proposal requires a tenant context.")
@@ -639,6 +705,7 @@ class JobRunner:
         base_payload = {
             "workspace_id": record.workspace_id,
             "commands": list(record.state.plan.get("verification_commands", [])),
+            "objective": record.state.plan.get("objective", ""),
         }
         with db(tenant_id) as conn:
             row = conn.execute(
@@ -650,6 +717,16 @@ class JobRunner:
             base_payload["repository_url"] = str(row[0])
 
         try:
+        # Repair actions consume evidence produced by OAE's own governed verifier.
+        if str(decision["action"]) == "repair_failures":
+            verifier_evidence = [
+                item for item in record.state.evidence
+                if isinstance(item, dict) and item.get("step_id") in {"verify", "reverify"}
+            ]
+            if not verifier_evidence:
+                raise ValueError("repair_failures requires governed verifier evidence.")
+            base_payload["failure_evidence"] = verifier_evidence[-1]
+
             result = execute_agent_action(
                 action=str(decision["action"]),
                 step=step,
