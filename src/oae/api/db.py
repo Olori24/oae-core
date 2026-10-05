@@ -251,6 +251,7 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
         adapter.execute("SELECT pg_advisory_xact_lock(hashtextextended('oae:postgres-bootstrap', 0))")
         for statement in POSTGRES_STATEMENTS:
             adapter.execute(statement)
+        adapter.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS result TEXT")
         adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_prefix TEXT")
         adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_id TEXT")
         adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_role TEXT")
