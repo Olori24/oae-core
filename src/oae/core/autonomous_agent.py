@@ -56,7 +56,11 @@ def next_agent_decision(plan: dict[str, Any], completed_steps: list[str]) -> Age
             raise ValueError(f"plan contains unsupported agent action: {action}")
         if step_id in completed:
             continue
+        if step.get("optional") and "verify_failed" not in completed:
+            continue
         if not all(req in completed for req in requires):
+            continue
+        if step_id == "commit" and "verify_failed" in completed and "reverify" not in completed:
             continue
         return AgentDecision("ready", action, step_id, "next dependency-satisfied governed action", len(steps) - len(completed) - 1)
     if all(isinstance(step, dict) and step.get("id") in completed for step in steps):
