@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -119,17 +119,14 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.strip("[]").split(",") if item.strip()]
         raise TypeError("Expected a list or string")
 
-    @field_validator("app_env")
-    @classmethod
-    def validate_production_security(cls, value, info):
-        if value == "production":
-            cors = info.data.get("cors_origins", [])
-            hosts = info.data.get("allowed_hosts", [])
-            if not cors or "*" in cors:
+    @model_validator(mode="after")
+    def validate_production_security(self):
+        if self.app_env == "production":
+            if not self.cors_origins or "*" in self.cors_origins:
                 raise ValueError("Production requires explicit CORS_ORIGINS; wildcard CORS is forbidden.")
-            if not hosts or "*" in hosts:
+            if not self.allowed_hosts or "*" in self.allowed_hosts:
                 raise ValueError("Production requires explicit ALLOWED_HOSTS; wildcard hosts are forbidden.")
-        return value
+        return self
 
     @property
     def resolved_database_url(self) -> str:
