@@ -79,7 +79,7 @@ def test_relay_projects_one_ordered_event_and_job_projection(monkeypatch, postgr
     import oae.api.outbox_relay as module
 
     connection = RelayConnection(publication_cursor=0)
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
 
     assert OutboxRelay("relay-1").project(_event()) is True
     queries = [query for query, _ in connection.calls]
@@ -95,7 +95,7 @@ def test_relay_releases_a_later_event_until_its_tenant_predecessor_is_published(
     import oae.api.outbox_relay as module
 
     connection = RelayConnection(publication_cursor=0)
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
 
     assert OutboxRelay("relay-1").project(_event(sequence=2)) is False
     assert not any("INSERT INTO realtime_events" in query for query, _ in connection.calls)
@@ -106,7 +106,7 @@ def test_relay_failure_record_is_redacted_and_releases_its_lease(monkeypatch, po
     import oae.api.outbox_relay as module
 
     connection = RelayConnection()
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
     OutboxRelay("relay-1").record_failure(_event(), RuntimeError("secret://must-not-persist"))
 
     failure_update = next(
@@ -156,7 +156,7 @@ def test_replay_envelope_hides_tenant_identifier_and_expired_cursor_is_rejected(
         datetime.now(timezone.utc), "correlation-1", None,
     )
     connection = ReplayConnection(oldest=2, rows=[row])
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
     store = RealtimeEventStore()
 
     event = store.list_tenant_events("tenant-1", after=1)[0]
@@ -179,7 +179,7 @@ def test_realtime_store_uses_fixed_aggregate_ownership_queries(monkeypatch, real
     connection = ReplayConnection(owned=True)
     import oae.api.realtime_events as module
 
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
     assert RealtimeEventStore().assert_aggregate_owned("tenant-1", "workspace", "workspace-1") is True
 
     assert AGGREGATE_OWNERSHIP_QUERIES["workspace"] in [query for query, _ in connection.calls]
