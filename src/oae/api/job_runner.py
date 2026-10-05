@@ -706,7 +706,23 @@ class JobRunner:
             "workspace_id": record.workspace_id,
             "commands": list(record.state.plan.get("verification_commands", [])),
             "objective": record.state.plan.get("objective", ""),
+            "branch": f"oae/agent/{run_id[:16]}",
         }
+        # Carry forward only the minimal durable handoff data needed by later
+        # governed stages. Never accept branch/change-set identifiers from the
+        # client as authority for this run.
+        for item in reversed(record.state.evidence):
+            if not isinstance(item, dict):
+                continue
+            result = item.get("result")
+            if not isinstance(result, dict):
+                continue
+            evidence = result.get("evidence")
+            if not isinstance(evidence, dict):
+                continue
+            if evidence.get("stage") == "sync" and evidence.get("change_set_id"):
+                base_payload["change_set_id"] = str(evidence["change_set_id"])
+                break
         with db(tenant_id) as conn:
             row = conn.execute(
                 "SELECT r.clone_url FROM repositories r JOIN workspaces w ON w.repository_id=r.id "
