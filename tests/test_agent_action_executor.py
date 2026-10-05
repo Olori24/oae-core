@@ -57,3 +57,23 @@ def test_analysis_requires_repository_url():
             base_payload={},
             invoke=lambda *_: {},
         )
+
+
+def test_code_objective_maps_to_coding_execution():
+    calls = []
+
+    def invoke(operation, payload):
+        calls.append((operation, payload))
+        return {"verified": True}
+
+    result = execute_agent_action(
+        action="code_objective",
+        step={"id": "implement", "action": "code_objective", "inputs": {"objective": "fix the bug"}},
+        workspace_id="w1",
+        base_payload={},
+        invoke=invoke,
+    )
+    assert result["verified"] is True
+    assert calls[0][0] == "build"
+    assert calls[0][1]["stage"] == "coding_execute"
+    assert calls[0][1]["objective"] == "fix the bug"
