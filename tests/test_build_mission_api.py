@@ -6,10 +6,12 @@ from oae.api.app import app
 def test_build_mission_is_exposed_as_real_saas_operation(tmp_path):
     import oae.api.auth as auth
     import oae.api.db as database
+    import oae.api.routes as routes
 
     db_path = tmp_path / "oae.db"
     database.settings.database_url = f"sqlite:///{db_path}"
     auth.settings.database_url = f"sqlite:///{db_path}"
+    routes.settings.worker_authorization_enforcement_enabled = True
 
     client = TestClient(app)
     created = client.post("/v1/tenants", json={"name": "TeamPulse Test"})
