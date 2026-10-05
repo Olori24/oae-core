@@ -472,7 +472,7 @@ class JobRunner:
         )
         verification = []
         for command in proposal.verification:
-            result = run_governed_command(command, root)
+            result = run_governed_command(command, workspace=root)
             verification.append(result)
             if not result.get("passed"):
                 return build_result(
