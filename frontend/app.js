@@ -1,6 +1,6 @@
 (() => {
   const POLL_INTERVAL = 3500;
-  const state = { key: "", jobs: [], tenant: null, pollTimer: null, createKey: "" };
+  const state = { key: "", jobs: [], tenant: null, pollTimer: null, createKey: "" };\n  const KEY_STORAGE = "oae.api_key";
   const $ = (id) => document.getElementById(id);
 
   function escapeHtml(value) {
