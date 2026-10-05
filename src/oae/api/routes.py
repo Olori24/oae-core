@@ -207,7 +207,7 @@ def create_tenant(data: TenantCreate, request: Request) -> TenantCreated:
 
 @router.get("/v1/me", tags=["tenants"])
 def me(tenant_id: str = Depends(require_tenant)) -> dict[str, str]:
-    with db() as conn:
+    with db(tenant_id) as conn:
         row = conn.execute("SELECT id,name,created_at FROM tenants WHERE id=?", (tenant_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=401, detail="Tenant not found")
