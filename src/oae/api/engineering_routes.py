@@ -57,6 +57,17 @@ class PullRequestRequest(EngineeringRequest):
     change_set_id: str = Field(min_length=1, max_length=120)
     authorization_id: str = Field(min_length=1, max_length=120)
 
+class CommandExecutionRequest(EngineeringRequest):
+    workspace_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    command: Literal["python_compile", "pytest", "ruff", "mypy"]
+
+
+class WorkspaceVerificationRequest(EngineeringRequest):
+    workspace_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    commands: list[Literal["python_compile", "pytest", "ruff", "mypy"]] = Field(default_factory=lambda: ["python_compile", "ruff", "pytest"], max_length=8)
+
 
 def _queue(
     *,
@@ -171,6 +182,32 @@ def create_change_set_pull_request(
         principal=principal,
         authorization_id=data.authorization_id,
         stage="pull_request",
+        payload=data.model_dump(exclude={"authorization_id"}, exclude_none=True),
+    )
+
+
+@router.post("/workspaces/execute", response_model=JobResponse, status_code=202)
+def execute_governed_command(
+    data: CommandExecutionRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="execute",
+        payload=data.model_dump(exclude={"authorization_id"}, exclude_none=True),
+    )
+
+
+@router.post("/workspaces/verify", response_model=JobResponse, status_code=202)
+def verify_workspace_commands(
+    data: WorkspaceVerificationRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="verify",
         payload=data.model_dump(exclude={"authorization_id"}, exclude_none=True),
     )
 
