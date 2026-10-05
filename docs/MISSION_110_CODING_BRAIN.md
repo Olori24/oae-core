@@ -16,7 +16,7 @@ The model is advisory and proposal-producing. The existing governed execution st
 
 - maximum 80 files
 - maximum 12,000 characters per selected file
-- maximum 90,000 context characters
+- maximum 8,000 context characters
 - generated/dependency directories are excluded
 - deterministic path ordering
 
