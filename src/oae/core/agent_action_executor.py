@@ -60,6 +60,12 @@ def execute_agent_action(
     }
     stage = mapping[action]
 
+    if action == "analyze_repository":
+        repository_url = payload.get("repository_url")
+        if not isinstance(repository_url, str) or not repository_url:
+            raise AgentActionBlocked("analyze_repository requires repository_url.")
+        return invoke("analyze", {"repository_url": repository_url})
+
     if action in {"mutate_workspace", "repair_failures"}:
         mutation = payload.get("mutation")
         if not isinstance(mutation, dict):
@@ -74,9 +80,8 @@ def execute_agent_action(
         return invoke("build", payload)
 
     if action == "capture_baseline":
-        payload["success"] = True
-        payload["checks"] = []
-        return invoke("verify", payload)
+        payload["stage"] = "verify"
+        return invoke("build", payload)
 
     payload["stage"] = stage
     return invoke("build", payload)
