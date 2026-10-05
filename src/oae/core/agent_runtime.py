@@ -99,7 +99,7 @@ def record_step_result(
         )
 
     evidence_items.append(normalized_evidence)
-    if step_id != "verify":
+    if step_id not in {"verify", "reverify"}:
         return AgentRunState(
             run_id=state.run_id,
             status="failed",
@@ -109,6 +109,9 @@ def record_step_result(
             repair_count=state.repair_count,
             evidence=tuple(evidence_items[-MAX_EVIDENCE_ITEMS:]),
         )
+
+    if step_id == "reverify":
+        completed.append("reverify_failed")
 
     repair_step = next(
         (
@@ -125,7 +128,7 @@ def record_step_result(
             run_id=state.run_id,
             status="failed",
             plan=state.plan,
-            completed_steps=tuple(completed + ["verify_failed"]),
+            completed_steps=tuple(completed + ([] if "verify_failed" in completed else ["verify_failed"])),
             failed_step="verify",
             repair_count=state.repair_count,
             evidence=tuple(evidence_items[-MAX_EVIDENCE_ITEMS:]),
