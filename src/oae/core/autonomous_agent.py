@@ -63,6 +63,10 @@ def next_agent_decision(plan: dict[str, Any], completed_steps: list[str]) -> Age
         if step_id == "commit" and "verify_failed" in completed and "reverify" not in completed:
             continue
         return AgentDecision("ready", action, step_id, "next dependency-satisfied governed action", len(steps) - len(completed) - 1)
-    if all(isinstance(step, dict) and step.get("id") in completed for step in steps):
-        return AgentDecision("complete", None, None, "all planned steps are complete", 0)
+    required_steps = [
+        step for step in steps
+        if isinstance(step, dict) and (not step.get("optional") or "verify_failed" in completed)
+    ]
+    if all(step.get("id") in completed for step in required_steps):
+        return AgentDecision("complete", None, None, "all required planned steps are complete", 0)
     return AgentDecision("blocked", None, None, "no dependency-satisfied action is available", len(steps) - len(completed))
