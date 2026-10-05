@@ -1,4 +1,6 @@
-from oae.api.github_writer import GitHubRepositoryWriter
+import pytest
+
+from oae.api.github_writer import GitHubRepositoryWriter, GitHubWriteError
 
 
 class FakeWriter(GitHubRepositoryWriter):
@@ -17,6 +19,8 @@ class FakeWriter(GitHubRepositoryWriter):
             return {"sha": "d" * 40}
         if method == "POST" and path.endswith("/git/refs"):
             return {"ref": "refs/heads/oae/task"}
+        if method == "GET" and "/pulls?" in path:
+            return []
         if method == "POST" and path.endswith("/pulls"):
             return {"number": 7, "html_url": "https://github.com/acme/demo/pull/7"}
         raise AssertionError((method, path))
@@ -55,3 +59,35 @@ def test_pull_request_creation_is_bounded():
         body="review",
     )
     assert result["number"] == 7
+
+
+def test_pull_request_creation_is_idempotent_for_existing_open_pr():
+    writer = FakeWriter()
+    writer._request = lambda method, path, payload=None: (
+        [{"number": 8, "head": {"ref": "oae/task"}, "base": {"ref": "main"}}]
+        if method == "GET" and "/pulls?" in path
+        else (_ for _ in ()).throw(AssertionError((method, path)))
+    )
+    result = writer.create_pull_request(branch="oae/task", base="main", title="ignored", body="ignored")
+    assert result["number"] == 8
+
+
+class StaleBranchWriter(FakeWriter):
+    def _request(self, method, path, payload=None):
+        if method == "POST" and path.endswith("/git/refs"):
+            raise GitHubWriteError("GitHub mutation failed with HTTP 422", status_code=422)
+        if method == "GET" and "/git/ref/heads/" in path:
+            return {"object": {"sha": "e" * 40}}
+        return super()._request(method, path, payload)
+
+
+def test_sync_refuses_to_update_a_moved_branch():
+    writer = StaleBranchWriter()
+    with pytest.raises(GitHubWriteError, match="branch moved"):
+        writer.synchronize(
+            base_sha="a" * 40,
+            branch="oae/task",
+            files=[{"path": "src/app.py", "status": "modified", "content": "print('ok')
+"}],
+            commit_message="feat: change",
+        )

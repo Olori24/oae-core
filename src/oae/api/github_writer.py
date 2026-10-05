@@ -6,12 +6,17 @@ import os
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
+from typing import Any
 
 MAX_RESPONSE = 2_000_000
 
 
 class GitHubWriteError(RuntimeError):
     """Raised when a governed GitHub mutation cannot be completed."""
+
+    def __init__(self, message: str, *, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -33,7 +38,7 @@ class GitHubRepositoryWriter:
         self.repo = parts[1].removesuffix(".git")
         self._opener = opener or build_opener(_NoRedirect())
 
-    def _request(self, method: str, path: str, payload: dict | None = None) -> dict:
+    def _request(self, method: str, path: str, payload: dict | None = None) -> Any:
         token = os.getenv("GITHUB_TOKEN", "").strip()
         if not token:
             raise GitHubWriteError("GitHub synchronization requires GITHUB_TOKEN")
@@ -57,7 +62,7 @@ class GitHubRepositoryWriter:
                     raise GitHubWriteError("GitHub response exceeded the size limit")
                 return json.loads(raw.decode()) if raw else {}
         except HTTPError as exc:
-            raise GitHubWriteError(f"GitHub mutation failed with HTTP {exc.code}") from exc
+            raise GitHubWriteError(f"GitHub mutation failed with HTTP {exc.code}", status_code=exc.code) from exc
         except (URLError, TimeoutError) as exc:
             raise GitHubWriteError(f"GitHub request failed: {type(exc).__name__}") from exc
 
@@ -100,8 +105,15 @@ class GitHubRepositoryWriter:
                 {"ref": f"refs/heads/{branch}", "sha": commit_sha},
             )
         except GitHubWriteError as exc:
-            if "HTTP 422" not in str(exc):
+            if exc.status_code != 422:
                 raise
+            current = self._request(
+                "GET",
+                f"/repos/{self.owner}/{self.repo}/git/ref/heads/{branch}",
+            )
+            current_sha = current.get("object", {}).get("sha")
+            if current_sha != base_sha:
+                raise GitHubWriteError("GitHub branch moved since the governed base revision; refusing concurrent update.")
             self._request(
                 "PATCH",
                 f"/repos/{self.owner}/{self.repo}/git/refs/heads/{branch}",
@@ -112,6 +124,17 @@ class GitHubRepositoryWriter:
     def create_pull_request(self, *, branch: str, base: str, title: str, body: str) -> dict:
         self._validate_ref(branch)
         self._validate_ref(base)
+        existing = self._request(
+            "GET",
+            f"/repos/{self.owner}/{self.repo}/pulls?state=open&head={self.owner}:{branch}&base={base}&per_page=10",
+        )
+        if isinstance(existing, list):
+            for pull in existing:
+                if (
+                    pull.get("head", {}).get("ref") == branch
+                    and pull.get("base", {}).get("ref") == base
+                ):
+                    return pull
         return self._request(
             "POST",
             f"/repos/{self.owner}/{self.repo}/pulls",
