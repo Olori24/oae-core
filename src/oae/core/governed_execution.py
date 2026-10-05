@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
-from oae.core.process_security import ProcessPolicyError, run_absolute_command, resolve_executable
+from oae.core.process_security import ProcessPolicyError, ProcessTimeout, run_absolute_command, resolve_executable
 
 
 class CommandExecutionError(RuntimeError):
@@ -59,8 +59,17 @@ def run_governed_command(name: str, *, workspace: str | Path) -> dict:
             text=True,
             timeout=spec.timeout_seconds,
         )
-    except TimeoutError as exc:
-        raise CommandExecutionError(f"Governed command timed out: {name}") from exc
+    except ProcessTimeout:
+        return {
+            "command": name,
+            "argv": [spec.executable, *spec.args],
+            "exit_code": None,
+            "passed": False,
+            "timed_out": True,
+            "output": "",
+            "output_truncated": False,
+            "timeout_seconds": spec.timeout_seconds,
+        }
     except Exception as exc:
         raise CommandExecutionError(f"Governed command failed to start: {name}") from exc
 
