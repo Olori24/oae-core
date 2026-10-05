@@ -131,7 +131,7 @@ class PostgresWorkspaceRepository:
     def reserve(self, record: WorkspaceRecord, entries: list[WorkspaceManifestEntry]) -> None:
         if settings.database_backend != "postgres":
             raise WorkspaceError("Durable workspace reservation requires PostgreSQL.")
-        with db(tenant_id) as conn:
+        with db(record.tenant_id) as conn:
             conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", (record.tenant_id,))
             usage = conn.execute(
                 "SELECT COALESCE(SUM(size_bytes),0),COUNT(*) FROM workspaces "
