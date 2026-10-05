@@ -171,7 +171,7 @@ def test_replay_envelope_hides_tenant_identifier_and_expired_cursor_is_rejected(
 def test_realtime_store_checks_aggregate_ownership(monkeypatch, realtime_enabled):
     import oae.api.realtime_events as module
 
-    monkeypatch.setattr(module, "db", lambda: _fake_db(ReplayConnection(owned=False)))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(ReplayConnection(owned=False)))
     assert RealtimeEventStore().assert_aggregate_owned("tenant-1", "job", "job-1") is False
 
 
