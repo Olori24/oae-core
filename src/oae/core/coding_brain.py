@@ -213,6 +213,8 @@ REPOSITORY CONTEXT:
             "python_compile", "pytest", "ruff", "mypy", "typescript_check",
             "eslint_check", "vitest_check", "jest_check",
         }
+        if not verification:
+            raise CodingBrainError("Model proposal must include at least one governed verification command.")
         if len(verification) > 8 or any(x not in allowed_verification for x in verification):
             raise CodingBrainError("Model proposed an unsupported verification command.")
 
