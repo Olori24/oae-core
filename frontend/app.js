@@ -362,6 +362,63 @@
     }
   }
 
+  let deferredInstallPrompt = null;
+
+  function setInstallVisibility(visible) {
+    const headerButton = $("install-app-button");
+    const welcomePromo = $("install-promo");
+    if (headerButton) headerButton.hidden = !visible;
+    if (welcomePromo) welcomePromo.hidden = !visible;
+  }
+
+  function isStandalone() {
+    return window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  }
+
+  async function installApp() {
+    if (!deferredInstallPrompt) {
+      if (isStandalone()) return;
+      setMessage("welcome-message", "Use your browser menu and choose Install app or Add to Home screen.", "success");
+      return;
+    }
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    setInstallVisibility(false);
+    if (choice.outcome === "accepted") showToast("OAE is being installed on this device.");
+  }
+
+  function showToast(message) {
+    const toast = $("toast");
+    toast.textContent = message;
+    toast.hidden = false;
+    window.clearTimeout(showToast.timer);
+    showToast.timer = window.setTimeout(() => { toast.hidden = true; }, 3200);
+  }
+
+  function initPwa() {
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
+    }
+    if (isStandalone()) {
+      setInstallVisibility(false);
+      return;
+    }
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      setInstallVisibility(true);
+    });
+    window.addEventListener("appinstalled", () => {
+      deferredInstallPrompt = null;
+      setInstallVisibility(false);
+      showToast("OAE is now installed. Launch it from your home screen.");
+    });
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !isStandalone()) {
+      window.setTimeout(() => setInstallVisibility(true), 900);
+    }
+  }
+
   async function boot() {
     $("create-form").addEventListener("submit", createWorkspace);
     $("signin-form").addEventListener("submit", signIn);
@@ -369,6 +426,9 @@
     $("copy-key").addEventListener("click", copyKey);
     $("continue-button").addEventListener("click", continueAfterKey);
     $("signout-button").addEventListener("click", signOut);
+    $("install-app-button")?.addEventListener("click", installApp);
+    $("welcome-install-button")?.addEventListener("click", installApp);
+    initPwa();
     $("example-repository").addEventListener("click", () => {
       $("repository-url").value = "https://github.com/psf/requests";
       $("repository-url").focus();
