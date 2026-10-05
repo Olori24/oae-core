@@ -75,14 +75,18 @@ def build_engineering_plan(
     verification: list[str] = []
     if kind in {"python", "mixed", "unknown"}:
         verification.append("python_compile")
-    if has_linter:
+    if has_linter and kind in {"python", "mixed", "unknown"}:
         verification.append("ruff")
+    if has_linter and kind in {"node", "typescript", "mixed"}:
+        verification.append("eslint_check")
     if has_typecheck:
         verification.append("mypy")
     if has_tests:
         verification.append("pytest")
     if kind in {"node", "typescript", "mixed"} and has_typecheck:
         verification.append("typescript_check")
+    if kind == "node" and has_tests:
+        verification.append("vitest_check")
 
     steps.append(PlanStep("verify", "verify_workspace", "Run the repository's approved verification set and stop on the first failure.", ("diff",), "medium"))
     steps.extend([
