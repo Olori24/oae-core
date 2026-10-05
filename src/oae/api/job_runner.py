@@ -448,6 +448,18 @@ class JobRunner:
             max_repairs=int(payload.get("max_repairs", 2)),
         )
         decision = record.state.next_decision()
+        if record.state.status == "running":
+            authorization_id = record.authorization_id or payload.get("_authorization_id")
+            if not authorization_id:
+                raise ValueError("Agent run cannot start without worker authorization.")
+            DurableJobRepository().enqueue(
+                tenant_id=tenant_id,
+                operation="build",
+                payload={"stage": "agent_tick", "run_id": record.id},
+                authorization_id=authorization_id,
+                idempotency_key=f"agent-tick:{record.id}:0:0",
+                priority=90,
+            )
         return build_result(
             operation="build",
             payload=payload,
