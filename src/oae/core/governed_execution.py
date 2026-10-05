@@ -28,6 +28,7 @@ class CommandSpec:
     args: tuple[str, ...]
     timeout_seconds: int = 300
     max_output_bytes: int = 200_000
+    local_only: bool = False
 
 
 _COMMANDS: dict[str, CommandSpec] = {
@@ -35,7 +36,10 @@ _COMMANDS: dict[str, CommandSpec] = {
     "ruff": CommandSpec("ruff", "ruff", ("check", "."), 300),
     "mypy": CommandSpec("mypy", "mypy", ("src",), 300),
     "python_compile": CommandSpec("python_compile", "python", ("-m", "compileall", "-q", "src"), 180),
-    "typescript_check": CommandSpec("typescript_check", "tsc", ("--noEmit",), 600),
+    "typescript_check": CommandSpec("typescript_check", "tsc", ("--noEmit",), 600, local_only=True),
+    "eslint_check": CommandSpec("eslint_check", "eslint", (".",), 600, local_only=True),
+    "vitest_check": CommandSpec("vitest_check", "vitest", ("run", "--passWithNoTests"), 600, local_only=True),
+    "jest_check": CommandSpec("jest_check", "jest", ("--runInBand",), 600, local_only=True),
 }
 
 
@@ -51,7 +55,7 @@ def run_governed_command(name: str, *, workspace: str | Path) -> dict:
     root = Path(workspace).resolve()
     if not root.is_dir():
         raise CommandExecutionError("Workspace does not exist.")
-    executable = str(Path(resolve_workspace_executable(spec.executable, root)).resolve())
+    executable = str(Path(resolve_workspace_executable(spec.executable, root, local_only=spec.local_only)).resolve())
     if spec.executable == "python":
         import sys
         executable = str(Path(sys.executable).resolve())
