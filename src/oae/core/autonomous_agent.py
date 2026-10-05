@@ -18,6 +18,7 @@ _ALLOWED_ACTIONS = {
     "commit_change_set",
     "sync_github",
     "create_pull_request",
+    "code_objective",
 }
 
 
