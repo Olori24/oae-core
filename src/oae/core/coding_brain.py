@@ -17,7 +17,7 @@ from oae.providers.open_weight import OpenWeightModelGateway
 
 MAX_CONTEXT_FILES = 80
 MAX_FILE_CHARS = 12_000
-MAX_CONTEXT_CHARS = 90_000
+MAX_CONTEXT_CHARS = 8_000
 MAX_MUTATIONS = 32
 MAX_MUTATION_CHARS = 1_500_000
 SAFE_PATH = re.compile(r"^[A-Za-z0-9._/-]+$")
