@@ -24,6 +24,23 @@ class EngineeringRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
 
+
+class EngineeringPlanRequest(EngineeringRequest):
+    workspace_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    objective: str = Field(min_length=1, max_length=4000)
+    repository_kind: Literal["python", "node", "typescript", "mixed", "unknown"] = "unknown"
+    has_tests: bool = True
+    has_linter: bool = True
+    has_typecheck: bool = False
+    has_build: bool = False
+    security_required: bool = True
+
+
+class AgentDecisionRequest(EngineeringRequest):
+    plan: dict
+    completed_steps: list[str] = Field(default_factory=list, max_length=32)
+
 class WorkspaceProvisionRequest(EngineeringRequest):
     repository_id: str = Field(min_length=1, max_length=120)
     revision_id: str = Field(min_length=1, max_length=120)
@@ -60,13 +77,13 @@ class PullRequestRequest(EngineeringRequest):
 class CommandExecutionRequest(EngineeringRequest):
     workspace_id: str = Field(min_length=1, max_length=120)
     authorization_id: str = Field(min_length=1, max_length=120)
-    command: Literal["python_compile", "pytest", "ruff", "mypy"]
+    command: Literal["python_compile", "pytest", "ruff", "mypy", "typescript_check"]
 
 
 class WorkspaceVerificationRequest(EngineeringRequest):
     workspace_id: str = Field(min_length=1, max_length=120)
     authorization_id: str = Field(min_length=1, max_length=120)
-    commands: list[Literal["python_compile", "pytest", "ruff", "mypy"]] = Field(default_factory=lambda: ["python_compile", "ruff", "pytest"], max_length=8)
+    commands: list[Literal["python_compile", "pytest", "ruff", "mypy", "typescript_check"]] = Field(default_factory=lambda: ["python_compile", "ruff", "pytest"], max_length=8)
 
 
 def _queue(
@@ -118,6 +135,28 @@ def _queue(
         created_at=job.created_at,
         updated_at=job.updated_at,
     )
+
+
+
+@router.post("/plans/create", response_model=JobResponse, status_code=202)
+def create_engineering_plan(
+    data: EngineeringPlanRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="plan",
+        payload=data.model_dump(exclude={"authorization_id"}),
+    )
+
+
+@router.post("/agent/next", response_model=JobResponse, status_code=202)
+def select_next_agent_action(
+    data: AgentDecisionRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    raise HTTPException(status_code=422, detail="Agent decision endpoint requires a tenant-scoped authorization_id in the plan payload.")
 
 
 @router.post("/workspaces/provision", response_model=JobResponse, status_code=202)
