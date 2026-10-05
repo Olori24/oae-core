@@ -23,9 +23,7 @@ CREATE TABLE IF NOT EXISTS engineering_change_files (
     path TEXT NOT NULL,
     status TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (tenant_id, change_set_id, path),
-    FOREIGN KEY (tenant_id, change_set_id)
-        REFERENCES engineering_change_sets (tenant_id, id)
+    UNIQUE (tenant_id, change_set_id, path)
 );
 
 CREATE INDEX IF NOT EXISTS idx_change_sets_tenant_created
