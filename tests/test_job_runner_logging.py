@@ -28,7 +28,10 @@ def test_failed_job_emits_log(monkeypatch, caplog):
         JobRunner().run("job-123")
 
     assert "job_execution_failed" in caplog.text
-    assert "job-123" in caplog.text
+    assert any(
+        record.message == "job_execution_failed" and record.__dict__.get("job_id") == "job-123"
+        for record in caplog.records
+    )
 
 
 def test_failed_job_result_is_redacted(monkeypatch):
