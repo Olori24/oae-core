@@ -717,15 +717,15 @@ class JobRunner:
             base_payload["repository_url"] = str(row[0])
 
         try:
-        # Repair actions consume evidence produced by OAE's own governed verifier.
-        if str(decision["action"]) == "repair_failures":
-            verifier_evidence = [
-                item for item in record.state.evidence
-                if isinstance(item, dict) and item.get("step_id") in {"verify", "reverify"}
-            ]
-            if not verifier_evidence:
-                raise ValueError("repair_failures requires governed verifier evidence.")
-            base_payload["failure_evidence"] = verifier_evidence[-1]
+            # Repair actions consume evidence produced by OAE's own governed verifier.
+            if str(decision["action"]) == "repair_failures":
+                verifier_evidence = [
+                    item for item in record.state.evidence
+                    if isinstance(item, dict) and item.get("step_id") in {"verify", "reverify"}
+                ]
+                if not verifier_evidence:
+                    raise ValueError("repair_failures requires governed verifier evidence.")
+                base_payload["failure_evidence"] = verifier_evidence[-1]
 
             result = execute_agent_action(
                 action=str(decision["action"]),
@@ -736,11 +736,17 @@ class JobRunner:
                     operation, action_payload, job_id, tenant_id
                 ),
             )
+            # Consequential coding/verification actions succeed only when their
+            # governed verifier explicitly proves success.
+            if str(decision["action"]) in {"code_objective", "repair_failures", "verify_workspace"}:
+                action_success = bool(result.get("verified"))
+            else:
+                action_success = True
             updated = repository.record_result(
                 tenant_id=tenant_id,
                 run_id=run_id,
                 step_id=str(decision["step_id"]),
-                success=True,
+                success=action_success,
                 evidence={"action": decision, "result": result},
                 action_token=token,
             )
