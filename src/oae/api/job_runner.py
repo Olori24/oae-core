@@ -36,8 +36,8 @@ class JobRunner:
                 "schema_version": "1.0",
                 "operation": operation,
                 "summary": "Mission execution failed before a verified engineering result was produced.",
-                "evidence": {"error": str(exc)},
-                "error": str(exc),
+                "evidence": {"failure_code": "mission_execution_failed"},
+                "error": "mission_execution_failed",
             }
             status = "failed"
 
