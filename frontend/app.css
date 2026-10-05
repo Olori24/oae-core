@@ -325,3 +325,13 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline-color:var(--tea
 @media(min-width:1521px){.workspace-layout{border-color:var(--line);background:#070b09}}
 @media(max-width:760px){.sidebar{background:rgba(10,16,13,.97);border-color:var(--line)}.primary-nav+.nav-label+.primary-nav{border-color:var(--line-strong)}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition-duration:.01ms!important}}
+
+
+/* OAE Mission 099 — installable PWA experience */
+.button-install{padding:7px 11px;border:1px solid #315743;border-radius:8px;color:var(--teal);background:#102219;font-size:9px;font-weight:720;letter-spacing:.01em}
+.button-install:hover{border-color:#4d8066;background:#142c20;color:#a8f4d0}
+.install-promo{display:flex;align-items:center;gap:10px;margin-bottom:17px;padding:10px;border:1px solid #28533d;border-radius:10px;background:linear-gradient(110deg,#0d1b13,#10271c)}
+.install-promo-mark{display:grid;width:29px;height:29px;flex:0 0 29px;place-items:center;border:1px solid #315743;border-radius:8px;color:var(--teal);background:#0b1710;font-size:16px}
+.install-promo>div{min-width:0;flex:1}.install-promo strong{display:block;color:var(--ink-soft);font-size:10px}.install-promo p{margin:2px 0 0;color:var(--muted);font-size:8px}.install-promo .button{padding:7px 10px;font-size:9px}
+@media(max-width:760px){.button-install{padding:7px 9px}.install-promo{align-items:flex-start}.install-promo .button{flex:0 0 auto}}
+@media(max-width:480px){.button-install{font-size:8px}.install-promo{gap:8px;padding:9px}.install-promo-mark{width:27px;height:27px;flex-basis:27px}}

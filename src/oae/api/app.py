@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -94,6 +94,18 @@ app.include_router(router)
 
 _FRONTEND = Path(__file__).resolve().parents[3] / "frontend" / "index.html"
 app.mount("/assets", StaticFiles(directory=_FRONTEND.parent), name="frontend-assets")
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def manifest_file():
+    path = _FRONTEND.parent / "manifest.webmanifest"
+    return FileResponse(path, media_type="application/manifest+json", headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.get("/sw.js", include_in_schema=False)
+def service_worker_file():
+    path = _FRONTEND.parent / "sw.js"
+    return FileResponse(path, media_type="application/javascript", headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
 
 
 @app.get("/", include_in_schema=False)
