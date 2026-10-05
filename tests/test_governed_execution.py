@@ -24,3 +24,10 @@ def test_command_output_is_bounded():
     spec = command_spec("pytest")
     assert spec.timeout_seconds <= 600
     assert spec.max_output_bytes <= 200_000
+
+
+def test_node_profiles_require_workspace_local_tools(tmp_path: Path):
+    assert command_spec("typescript_check").local_only is True
+    assert command_spec("eslint_check").local_only is True
+    assert command_spec("vitest_check").local_only is True
+    assert command_spec("jest_check").local_only is True
