@@ -12,3 +12,8 @@ data/
 htmlcov/
 coverage.json
 *.egg-info/
+
+.env.*
+!.env.example
+!.env.production.example
+!.env.staging.example
