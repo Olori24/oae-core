@@ -44,6 +44,19 @@ class WorktreeRequest(EngineeringRequest):
     content: str | None = None
     message: str | None = Field(default=None, max_length=200)
 
+class ChangeSetSyncRequest(EngineeringRequest):
+    workspace_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    branch: str = Field(min_length=1, max_length=120)
+    message: str | None = Field(default=None, max_length=200)
+    title: str | None = Field(default=None, max_length=200)
+    summary: str | None = Field(default=None, max_length=2000)
+
+
+class PullRequestRequest(EngineeringRequest):
+    change_set_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+
 
 def _queue(
     *,
@@ -132,6 +145,33 @@ def check_workspace_readiness(
         authorization_id=data.authorization_id,
         stage="readiness",
         payload=data.model_dump(exclude={"authorization_id"}),
+    )
+
+
+
+@router.post("/changesets/sync", response_model=JobResponse, status_code=202)
+def synchronize_change_set(
+    data: ChangeSetSyncRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="sync",
+        payload=data.model_dump(exclude={"authorization_id"}, exclude_none=True),
+    )
+
+
+@router.post("/changesets/pull-request", response_model=JobResponse, status_code=202)
+def create_change_set_pull_request(
+    data: PullRequestRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="pull_request",
+        payload=data.model_dump(exclude={"authorization_id"}, exclude_none=True),
     )
 
 
