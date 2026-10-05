@@ -286,6 +286,17 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
         )""")
         adapter.execute("CREATE INDEX IF NOT EXISTS idx_change_sets_tenant_created ON engineering_change_sets(tenant_id, created_at DESC)")
         adapter.execute("CREATE INDEX IF NOT EXISTS idx_change_files_set ON engineering_change_files(tenant_id, change_set_id)")
+        adapter.execute("""CREATE TABLE IF NOT EXISTS engineering_agent_runs (
+            id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
+            plan JSONB NOT NULL, status TEXT NOT NULL,
+            completed_steps JSONB NOT NULL DEFAULT '[]'::jsonb, failed_step TEXT,
+            repair_count INTEGER NOT NULL DEFAULT 0,
+            evidence JSONB NOT NULL DEFAULT '[]'::jsonb, idempotency_key TEXT,
+            correlation_id TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (tenant_id, idempotency_key)
+        )""")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_created ON engineering_agent_runs(tenant_id, created_at DESC)")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_agent_runs_workspace ON engineering_agent_runs(tenant_id, workspace_id, created_at DESC)")
         adapter.commit()
         _POSTGRES_BOOTSTRAPPED_URLS.add(database_url)
 
