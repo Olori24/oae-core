@@ -22,7 +22,15 @@ class _NoRedirect(HTTPRedirectHandler):
 class GitHubCiInspector:
     def __init__(self, repository_url: str, opener=None):
         parsed = urlparse(repository_url)
-        if parsed.scheme != "https" or parsed.hostname != "github.com" or parsed.username or parsed.password:
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != "github.com"
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+            or parsed.port is not None
+        ):
             raise ValueError("repository_url must be an https GitHub URL")
         parts = [p for p in parsed.path.strip("/").split("/") if p]
         if len(parts) != 2:
