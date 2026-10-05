@@ -119,6 +119,18 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.strip("[]").split(",") if item.strip()]
         raise TypeError("Expected a list or string")
 
+    @field_validator("app_env")
+    @classmethod
+    def validate_production_security(cls, value):
+        if value == "production":
+            cors = os.getenv("CORS_ORIGINS", "").strip()
+            hosts = os.getenv("ALLOWED_HOSTS", "").strip()
+            if not cors or "*" in cors:
+                raise ValueError("Production requires explicit CORS_ORIGINS; wildcard CORS is forbidden.")
+            if not hosts or "*" in hosts:
+                raise ValueError("Production requires explicit ALLOWED_HOSTS; wildcard hosts are forbidden.")
+        return value
+
     @property
     def resolved_database_url(self) -> str:
         """Resolve the production database from explicit and integration env names."""
