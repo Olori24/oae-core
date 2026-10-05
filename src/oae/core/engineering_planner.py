@@ -71,7 +71,7 @@ def build_engineering_plan(
     steps: list[PlanStep] = [
         PlanStep("inspect", "analyze_repository", "Confirm repository structure, entry points, dependencies, and existing quality signals."),
         PlanStep("baseline", "capture_baseline", "Run only supported read/verification operations before mutation.", ("inspect",)),
-        PlanStep("implement", "mutate_workspace", f"Apply bounded changes required for the objective: {objective}", ("baseline",), "medium"),
+        PlanStep("implement", "code_objective", f"Generate, apply, and verify bounded code changes for the objective: {objective}", ("baseline",), "high", False, {"objective": objective}),
         PlanStep("diff", "review_diff", "Inspect the complete governed diff before verification.", ("implement",)),
     ]
 
