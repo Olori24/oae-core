@@ -94,9 +94,19 @@ class GitHubRepositoryWriter:
         if not commit_sha:
             raise GitHubWriteError("GitHub did not return the commit SHA")
         try:
-            self._request("POST", f"/repos/{self.owner}/{self.repo}/git/refs", {"ref": f"refs/heads/{branch}", "sha": commit_sha})
-        except GitHubWriteError:
-            self._request("PATCH", f"/repos/{self.owner}/{self.repo}/git/refs/heads/{branch}", {"sha": commit_sha, "force": False})
+            self._request(
+                "POST",
+                f"/repos/{self.owner}/{self.repo}/git/refs",
+                {"ref": f"refs/heads/{branch}", "sha": commit_sha},
+            )
+        except GitHubWriteError as exc:
+            if "HTTP 422" not in str(exc):
+                raise
+            self._request(
+                "PATCH",
+                f"/repos/{self.owner}/{self.repo}/git/refs/heads/{branch}",
+                {"sha": commit_sha, "force": False},
+            )
         return {"branch": branch, "commit_sha": commit_sha, "tree_sha": tree_sha}
 
     def create_pull_request(self, *, branch: str, base: str, title: str, body: str) -> dict:
