@@ -23,6 +23,8 @@ from oae.core.vertical_slice_mission import VerticalSliceMission
 from oae.api.agent_runs import AgentRunRepository
 from oae.api.durable_jobs import DurableJobRepository
 from oae.core.agent_action_executor import execute_agent_action
+from oae.core.coding_brain import CodingBrain
+from oae.providers.open_weight import OpenWeightModelGateway, open_weight_config_from_settings
 
 logger = logging.getLogger("oae.api.job_runner")
 
@@ -147,6 +149,8 @@ class JobRunner:
                 return self._create_engineering_plan(payload, tenant_id)
             if stage == "agent":
                 return self._next_agent_action(payload, tenant_id)
+            if stage == "coding_proposal":
+                return self._coding_proposal(payload, tenant_id)
             if stage == "agent_run_start":
                 return self._start_agent_run(payload, tenant_id)
             if stage == "agent_run_step":
@@ -432,6 +436,36 @@ class JobRunner:
             evidence={"stage": "agent", "decision": decision.to_dict()},
         )
 
+
+    @staticmethod
+    def _coding_proposal(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Coding proposal requires a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        objective = str(payload.get("objective", "")).strip()
+        if not workspace_id or not objective:
+            raise ValueError("coding_proposal requires workspace_id and objective")
+        model = settings.coding_brain_model.strip()
+        if not model:
+            raise ValueError("Coding brain model is not configured server-side.")
+        with db(tenant_id) as conn:
+            row = conn.execute(
+                "SELECT storage_uri,state FROM workspaces WHERE id=? AND tenant_id=?",
+                (workspace_id, tenant_id),
+            ).fetchone()
+        if not row or row[1] != "ready":
+            raise ValueError("Workspace must be ready before coding proposal generation.")
+        root = JobRunner._safe_workspace_path(row[0])
+        gateway = OpenWeightModelGateway(open_weight_config_from_settings(settings))
+        proposal = CodingBrain(gateway, model).propose(
+            tenant_id=tenant_id, workspace=root, objective=objective
+        )
+        return build_result(
+            operation="build",
+            payload=payload,
+            summary=f"Coding proposal generated for workspace {workspace_id}.",
+            evidence={"stage": "coding_proposal", "workspace_id": workspace_id, "proposal": proposal.to_dict()},
+        )
 
     @staticmethod
     def _start_agent_run(payload: dict, tenant_id: str | None) -> dict:
