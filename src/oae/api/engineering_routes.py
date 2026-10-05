@@ -42,6 +42,23 @@ class AgentDecisionRequest(EngineeringRequest):
     plan: dict
     completed_steps: list[str] = Field(default_factory=list, max_length=32)
 
+class AgentRunStartRequest(EngineeringRequest):
+    workspace_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    plan: dict
+    max_repairs: int = Field(default=2, ge=0, le=3)
+    run_idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+    correlation_id: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class AgentRunStepRequest(EngineeringRequest):
+    run_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    step_id: str = Field(min_length=1, max_length=120)
+    success: bool
+    evidence: dict | None = None
+
+
 
 class CiStatusRequest(EngineeringRequest):
     workspace_id: str = Field(min_length=1, max_length=120)
@@ -182,6 +199,32 @@ def select_next_agent_action(
         payload=data.model_dump(exclude={"authorization_id"}),
     )
 
+
+
+@router.post("/agent/runs/start", response_model=JobResponse, status_code=202)
+def start_agent_run(
+    data: AgentRunStartRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="agent_run_start",
+        payload=data.model_dump(exclude={"authorization_id"}, exclude_none=True),
+    )
+
+
+@router.post("/agent/runs/step", response_model=JobResponse, status_code=202)
+def record_agent_run_step(
+    data: AgentRunStepRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="agent_run_step",
+        payload=data.model_dump(exclude={"authorization_id"}, exclude_none=True),
+    )
 
 
 @router.post("/ci/status", response_model=JobResponse, status_code=202)
