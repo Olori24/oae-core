@@ -36,4 +36,7 @@ class DatabaseRateLimiter:
             )
 
 
+# Backward-compatible name for existing callers/tests; implementation is shared DB-backed.
+ProcessRateLimiter = DatabaseRateLimiter
+
 rate_limiter = DatabaseRateLimiter()
