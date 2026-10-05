@@ -16,6 +16,7 @@ class PlanStep:
     purpose: str
     requires: tuple[str, ...] = ()
     risk: str = "low"
+    optional: bool = False
 
 
 @dataclass(frozen=True)
@@ -79,9 +80,9 @@ def build_engineering_plan(
 
     steps.append(PlanStep("verify", "verify_workspace", "Run the repository's approved verification set and stop on the first failure.", ("diff",), "medium"))
     steps.extend([
-        PlanStep("repair", "repair_failures", "If verification fails, diagnose the bounded failure evidence and apply the smallest safe repair.", ("verify",), "high"),
-        PlanStep("reverify", "verify_workspace", "Re-run verification after repair until the bounded repair budget is exhausted.", ("repair",), "medium"),
-        PlanStep("commit", "commit_change_set", "Create a governed commit only after verification succeeds.", ("reverify",), "medium"),
+        PlanStep("repair", "repair_failures", "If verification fails, diagnose the bounded failure evidence and apply the smallest safe repair.", ("verify",), "high", True),
+        PlanStep("reverify", "verify_workspace", "Re-run verification after a repair.", ("repair",), "medium", True),
+        PlanStep("commit", "commit_change_set", "Create a governed commit only after verification succeeds.", ("verify",), "medium"),
         PlanStep("sync", "sync_github", "Synchronize the verified commit to a GitHub branch without force pushing.", ("commit",), "high"),
         PlanStep("pr", "create_pull_request", "Open a reviewable pull request containing the change-set evidence.", ("sync",), "high"),
     ])
