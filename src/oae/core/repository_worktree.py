@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from oae.core.process_security import run_git, validate_git_ref
+from oae.core.process_security import run_git, validate_git_ref, validate_repository_url
 
 _SAFE_BRANCH = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,119}$")
 _MAX_FILE_BYTES = 2 * 1024 * 1024
@@ -34,6 +34,7 @@ class RepositoryWorktree:
         if (self.root / ".git").exists():
             return {"status": "attached", "commit_sha": self.head()}
         validate_git_ref(commit_sha)
+        clone_url = validate_repository_url(clone_url)
         run_git(["init"], cwd=self.root, check=True, capture_output=True, text=True)
         run_git(
             ["remote", "add", "origin", clone_url],
