@@ -55,7 +55,7 @@ class WorkerAuthorizationRepository:
         authorization_id = str(uuid4())
         requested_at = datetime.now(timezone.utc)
         expires_at = requested_at + timedelta(seconds=expires_in_seconds)
-        with db() as conn:
+        with db(tenant_id) as conn:
             conn.execute(
                 """
                 INSERT INTO worker_authorizations(
@@ -101,7 +101,7 @@ class WorkerAuthorizationRepository:
 
     def get(self, *, tenant_id: str, authorization_id: str) -> WorkerAuthorization | None:
         self._require_postgres()
-        with db() as conn:
+        with db(tenant_id) as conn:
             row = conn.execute(
                 """
                 SELECT id,tenant_id,operation,scope,requester,status,requested_at,expires_at,
@@ -159,7 +159,7 @@ class WorkerAuthorizationRepository:
     ) -> None:
         self._require_postgres()
         now = datetime.now(timezone.utc)
-        with db() as conn:
+        with db(tenant_id) as conn:
             row = conn.execute(
                 """
                 UPDATE worker_authorizations
@@ -187,7 +187,7 @@ class WorkerAuthorizationRepository:
         self._require_postgres()
         if not authorization_id:
             return False
-        with db() as conn:
+        with db(tenant_id) as conn:
             row = conn.execute(
                 """
                 SELECT 1 FROM worker_authorizations
@@ -209,7 +209,7 @@ class WorkerAuthorizationRepository:
     ) -> None:
         self._require_postgres()
         now = datetime.now(timezone.utc)
-        with db() as conn:
+        with db(tenant_id) as conn:
             row = conn.execute(
                 """
                 UPDATE worker_authorizations
