@@ -36,6 +36,7 @@ class EngineeringPlanRequest(EngineeringRequest):
     has_typecheck: bool = False
     has_build: bool = False
     security_required: bool = True
+    action_inputs: dict[str, dict] = Field(default_factory=dict, max_length=32)
 
 
 class AgentDecisionRequest(EngineeringRequest):
