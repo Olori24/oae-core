@@ -20,6 +20,7 @@ from oae.core.autonomous_agent import next_agent_decision
 from oae.core.ci_inspector import GitHubCiInspector
 from oae.core.production_readiness import evaluate_production_readiness
 from oae.core.vertical_slice_mission import VerticalSliceMission
+from oae.api.agent_runs import AgentRunRepository
 
 logger = logging.getLogger("oae.api.job_runner")
 
@@ -142,6 +143,10 @@ class JobRunner:
                 return self._create_engineering_plan(payload, tenant_id)
             if stage == "agent":
                 return self._next_agent_action(payload, tenant_id)
+            if stage == "agent_run_start":
+                return self._start_agent_run(payload, tenant_id)
+            if stage == "agent_run_step":
+                return self._record_agent_run_step(payload, tenant_id)
             if stage == "ci_status":
                 return self._inspect_ci_status(payload, tenant_id)
             if stage == "readiness_gate":
@@ -419,6 +424,67 @@ class JobRunner:
             evidence={"stage": "agent", "decision": decision.to_dict()},
         )
 
+
+    @staticmethod
+    def _start_agent_run(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Agent run requires a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        plan = payload.get("plan")
+        if not workspace_id or not isinstance(plan, dict):
+            raise ValueError("agent_run_start requires workspace_id and plan")
+        record = AgentRunRepository().start(
+            tenant_id=tenant_id,
+            workspace_id=workspace_id,
+            plan=plan,
+            idempotency_key=payload.get("run_idempotency_key"),
+            correlation_id=payload.get("correlation_id"),
+            max_repairs=int(payload.get("max_repairs", 2)),
+        )
+        decision = record.state.next_decision()
+        return build_result(
+            operation="build",
+            payload=payload,
+            summary=f"Agent run {record.id} is {record.state.status}.",
+            evidence={
+                "stage": "agent_run_start",
+                "run_id": record.id,
+                "workspace_id": record.workspace_id,
+                "status": record.state.status,
+                "decision": decision.to_dict(),
+                "completed_steps": list(record.state.completed_steps),
+            },
+        )
+
+    @staticmethod
+    def _record_agent_run_step(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Agent run step requires a tenant context.")
+        run_id = payload.get("run_id")
+        step_id = payload.get("step_id")
+        if not run_id or not step_id:
+            raise ValueError("agent_run_step requires run_id and step_id")
+        record = AgentRunRepository().record_result(
+            tenant_id=tenant_id,
+            run_id=run_id,
+            step_id=step_id,
+            success=bool(payload.get("success")),
+            evidence=payload.get("evidence") if isinstance(payload.get("evidence"), dict) else None,
+        )
+        decision = record.state.next_decision() if record.state.status == "running" else None
+        return build_result(
+            operation="build",
+            payload=payload,
+            summary=f"Agent run {record.id} recorded step {step_id}.",
+            evidence={
+                "stage": "agent_run_step",
+                "run_id": record.id,
+                "status": record.state.status,
+                "completed_steps": list(record.state.completed_steps),
+                "repair_count": record.state.repair_count,
+                "next_decision": decision.to_dict() if decision else None,
+            },
+        )
 
     @staticmethod
     def _inspect_ci_status(payload: dict, tenant_id: str | None) -> dict:
