@@ -24,6 +24,7 @@ from oae.api.agent_runs import AgentRunRepository
 from oae.api.durable_jobs import DurableJobRepository
 from oae.core.agent_action_executor import execute_agent_action
 from oae.core.coding_brain import CodingBrain
+from oae.core.coding_executor import apply_coding_proposal
 from oae.providers.open_weight import OpenWeightModelGateway, open_weight_config_from_settings
 
 logger = logging.getLogger("oae.api.job_runner")
@@ -151,6 +152,8 @@ class JobRunner:
                 return self._next_agent_action(payload, tenant_id)
             if stage == "coding_proposal":
                 return self._coding_proposal(payload, tenant_id)
+            if stage == "coding_execute":
+                return self._coding_execute(payload, tenant_id)
             if stage == "agent_run_start":
                 return self._start_agent_run(payload, tenant_id)
             if stage == "agent_run_step":
@@ -436,6 +439,68 @@ class JobRunner:
             evidence={"stage": "agent", "decision": decision.to_dict()},
         )
 
+
+    @staticmethod
+    def _coding_execute(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Coding execution requires a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        objective = str(payload.get("objective", "")).strip()
+        if not workspace_id or not objective:
+            raise ValueError("coding_execute requires workspace_id and objective")
+        model = settings.coding_brain_model.strip()
+        if not model:
+            raise ValueError("Coding brain model is not configured server-side.")
+        with db(tenant_id) as conn:
+            row = conn.execute(
+                "SELECT storage_uri,state,repository_id FROM workspaces WHERE id=? AND tenant_id=?",
+                (workspace_id, tenant_id),
+            ).fetchone()
+        if not row or row[1] != "ready":
+            raise ValueError("Workspace must be ready before coding execution.")
+        root = self._safe_workspace_path(row[0])
+        gateway = OpenWeightModelGateway(open_weight_config_from_settings(settings))
+        proposal = CodingBrain(gateway, model).propose(
+            tenant_id=tenant_id, workspace=root, objective=objective
+        )
+        worktree = RepositoryWorktree(root)
+        evidence = apply_coding_proposal(
+            proposal=proposal,
+            workspace=root,
+            write_file=worktree.write_file,
+            delete_file=worktree.delete_file,
+        )
+        verification = []
+        for command in proposal.verification:
+            result = run_governed_command(command, root)
+            verification.append(result)
+            if not result.get("passed"):
+                return build_result(
+                    operation="build",
+                    payload=payload,
+                    summary="Coding proposal applied but verification failed.",
+                    evidence={
+                        "stage": "coding_execute",
+                        "workspace_id": workspace_id,
+                        "proposal": proposal.to_dict(),
+                        "mutations": evidence,
+                        "verification": verification,
+                        "verified": False,
+                    },
+                )
+        return build_result(
+            operation="build",
+            payload=payload,
+            summary="OAE generated, applied, and verified a coding proposal.",
+            evidence={
+                "stage": "coding_execute",
+                "workspace_id": workspace_id,
+                "proposal": proposal.to_dict(),
+                "mutations": evidence,
+                "verification": verification,
+                "verified": True,
+            },
+        )
 
     @staticmethod
     def _coding_proposal(payload: dict, tenant_id: str | None) -> dict:
