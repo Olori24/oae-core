@@ -202,7 +202,8 @@ def _connect(tenant_id: str | None = None) -> _ConnectionAdapter:
             raise RuntimeError("PostgreSQL database URL is not configured for this runtime")
         connection: Any = psycopg.connect(database_url)
         adapter = _ConnectionAdapter(connection, "postgres")
-        _bootstrap_postgres(adapter, database_url)
+        if not _WORKER_DATABASE_CONTEXT.get():
+            _bootstrap_postgres(adapter, database_url)
         if tenant_id:
             adapter.execute("SELECT set_config('oae.tenant_id', ?, true)", (tenant_id,))
         return adapter
