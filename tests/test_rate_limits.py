@@ -1,6 +1,13 @@
 import pytest
 
+from oae.api.db import db
 from oae.api.rate_limits import ProcessRateLimiter, RateLimitExceeded
+
+
+@pytest.fixture(autouse=True)
+def clear_rate_limit_buckets():
+    with db() as conn:
+        conn.execute("DELETE FROM rate_limit_buckets")
 
 
 def test_process_rate_limiter_rejects_excess_control_requests_inside_window():

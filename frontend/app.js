@@ -1,5 +1,4 @@
 (() => {
-  const KEY_STORAGE = "oae_api_key";
   const POLL_INTERVAL = 3500;
   const state = { key: "", jobs: [], tenant: null, pollTimer: null, createKey: "" };
   const $ = (id) => document.getElementById(id);
@@ -93,7 +92,7 @@
     state.key = key;
     try {
       state.tenant = await api("/v1/me");
-      localStorage.setItem(KEY_STORAGE, key);
+      
       $("api-key").value = "";
       await enterWorkspace();
     } catch (error) {
@@ -109,13 +108,13 @@
     if (!state.createKey) return;
     state.key = state.createKey;
     try {
-      localStorage.setItem(KEY_STORAGE, state.key);
+      
       state.tenant = await api("/v1/me");
       $("key-dialog").hidden = true;
       state.createKey = "";
       await enterWorkspace();
     } catch (error) {
-      localStorage.removeItem(KEY_STORAGE);
+      
       state.key = "";
       state.createKey = "";
       $("key-dialog").hidden = true;
@@ -137,7 +136,7 @@
 
   function signOut() {
     stopPolling();
-    localStorage.removeItem(KEY_STORAGE);
+    
     state.key = "";
     state.tenant = null;
     state.jobs = [];
@@ -290,7 +289,7 @@
     } catch (error) {
       if (/401|invalid api key|unauthorized/i.test(error.message)) {
         stopPolling();
-        localStorage.removeItem(KEY_STORAGE);
+        
         state.key = "";
         showWelcome("Your saved key is no longer valid. Sign in with an active workspace key.", "error");
       } else {
@@ -384,18 +383,7 @@
       if (event.target === $("key-dialog")) event.preventDefault();
     });
 
-    const savedKey = localStorage.getItem(KEY_STORAGE);
-    if (!savedKey) return showWelcome();
-    state.key = savedKey;
-    try {
-      state.tenant = await api("/v1/me");
-      await enterWorkspace();
-    } catch {
-      localStorage.removeItem(KEY_STORAGE);
-      state.key = "";
-      showWelcome("We couldn't reconnect to that saved key. Sign in with your workspace API key.", "error");
-    }
-  }
+    // Authentication credentials are intentionally kept only in volatile memory.\n    showWelcome();
 
   document.addEventListener("DOMContentLoaded", boot);
 })();

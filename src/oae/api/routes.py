@@ -207,7 +207,7 @@ def create_tenant(data: TenantCreate, request: Request) -> TenantCreated:
 
 @router.get("/v1/me", tags=["tenants"])
 def me(tenant_id: str = Depends(require_tenant)) -> dict[str, str]:
-    with db() as conn:
+    with db(tenant_id) as conn:
         row = conn.execute("SELECT id,name,created_at FROM tenants WHERE id=?", (tenant_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=401, detail="Tenant not found")
@@ -357,11 +357,13 @@ def get_worker_authorization(
 @router.post("/v1/repositories", response_model=RepositoryResponse, status_code=201, tags=["repositories"])
 def create_repository(
     data: RepositoryCreate,
-    tenant_id: str = Depends(require_tenant),
+    principal: TenantPrincipal = Depends(require_principal),
 ) -> RepositoryResponse:
+    principal = require_requester_principal(principal)
+    tenant_id = principal.tenant_id
     repository_id = str(uuid4())
     now = _now()
-    with db() as conn:
+    with db(tenant_id) as conn:
         inserted = conn.execute(
             """
             INSERT INTO repositories(
@@ -419,7 +421,7 @@ def list_repositories(
         params.extend((cursor[0], cursor[0], cursor[1]))
     query += " ORDER BY updated_at DESC, id DESC LIMIT ?"
     params.append(limit + 1)
-    with db() as conn:
+    with db(tenant_id) as conn:
         rows = conn.execute(query, tuple(params)).fetchall()
     page = rows[:limit]
     if len(rows) > limit and page:
@@ -436,11 +438,13 @@ def list_repositories(
 def pin_repository_revision(
     repository_id: str,
     data: RevisionCreate,
-    tenant_id: str = Depends(require_tenant),
+    principal: TenantPrincipal = Depends(require_principal),
 ) -> RevisionResponse:
+    principal = require_requester_principal(principal)
+    tenant_id = principal.tenant_id
     revision_id = str(uuid4())
     observed_at = _now()
-    with db() as conn:
+    with db(tenant_id) as conn:
         repository = conn.execute(
             """
             SELECT id FROM repositories
@@ -498,7 +502,7 @@ def list_repository_revisions(
     tenant_id: str = Depends(require_tenant),
 ) -> list[RevisionResponse]:
     cursor = _decode_cursor(after)
-    with db() as conn:
+    with db(tenant_id) as conn:
         repository = conn.execute(
             "SELECT id FROM repositories WHERE id=? AND tenant_id=? AND deleted_at IS NULL",
             (repository_id, tenant_id),
@@ -546,7 +550,7 @@ def list_workspaces(
         params.extend((cursor[0], cursor[0], cursor[1]))
     query += " ORDER BY created_at DESC, id DESC LIMIT ?"
     params.append(limit + 1)
-    with db() as conn:
+    with db(tenant_id) as conn:
         rows = conn.execute(query, tuple(params)).fetchall()
     page = rows[:limit]
     if len(rows) > limit and page:
@@ -556,7 +560,7 @@ def list_workspaces(
 
 @router.get("/v1/workspaces/{workspace_id}", response_model=WorkspaceResponse, tags=["workspaces"])
 def get_workspace(workspace_id: str, tenant_id: str = Depends(require_tenant)) -> WorkspaceResponse:
-    with db() as conn:
+    with db(tenant_id) as conn:
         row = conn.execute(
             """
             SELECT id,repository_id,source_revision_id,parent_workspace_id,purpose,state,storage_uri,manifest_uri,
@@ -575,9 +579,16 @@ def get_workspace(workspace_id: str, tenant_id: str = Depends(require_tenant)) -
 def create_job(
     data: JobCreate,
     background_tasks: BackgroundTasks,
-    tenant_id: str = Depends(require_tenant),
+    principal: TenantPrincipal = Depends(require_principal),
 ) -> JobResponse:
+    principal = require_requester_principal(principal)
+    tenant_id = principal.tenant_id
     _enforce_control_rate("job-create", tenant_id)
+    if data.operation == "build" and not settings.worker_authorization_enforcement_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Build execution is disabled until governed worker authorization is enabled.",
+        )
     if data.operation == "build" and settings.worker_authorization_enforcement_enabled:
         if settings.database_backend != "postgres" or not settings.durable_jobs_enabled:
             raise HTTPException(
@@ -614,7 +625,7 @@ def create_job(
     job_id = str(uuid4())
     now = _now()
     cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
-    with db() as conn:
+    with db(tenant_id) as conn:
         recent = conn.execute(
             "SELECT COUNT(*) FROM jobs WHERE tenant_id=? AND created_at >= ?",
             (tenant_id, cutoff),
@@ -651,7 +662,7 @@ def list_jobs(
         params.extend((cursor[0], cursor[0], cursor[1]))
     query += " ORDER BY created_at DESC, id DESC LIMIT ?"
     params.append(limit + 1)
-    with db() as conn:
+    with db(tenant_id) as conn:
         rows = conn.execute(query, tuple(params)).fetchall()
     page = rows[:limit]
     if len(rows) > limit and page:
@@ -666,7 +677,7 @@ def list_jobs(
 
 @router.get("/v1/jobs/{job_id}", response_model=JobResponse, tags=["jobs"])
 def get_job(job_id: str, tenant_id: str = Depends(require_tenant)) -> JobResponse:
-    with db() as conn:
+    with db(tenant_id) as conn:
         row = conn.execute(
             "SELECT id,status,operation,payload,result,created_at,updated_at FROM jobs WHERE id=? AND tenant_id=?",
             (job_id, tenant_id),

@@ -124,7 +124,7 @@ def test_durable_enqueue_writes_job_and_event_in_one_connection(monkeypatch, pos
     now = datetime.now(timezone.utc)
     connection = _Connection()
     connection.job_insert_row = ("job-1", "tenant-1", "queued", "build", "{}", now, now)
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
 
     job = DurableJobRepository().enqueue(
         tenant_id="tenant-1",
@@ -148,7 +148,7 @@ def test_durable_enqueue_returns_existing_idempotency_outcome_without_second_eve
     now = datetime.now(timezone.utc)
     connection = _Connection()
     connection.existing_job_row = ("job-1", "tenant-1", "queued", "build", "{}", now, now)
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
 
     job = DurableJobRepository().enqueue(
         tenant_id="tenant-1",
@@ -167,7 +167,7 @@ def test_claim_records_attempt_emits_events_and_lease_fences_completion(monkeypa
     now = datetime.now(timezone.utc)
     connection = _Connection()
     connection.claim_row = ("job-1", "tenant-1", "build", json.dumps({}), 1, 3, now)
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
     repository = DurableJobRepository()
 
     lease = repository.claim_next("worker-1")
@@ -188,7 +188,7 @@ def test_lease_renewal_rejects_a_lost_or_expired_lease(monkeypatch, postgres_set
     import oae.api.durable_jobs as module
 
     connection = _Connection()
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
     lease = JobLease(
         job_id="job-1",
         tenant_id="tenant-1",
@@ -210,7 +210,7 @@ def test_expired_lease_recovery_schedules_retry_and_emits_event(monkeypatch, pos
 
     connection = _Connection()
     connection.recovery_rows = [("job-1", "tenant-1", 1, 3)]
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
 
     assert DurableJobRepository().recover_expired_leases() == 1
     assert connection.outbox_event_types == ["job.retry_scheduled"]
@@ -263,6 +263,7 @@ def test_enabled_durable_dispatch_rejects_sqlite_instead_of_falling_back(monkeyp
     monkeypatch.setattr(database.settings, "database_url", f"sqlite:///{db_path}")
     monkeypatch.setattr(auth.settings, "database_url", f"sqlite:///{db_path}")
     monkeypatch.setattr(routes.settings, "durable_jobs_enabled", True)
+    monkeypatch.setattr(routes.settings, "worker_authorization_enforcement_enabled", True)
     client = TestClient(app)
     tenant = client.post("/v1/tenants", json={"name": "Durable Tenant"})
 

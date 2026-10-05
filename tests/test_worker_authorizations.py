@@ -51,7 +51,7 @@ def test_request_persists_pending_tenant_scoped_authorization_and_outbox_event(m
 
     connection = _Connection()
     writer = _EventWriter()
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
 
     record = WorkerAuthorizationRepository(writer).request(
         tenant_id="tenant-1",
@@ -73,7 +73,7 @@ def test_approval_records_actor_and_emits_durable_event(monkeypatch, postgres_se
 
     connection = _Connection()
     writer = _EventWriter()
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
 
     WorkerAuthorizationRepository(writer).approve(
         tenant_id="tenant-1",
@@ -97,7 +97,7 @@ def test_approval_rejects_missing_expired_or_already_decided_record(monkeypatch,
 
     connection = _Connection()
     connection.decision_row = None
-    monkeypatch.setattr(module, "db", lambda: _fake_db(connection))
+    monkeypatch.setattr(module, "db", lambda tenant_id=None: _fake_db(connection))
 
     with pytest.raises(WorkerAuthorizationError, match="missing, expired, already decided, or cannot be self-approved"):
         WorkerAuthorizationRepository(_EventWriter()).approve(

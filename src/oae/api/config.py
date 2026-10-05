@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from typing import Annotated
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     app_env: str = "development"
     database_url: str = ""
+    worker_database_url: str = ""
     # Kept for backward compatibility. New API keys use per-key salted PBKDF2.
     api_key_pepper: str = ""
     api_control_rate_limit_per_minute: int = 60
@@ -119,14 +120,28 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.strip("[]").split(",") if item.strip()]
         raise TypeError("Expected a list or string")
 
+    @model_validator(mode="after")
+    def validate_production_security(self):
+        if self.app_env == "production":
+            if not self.cors_origins or "*" in self.cors_origins:
+                raise ValueError("Production requires explicit CORS_ORIGINS; wildcard CORS is forbidden.")
+            if not self.allowed_hosts or "*" in self.allowed_hosts:
+                raise ValueError("Production requires explicit ALLOWED_HOSTS; wildcard hosts are forbidden.")
+            if self.durable_jobs_enabled:
+                worker_url = self.resolved_worker_database_url
+                api_url = self.resolved_database_url
+                if not worker_url:
+                    raise ValueError("Production durable jobs require OAE_WORKER_DATABASE_URL.")
+                if worker_url == api_url:
+                    raise ValueError("Production API and worker database URLs must use separate roles.")
+        return self
+
     @property
     def resolved_database_url(self) -> str:
         """Resolve the production database from explicit and integration env names."""
         if self.database_url:
             return self.database_url
 
-        # Vercel storage integrations can apply a custom prefix to the
-        # generated DATABASE_URL. For example, OAE_DB_DATABASE_URL.
         for name in (
             "OAE_DB_DATABASE_URL",
             "OAE_DB_URL",
@@ -144,6 +159,12 @@ class Settings(BaseSettings):
         if self.app_env == "production" or os.getenv("VERCEL"):
             return ""
         return "sqlite:///./oae.db"
+
+    @property
+    def resolved_worker_database_url(self) -> str:
+        if self.worker_database_url:
+            return self.worker_database_url
+        return os.getenv("OAE_WORKER_DATABASE_URL", "").strip()
 
     @property
     def database_backend(self) -> str:

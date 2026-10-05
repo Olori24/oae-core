@@ -43,6 +43,8 @@ def test_postgres_migration_files_are_ordered_and_present():
         "0004_realtime_event_metadata.sql",
         "0005_worker_authorization_foundation.sql",
         "0006_principal_and_authorization_decision_metadata.sql",
+        "0007_tenant_row_security.sql",
+        "0008_job_result_payload.sql",
     ]
 
 

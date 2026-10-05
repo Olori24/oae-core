@@ -31,13 +31,16 @@ class JobRunner:
             result = self._dispatch(operation, payload, job_id)
             status = "completed"
         except Exception as exc:
-            logger.exception("job_execution_failed job_id=%s operation=%s", job_id, operation)
+            logger.error(
+                "job_execution_failed",
+                extra={"job_id": job_id, "operation": operation, "error_type": type(exc).__name__},
+            )
             result = {
                 "schema_version": "1.0",
                 "operation": operation,
                 "summary": "Mission execution failed before a verified engineering result was produced.",
-                "evidence": {"error": str(exc)},
-                "error": str(exc),
+                "evidence": {"failure_code": "mission_execution_failed"},
+                "error": "mission_execution_failed",
             }
             status = "failed"
 

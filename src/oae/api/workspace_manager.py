@@ -108,7 +108,7 @@ class PostgresWorkspaceRepository:
     def get_pinned_revision(
         self, tenant_id: str, repository_id: str, revision_id: str
     ) -> PinnedRepositoryRevision | None:
-        with db() as conn:
+        with db(tenant_id) as conn:
             row = conn.execute(
                 "SELECT revision.id,revision.repository_id,repository.clone_url,revision.commit_sha "
                 "FROM repository_revisions revision "
@@ -131,7 +131,7 @@ class PostgresWorkspaceRepository:
     def reserve(self, record: WorkspaceRecord, entries: list[WorkspaceManifestEntry]) -> None:
         if settings.database_backend != "postgres":
             raise WorkspaceError("Durable workspace reservation requires PostgreSQL.")
-        with db() as conn:
+        with db(record.tenant_id) as conn:
             conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", (record.tenant_id,))
             usage = conn.execute(
                 "SELECT COALESCE(SUM(size_bytes),0),COUNT(*) FROM workspaces "
@@ -203,7 +203,7 @@ class PostgresWorkspaceRepository:
             )
 
     def mark_ready(self, tenant_id: str, workspace_id: str, ready_at: datetime) -> None:
-        with db() as conn:
+        with db(tenant_id) as conn:
             changed = conn.execute(
                 "UPDATE workspaces SET state='ready',ready_at=? "
                 "WHERE tenant_id=? AND id=? AND state='provisioning'",
@@ -223,7 +223,7 @@ class PostgresWorkspaceRepository:
             raise WorkspaceError("Workspace readiness transition lost its provisioning ownership.")
 
     def mark_failed(self, tenant_id: str, workspace_id: str, failure_code: str) -> None:
-        with db() as conn:
+        with db(tenant_id) as conn:
             changed = conn.execute(
                 "UPDATE workspaces SET state='failed',failure_code=? "
                 "WHERE tenant_id=? AND id=? AND state='provisioning'",

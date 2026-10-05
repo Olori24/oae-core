@@ -33,3 +33,53 @@ def test_settings_default_to_an_empty_open_weight_model_allowlist():
     settings = Settings(open_weight_model_allowed_models="")
 
     assert settings.open_weight_model_allowed_models == []
+
+
+def test_production_settings_reject_wildcard_security_defaults(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "*")
+    monkeypatch.setenv("ALLOWED_HOSTS", "api.example.com")
+
+    import pytest
+
+    with pytest.raises(ValueError, match="CORS_ORIGINS"):
+        Settings()
+
+
+def test_production_settings_accept_explicit_security_origins(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "[\"https://app.example.com\"]")
+    monkeypatch.setenv("ALLOWED_HOSTS", "[\"api.example.com\"]")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://example.test/oae")
+
+    settings = Settings()
+
+    assert settings.cors_origins == ["https://app.example.com"]
+    assert settings.allowed_hosts == ["api.example.com"]
+
+
+def test_production_durable_jobs_require_separate_worker_database(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "[\"https://app.example.com\"]")
+    monkeypatch.setenv("ALLOWED_HOSTS", "[\"api.example.com\"]")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://example.test/oae")
+    monkeypatch.delenv("OAE_WORKER_DATABASE_URL", raising=False)
+    monkeypatch.setenv("DURABLE_JOBS_ENABLED", "true")
+
+    import pytest
+
+    with pytest.raises(ValueError, match="OAE_WORKER_DATABASE_URL"):
+        Settings()
+
+
+def test_production_durable_jobs_accept_separate_worker_database(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("CORS_ORIGINS", "[\"https://app.example.com\"]")
+    monkeypatch.setenv("ALLOWED_HOSTS", "[\"api.example.com\"]")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://api.example.test/oae")
+    monkeypatch.setenv("OAE_WORKER_DATABASE_URL", "postgresql://worker.example.test/oae")
+    monkeypatch.setenv("DURABLE_JOBS_ENABLED", "true")
+
+    settings = Settings()
+
+    assert settings.resolved_worker_database_url == "postgresql://worker.example.test/oae"

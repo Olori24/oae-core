@@ -1,6 +1,7 @@
 import sqlite3
 import threading
 from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 
 from oae.api.config import settings
@@ -83,6 +84,13 @@ CREATE TABLE IF NOT EXISTS workspaces (
     FOREIGN KEY (tenant_id, repository_id) REFERENCES repositories (tenant_id, id),
     FOREIGN KEY (tenant_id, source_revision_id) REFERENCES repository_revisions (tenant_id, id)
 );
+CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+    scope TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    window_start BIGINT NOT NULL,
+    hit_count INTEGER NOT NULL CHECK (hit_count >= 0),
+    PRIMARY KEY (scope, subject, window_start)
+);
 CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC);
@@ -121,9 +129,17 @@ POSTGRES_STATEMENTS = (
         status TEXT NOT NULL,
         operation TEXT NOT NULL,
         payload TEXT NOT NULL,
-        result TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+        scope TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        window_start BIGINT NOT NULL,
+        hit_count INTEGER NOT NULL CHECK (hit_count >= 0),
+        PRIMARY KEY (scope, subject, window_start)
     )
     """,
     "CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)",
@@ -133,6 +149,7 @@ POSTGRES_STATEMENTS = (
 
 _POSTGRES_BOOTSTRAP_LOCK = threading.Lock()
 _POSTGRES_BOOTSTRAPPED_URLS: set[str] = set()
+_WORKER_DATABASE_CONTEXT: ContextVar[bool] = ContextVar("oae_worker_database", default=False)
 
 
 class _ConnectionAdapter:
@@ -178,16 +195,36 @@ def _migrate_sqlite(adapter: _ConnectionAdapter) -> None:
     adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
 
 
-def _connect() -> _ConnectionAdapter:
+@contextmanager
+def worker_database_context():
+    token = _WORKER_DATABASE_CONTEXT.set(True)
+    try:
+        yield
+    finally:
+        _WORKER_DATABASE_CONTEXT.reset(token)
+
+
+def _connect(tenant_id: str | None = None) -> _ConnectionAdapter:
     backend = settings.database_backend
+    worker_context = _WORKER_DATABASE_CONTEXT.get()
+    database_url = (
+        settings.resolved_worker_database_url
+        if worker_context
+        else settings.resolved_database_url
+    )
     if backend == "postgres":
         try:
             import psycopg
         except ImportError as exc:
             raise RuntimeError("Postgres is configured but psycopg is not installed") from exc
-        connection: Any = psycopg.connect(settings.resolved_database_url)
+        if not database_url:
+            raise RuntimeError("PostgreSQL database URL is not configured for this runtime")
+        connection: Any = psycopg.connect(database_url)
         adapter = _ConnectionAdapter(connection, "postgres")
-        _bootstrap_postgres(adapter, settings.resolved_database_url)
+        if not worker_context:
+            _bootstrap_postgres(adapter, database_url)
+        if tenant_id:
+            adapter.execute("SELECT set_config('oae.tenant_id', ?, true)", (tenant_id,))
         return adapter
 
     if backend == "sqlite":
@@ -214,6 +251,7 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
         adapter.execute("SELECT pg_advisory_xact_lock(hashtextextended('oae:postgres-bootstrap', 0))")
         for statement in POSTGRES_STATEMENTS:
             adapter.execute(statement)
+        adapter.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS result TEXT")
         adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS key_prefix TEXT")
         adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_id TEXT")
         adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_role TEXT")
@@ -223,8 +261,8 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
 
 
 @contextmanager
-def db():
-    conn = _connect()
+def db(tenant_id: str | None = None):
+    conn = _connect(tenant_id)
     try:
         yield conn
         conn.commit()

@@ -68,7 +68,7 @@ class DurableJobRepository:
             raise DurableJobsError("Job priority must be between 0 and 1000.")
         job_id = str(uuid4())
         now = datetime.now(timezone.utc)
-        with db() as conn:
+        with db(tenant_id) as conn:
             row = conn.execute(
                 """
                 INSERT INTO jobs(

@@ -11,7 +11,7 @@ from typing import Any
 from uuid import uuid4
 
 from oae.api.config import settings
-from oae.api.db import db
+from oae.api.db import db, worker_database_context
 
 logger = logging.getLogger("oae.api.outbox_relay")
 
@@ -253,10 +253,13 @@ def main() -> int:
     parser.add_argument("--poll-seconds", type=float, default=1.0)
     parser.add_argument("--batch-size", type=int, default=settings.outbox_relay_batch_size)
     args = parser.parse_args()
-    relay = OutboxRelay()
-    while True:
-        result = relay.run_once(args.batch_size)
-        if args.once:
-            return 0
-        if result.claimed == 0:
-            time.sleep(max(args.poll_seconds, 0.1))
+    if not settings.resolved_worker_database_url:
+        raise SystemExit("OAE_WORKER_DATABASE_URL is required for the outbox relay.")
+    with worker_database_context():
+        relay = OutboxRelay()
+        while True:
+            result = relay.run_once(args.batch_size)
+            if args.once:
+                return 0
+            if result.claimed == 0:
+                time.sleep(max(args.poll_seconds, 0.1))
