@@ -1,6 +1,8 @@
 import sqlite3
 import threading
 from contextlib import contextmanager
+from contextvars import ContextVar
+from contextlib import contextmanager
 from typing import Any
 
 from oae.api.config import settings
@@ -133,6 +135,7 @@ POSTGRES_STATEMENTS = (
 
 _POSTGRES_BOOTSTRAP_LOCK = threading.Lock()
 _POSTGRES_BOOTSTRAPPED_URLS: set[str] = set()
+_WORKER_DATABASE_CONTEXT: ContextVar[bool] = ContextVar("oae_worker_database", default=False)
 
 
 class _ConnectionAdapter:
@@ -178,16 +181,30 @@ def _migrate_sqlite(adapter: _ConnectionAdapter) -> None:
     adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
 
 
-def _connect() -> _ConnectionAdapter:
+@contextmanager
+def worker_database_context():
+    token = _WORKER_DATABASE_CONTEXT.set(True)
+    try:
+        yield
+    finally:
+        _WORKER_DATABASE_CONTEXT.reset(token)
+
+
+def _connect(tenant_id: str | None = None) -> _ConnectionAdapter:
     backend = settings.database_backend
+    database_url = settings.resolved_worker_database_url if _WORKER_DATABASE_CONTEXT.get() else settings.resolved_database_url
     if backend == "postgres":
         try:
             import psycopg
         except ImportError as exc:
             raise RuntimeError("Postgres is configured but psycopg is not installed") from exc
-        connection: Any = psycopg.connect(settings.resolved_database_url)
+        if not database_url:
+            raise RuntimeError("PostgreSQL database URL is not configured for this runtime")
+        connection: Any = psycopg.connect(database_url)
         adapter = _ConnectionAdapter(connection, "postgres")
-        _bootstrap_postgres(adapter, settings.resolved_database_url)
+        _bootstrap_postgres(adapter, database_url)
+        if tenant_id:
+            adapter.execute("SELECT set_config('oae.tenant_id', ?, true)", (tenant_id,))
         return adapter
 
     if backend == "sqlite":
@@ -223,8 +240,8 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
 
 
 @contextmanager
-def db():
-    conn = _connect()
+def db(tenant_id: str | None = None):
+    conn = _connect(tenant_id)
     try:
         yield conn
         conn.commit()
