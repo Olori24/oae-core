@@ -54,5 +54,6 @@ def test_node_contract_is_detected_without_executing_scripts(tmp_path: Path):
 
     result = RepositoryQualityGate().run(tmp_path)
 
-    assert result["production_ready"] is True
+    assert result["production_ready"] is False
+    assert result["verdict"] == "blocked"
     assert result["checks"][0]["name"] == "node-project-contract"
