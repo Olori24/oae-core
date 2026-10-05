@@ -16,7 +16,7 @@ from urllib import error, request
 from urllib.parse import urlparse
 
 MODEL_NAME_PATTERN = re.compile(r"^[A-Za-z0-9._:-]{1,160}$")
-ALLOWED_OPERATIONS = frozenset({"analyze", "review", "verify"})
+ALLOWED_OPERATIONS = frozenset({"analyze", "review", "verify", "code_proposal"})
 
 
 class OpenWeightProviderError(RuntimeError):
