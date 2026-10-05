@@ -383,7 +383,7 @@
       if (event.target === $("key-dialog")) event.preventDefault();
     });
 
-    // Authentication credentials are intentionally kept only in memory.\n    // Do not persist bearer API keys in localStorage/sessionStorage.\n    showWelcome();
+    // Authentication credentials are intentionally kept only in volatile memory.\n    showWelcome();
 
   document.addEventListener("DOMContentLoaded", boot);
 })();
