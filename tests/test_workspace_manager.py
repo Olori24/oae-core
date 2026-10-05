@@ -133,7 +133,7 @@ def test_postgres_workspace_ready_transition_emits_durable_event(monkeypatch):
             self.events.append(kwargs)
 
     @contextmanager
-    def fake_db():
+    def fake_db(tenant_id=None):
         yield Connection()
 
     writer = EventWriter()
