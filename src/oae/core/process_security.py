@@ -23,6 +23,7 @@ _GIT_SUBCOMMANDS = frozenset(
     {
         "add",
         "branch",
+        "init",
         "checkout",
         "clone",
         "commit",
@@ -31,7 +32,11 @@ _GIT_SUBCOMMANDS = frozenset(
         "log",
         "pull",
         "push",
+        "remote",
+        "reset",
+        "rev-parse",
         "status",
+        "switch",
         "--version",
     }
 )
@@ -69,6 +74,20 @@ def resolve_executable(name: str) -> str:
         raise ProcessPolicyError(f"Resolved executable is not runnable: {name}")
     return str(path)
 
+
+
+def resolve_workspace_executable(name: str, workspace: str | Path, *, local_only: bool = False) -> str:
+    """Resolve a permitted tool from the workspace first, then the controlled PATH."""
+    if not isinstance(name, str) or not name or Path(name).name != name:
+        raise ProcessPolicyError("Executable name must be a simple local command name.")
+    root = validate_working_directory(workspace)
+    assert root is not None
+    local = root / "node_modules" / ".bin" / name
+    if local.is_file() and os.access(local, os.X_OK):
+        return str(local.resolve())
+    if local_only:
+        raise ProcessPolicyError(f"Workspace-local executable is required: {name}")
+    return resolve_executable(name)
 
 def validate_working_directory(cwd: str | Path | None) -> Path | None:
     """Resolve and require a local working directory before process execution."""
@@ -184,9 +203,21 @@ def run_git(
     capture_output: bool = True,
     text: bool = True,
     timeout: float | None = None,
+    commit_identity: bool = False,
 ):
     """Run a constrained Git invocation through the absolute process boundary."""
     tokens = _validate_git_arguments(arguments)
+    env = None
+    if commit_identity:
+        if tokens[0] != "commit":
+            raise ProcessPolicyError("commit_identity is valid only for git commit.")
+        env = os.environ.copy()
+        env.update({
+            "GIT_AUTHOR_NAME": "OAE Core",
+            "GIT_AUTHOR_EMAIL": "engineering@oae.invalid",
+            "GIT_COMMITTER_NAME": "OAE Core",
+            "GIT_COMMITTER_EMAIL": "engineering@oae.invalid",
+        })
     return run_absolute_command(
         [resolve_executable("git"), *tokens],
         cwd=cwd,
@@ -194,6 +225,7 @@ def run_git(
         capture_output=capture_output,
         text=text,
         timeout=timeout,
+        env=env,
     )
 
 

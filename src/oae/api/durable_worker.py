@@ -33,7 +33,7 @@ class DurableWorker:
         )
         heartbeat.start()
         try:
-            result = self.runner._dispatch(lease.operation, lease.payload, lease.job_id)
+            result = self.runner._dispatch(lease.operation, lease.payload, lease.job_id, tenant_id=lease.tenant_id)
         except Exception:
             logger.exception("durable_job_execution_failed job_id=%s", lease.job_id)
             if lease_lost.is_set():

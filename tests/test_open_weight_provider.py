@@ -78,6 +78,21 @@ def test_gateway_rejects_unapproved_operations(operation):
         )
 
 
+def test_gateway_allows_code_proposal_operation():
+    gateway = configured_gateway(
+        lambda *_args, **_kwargs: FakeResponse(
+            {"model": "qwen3:8b", "message": {"content": "{\"summary\":\"ok\"}"}}
+        )
+    )
+    result = gateway.generate(
+        tenant_id="tenant-a",
+        operation="code_proposal",
+        model="qwen3:8b",
+        prompt="Produce a bounded proposal.",
+    )
+    assert result.audit.operation == "code_proposal"
+
+
 def test_gateway_rejects_disabled_provider_without_network_access():
     gateway = OpenWeightModelGateway(
         OpenWeightModelConfig(
