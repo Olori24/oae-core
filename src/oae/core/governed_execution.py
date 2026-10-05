@@ -8,9 +8,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
 
-from oae.core.process_security import ProcessPolicyError, ProcessTimeout, run_absolute_command, resolve_executable
+from oae.core.process_security import (
+    ProcessPolicyError,
+    ProcessTimeout,
+    resolve_workspace_executable,
+    run_absolute_command,
+)
 
 
 class CommandExecutionError(RuntimeError):
@@ -31,6 +35,7 @@ _COMMANDS: dict[str, CommandSpec] = {
     "ruff": CommandSpec("ruff", "ruff", ("check", "."), 300),
     "mypy": CommandSpec("mypy", "mypy", ("src",), 300),
     "python_compile": CommandSpec("python_compile", "python", ("-m", "compileall", "-q", "src"), 180),
+    "typescript_check": CommandSpec("typescript_check", "tsc", ("--noEmit",), 600),
 }
 
 
@@ -46,7 +51,7 @@ def run_governed_command(name: str, *, workspace: str | Path) -> dict:
     root = Path(workspace).resolve()
     if not root.is_dir():
         raise CommandExecutionError("Workspace does not exist.")
-    executable = str(Path(resolve_executable(spec.executable)).resolve())
+    executable = str(Path(resolve_workspace_executable(spec.executable, root)).resolve())
     if spec.executable == "python":
         import sys
         executable = str(Path(sys.executable).resolve())

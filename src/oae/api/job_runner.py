@@ -15,6 +15,10 @@ from oae.api.workspace_models import WorkspacePurpose
 from oae.core.repository_quality_gate import RepositoryQualityGate
 from oae.core.repository_worktree import RepositoryWorktree
 from oae.core.governed_execution import run_governed_command, supported_commands
+from oae.core.engineering_planner import build_engineering_plan
+from oae.core.autonomous_agent import next_agent_decision
+from oae.core.ci_inspector import GitHubCiInspector
+from oae.core.production_readiness import evaluate_production_readiness
 from oae.core.vertical_slice_mission import VerticalSliceMission
 
 logger = logging.getLogger("oae.api.job_runner")
@@ -134,6 +138,14 @@ class JobRunner:
                 return self._execute_command(payload, tenant_id)
             if stage == "verify":
                 return self._verify_workspace(payload, tenant_id)
+            if stage == "plan":
+                return self._create_engineering_plan(payload, tenant_id)
+            if stage == "agent":
+                return self._next_agent_action(payload, tenant_id)
+            if stage == "ci_status":
+                return self._inspect_ci_status(payload, tenant_id)
+            if stage == "readiness_gate":
+                return self._evaluate_readiness_gate(payload, tenant_id)
 
             name = payload.get("name")
             description = payload.get("description")
@@ -365,6 +377,98 @@ class JobRunner:
             operation="build", payload=payload, repository=str(row[1]),
             summary=f"Pull request created for change set {change_set_id}.",
             evidence={"stage":"pull_request","change_set_id":change_set_id,"pull_request":{"number":pr.get("number"),"url":pr.get("html_url"),"branch":row[2]}},
+        )
+
+
+    @staticmethod
+    def _create_engineering_plan(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Planning requires a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        if not workspace_id:
+            raise ValueError("plan requires workspace_id")
+        plan = build_engineering_plan(
+            objective=str(payload.get("objective", "")),
+            repository_kind=str(payload.get("repository_kind", "unknown")),
+            has_tests=bool(payload.get("has_tests", True)),
+            has_linter=bool(payload.get("has_linter", True)),
+            has_typecheck=bool(payload.get("has_typecheck", False)),
+            has_build=bool(payload.get("has_build", False)),
+            security_required=bool(payload.get("security_required", True)),
+        )
+        return build_result(
+            operation="build",
+            payload=payload,
+            summary=f"Engineering plan created for workspace {workspace_id}.",
+            evidence={"stage": "plan", "workspace_id": workspace_id, "plan": plan.to_dict()},
+        )
+
+    @staticmethod
+    def _next_agent_action(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Agent control requires a tenant context.")
+        plan = payload.get("plan")
+        completed = payload.get("completed_steps") or []
+        if not isinstance(plan, dict) or not isinstance(completed, list):
+            raise ValueError("agent requires a plan object and completed_steps list")
+        decision = next_agent_decision(plan, [str(item) for item in completed])
+        return build_result(
+            operation="build",
+            payload=payload,
+            summary=f"Agent controller status: {decision.status}.",
+            evidence={"stage": "agent", "decision": decision.to_dict()},
+        )
+
+
+    @staticmethod
+    def _inspect_ci_status(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("CI inspection requires a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        commit_sha = payload.get("commit_sha")
+        if not workspace_id or not commit_sha:
+            raise ValueError("ci_status requires workspace_id and commit_sha")
+        with db(tenant_id) as conn:
+            row = conn.execute(
+                "SELECT repository_id,state FROM workspaces WHERE id=? AND tenant_id=?",
+                (workspace_id, tenant_id),
+            ).fetchone()
+            repo = conn.execute(
+                "SELECT clone_url FROM repositories WHERE id=? AND tenant_id=? AND status='active'",
+                (row[0], tenant_id),
+            ).fetchone() if row else None
+        if not row or row[1] != "ready" or not repo:
+            raise ValueError("Workspace repository is unavailable for CI inspection.")
+        evidence = GitHubCiInspector(str(repo[0])).inspect_commit(str(commit_sha))
+        return build_result(
+            operation="build",
+            payload=payload,
+            repository=str(row[0]),
+            summary=f"GitHub CI status for {commit_sha[:12]} is {evidence['status']}.",
+            evidence={"stage": "ci_status", "workspace_id": workspace_id, "ci": evidence},
+        )
+
+    @staticmethod
+    def _evaluate_readiness_gate(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Readiness evaluation requires a tenant context.")
+        workspace_id = payload.get("workspace_id")
+        if not workspace_id:
+            raise ValueError("readiness_gate requires workspace_id")
+        result = evaluate_production_readiness(
+            quality_verified=bool(payload.get("quality_verified")),
+            workspace_verified=bool(payload.get("workspace_verified")),
+            ci_status=str(payload.get("ci_status", "failed")),
+            change_set_synced=bool(payload.get("change_set_synced")),
+            pull_request_open=bool(payload.get("pull_request_open")),
+            deployment_verified=bool(payload.get("deployment_verified")),
+            rollback_verified=bool(payload.get("rollback_verified")),
+        )
+        return build_result(
+            operation="build",
+            payload=payload,
+            summary=f"Production readiness gate is {result['status']}.",
+            evidence={"stage": "readiness_gate", "workspace_id": workspace_id, "readiness": result},
         )
 
     @staticmethod
