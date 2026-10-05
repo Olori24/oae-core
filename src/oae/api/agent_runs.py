@@ -3,10 +3,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
-from datetime import timedelta
 
 from oae.api.db import db
 from oae.core.agent_runtime import AgentRunState, record_step_result, start_agent_run
@@ -64,6 +63,7 @@ class AgentRunRepository:
                     json.dumps(list(state.evidence), separators=(",", ":"), sort_keys=True),
                     idempotency_key,
                     correlation_id,
+                    authorization_id,
                     now,
                     now,
                 ),
@@ -150,7 +150,7 @@ class AgentRunRepository:
             row = conn.execute(
                 """
                 SELECT id,workspace_id,plan,status,completed_steps,failed_step,
-                       repair_count,evidence,idempotency_key,correlation_id,created_at,updated_at
+                       repair_count,evidence,idempotency_key,correlation_id,authorization_id,active_step_id,active_token,lease_until,created_at,updated_at
                 FROM engineering_agent_runs
                 WHERE id=? AND tenant_id=?
                 FOR UPDATE
