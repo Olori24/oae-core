@@ -75,6 +75,18 @@ def resolve_executable(name: str) -> str:
     return str(path)
 
 
+
+def resolve_workspace_executable(name: str, workspace: str | Path) -> str:
+    """Resolve a permitted tool from the workspace first, then the controlled PATH."""
+    if not isinstance(name, str) or not name or Path(name).name != name:
+        raise ProcessPolicyError("Executable name must be a simple local command name.")
+    root = validate_working_directory(workspace)
+    assert root is not None
+    local = root / "node_modules" / ".bin" / name
+    if local.is_file() and os.access(local, os.X_OK):
+        return str(local.resolve())
+    return resolve_executable(name)
+
 def validate_working_directory(cwd: str | Path | None) -> Path | None:
     """Resolve and require a local working directory before process execution."""
     if cwd is None:
