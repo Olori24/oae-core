@@ -21,6 +21,8 @@ from oae.core.ci_inspector import GitHubCiInspector
 from oae.core.production_readiness import evaluate_production_readiness
 from oae.core.vertical_slice_mission import VerticalSliceMission
 from oae.api.agent_runs import AgentRunRepository
+from oae.api.durable_jobs import DurableJobRepository
+from oae.core.agent_action_executor import execute_agent_action
 
 logger = logging.getLogger("oae.api.job_runner")
 
@@ -31,12 +33,12 @@ class JobRunner:
     def run(self, job_id: str) -> None:
         with db() as conn:
             row = conn.execute(
-                "SELECT operation,payload,tenant_id FROM jobs WHERE id=?",
+                "SELECT operation,payload,tenant_id,authorization_id FROM jobs WHERE id=?",
                 (job_id,),
             ).fetchone()
             if not row:
                 return
-            operation, payload_json, tenant_id = row
+            operation, payload_json, tenant_id, authorization_id = row
             conn.execute(
                 "UPDATE jobs SET status='running',updated_at=? WHERE id=?",
                 (self._now(), job_id),
@@ -44,6 +46,8 @@ class JobRunner:
 
         try:
             payload = json.loads(payload_json)
+            if authorization_id:
+                payload["_authorization_id"] = str(authorization_id)
             result = self._dispatch(operation, payload, job_id, tenant_id=str(tenant_id))
             status = "completed"
         except Exception as exc:
@@ -147,6 +151,8 @@ class JobRunner:
                 return self._start_agent_run(payload, tenant_id)
             if stage == "agent_run_step":
                 return self._record_agent_run_step(payload, tenant_id)
+            if stage == "agent_tick":
+                return self._agent_tick(payload, tenant_id, job_id)
             if stage == "ci_status":
                 return self._inspect_ci_status(payload, tenant_id)
             if stage == "readiness_gate":
@@ -483,6 +489,100 @@ class JobRunner:
                 "completed_steps": list(record.state.completed_steps),
                 "repair_count": record.state.repair_count,
                 "next_decision": decision.to_dict() if decision else None,
+            },
+        )
+
+    def _agent_tick(self, payload: dict, tenant_id: str | None, job_id: str) -> dict:
+        if not tenant_id:
+            raise ValueError("Agent tick requires a tenant context.")
+        run_id = payload.get("run_id")
+        if not run_id:
+            raise ValueError("agent_tick requires run_id")
+        repository = AgentRunRepository()
+        claim = repository.claim_next_action(tenant_id=tenant_id, run_id=run_id)
+        if claim is None:
+            record = repository.get(tenant_id=tenant_id, run_id=run_id)
+            return build_result(
+                operation="build",
+                payload=payload,
+                summary=f"Agent run {run_id} has no claimable action.",
+                evidence={"stage": "agent_tick", "run_id": run_id, "status": record.state.status},
+            )
+        record, token, decision = claim
+        step = next(
+            (item for item in record.state.plan.get("steps", [])
+             if isinstance(item, dict) and item.get("id") == decision.get("step_id")),
+            None,
+        )
+        if step is None:
+            repository.record_result(
+                tenant_id=tenant_id, run_id=run_id,
+                step_id=str(decision["step_id"]), success=False,
+                evidence={"failure_code": "planned_step_missing"},
+                action_token=token,
+            )
+            raise ValueError("Claimed agent step is missing from the persisted plan.")
+
+        base_payload = {
+            "workspace_id": record.workspace_id,
+            "commands": list(record.state.plan.get("verification_commands", [])),
+        }
+        with db(tenant_id) as conn:
+            row = conn.execute(
+                "SELECT r.clone_url FROM repositories r JOIN workspaces w ON w.repository_id=r.id "
+                "WHERE w.id=? AND w.tenant_id=? AND r.tenant_id=? AND r.status='active'",
+                (record.workspace_id, tenant_id, tenant_id),
+            ).fetchone()
+        if row:
+            base_payload["repository_url"] = str(row[0])
+
+        try:
+            result = execute_agent_action(
+                action=str(decision["action"]),
+                step=step,
+                workspace_id=record.workspace_id,
+                base_payload=base_payload,
+                invoke=lambda operation, action_payload: self._dispatch(
+                    operation, action_payload, job_id, tenant_id
+                ),
+            )
+            updated = repository.record_result(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                step_id=str(decision["step_id"]),
+                success=True,
+                evidence={"action": decision, "result": result},
+                action_token=token,
+            )
+        except Exception as exc:
+            updated = repository.record_result(
+                tenant_id=tenant_id,
+                run_id=run_id,
+                step_id=str(decision["step_id"]),
+                success=False,
+                evidence={"action": decision, "failure_code": "agent_action_failed", "error_type": type(exc).__name__},
+                action_token=token,
+            )
+        if updated.state.status == "running":
+            DurableJobRepository().enqueue(
+                tenant_id=tenant_id,
+                operation="build",
+                payload={"stage": "agent_tick", "run_id": run_id},
+                authorization_id=updated.authorization_id or payload.get("_authorization_id"),
+                idempotency_key=f"agent-tick:{run_id}:{updated.state.repair_count}:{len(updated.state.completed_steps)}",
+                priority=90,
+            )
+        return build_result(
+            operation="build",
+            payload=payload,
+            summary=f"Agent run {run_id} advanced through {decision['step_id']}.",
+            evidence={
+                "stage": "agent_tick",
+                "run_id": run_id,
+                "decision": decision,
+                "status": updated.state.status,
+                "completed_steps": list(updated.state.completed_steps),
+                "repair_count": updated.state.repair_count,
             },
         )
 
