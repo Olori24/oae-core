@@ -36,27 +36,9 @@ class RepositoryWorktree:
         validate_git_ref(commit_sha)
         clone_url = validate_repository_url(clone_url)
         run_git(["init"], cwd=self.root, check=True, capture_output=True, text=True)
-        run_git(
-            ["remote", "add", "origin", clone_url],
-            cwd=self.root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        run_git(
-            ["fetch", "--depth", "1", "origin", commit_sha],
-            cwd=self.root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        run_git(
-            ["reset", "--hard", commit_sha],
-            cwd=self.root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        run_git(["remote", "add", "origin", clone_url], cwd=self.root, check=True, capture_output=True, text=True)
+        run_git(["fetch", "--depth", "1", "origin", commit_sha], cwd=self.root, check=True, capture_output=True, text=True)
+        run_git(["reset", "--hard", commit_sha], cwd=self.root, check=True, capture_output=True, text=True)
         return {"status": "attached", "commit_sha": self.head()}
 
     def create_branch(self, name: str) -> dict[str, str]:
@@ -83,13 +65,7 @@ class RepositoryWorktree:
 
     def status(self) -> dict[str, Any]:
         self._require_repo()
-        result = run_git(
-            ["status", "--porcelain=v1", "--branch"],
-            cwd=self.root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
+        result = run_git(["status", "--porcelain=v1", "--branch"], cwd=self.root, check=True, capture_output=True, text=True)
         return {
             "branch": self.branch(),
             "commit_sha": self.head(),
@@ -98,36 +74,58 @@ class RepositoryWorktree:
 
     def diff(self) -> dict[str, Any]:
         self._require_repo()
-        result = run_git(
-            ["diff", "--no-ext-diff", "--binary"],
-            cwd=self.root,
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-        encoded = result.stdout.encode("utf-8")
-        if len(encoded) > _MAX_DIFF_BYTES:
+        result = run_git(["diff", "--no-ext-diff", "--binary"], cwd=self.root, check=True, capture_output=True, text=True)
+        if len(result.stdout.encode("utf-8")) > _MAX_DIFF_BYTES:
             raise WorktreeError("diff exceeds the governed evidence limit")
         return {"branch": self.branch(), "commit_sha": self.head(), "diff": result.stdout}
 
-    def commit(self, message: str) -> dict[str, str]:
+    def commit(self, message: str) -> dict[str, Any]:
         self._require_repo()
         message = message.strip()
         if not message or len(message) > 200:
             raise WorktreeError("commit message must be between 1 and 200 characters")
-        status = self.status()
-        if not status["entries"]:
+        if not self.status()["entries"]:
             raise WorktreeError("cannot commit a clean worktree")
         run_git(["add", "--all"], cwd=self.root, check=True, capture_output=True, text=True)
         run_git(
-            ["-c", "user.name=OAE Core", "-c", "user.email=engineering@oae.invalid",
-             "commit", "-m", message],
-            cwd=self.root,
-            check=True,
-            capture_output=True,
-            text=True,
+            ["-c", "user.name=OAE Core", "-c", "user.email=engineering@oae.invalid", "commit", "-m", message],
+            cwd=self.root, check=True, capture_output=True, text=True,
         )
-        return {"branch": self.branch(), "commit_sha": self.head(), "message": message}
+        commit_sha = self.head()
+        changed = run_git(
+            ["diff", "HEAD^", "HEAD", "--name-status"],
+            cwd=self.root, check=True, capture_output=True, text=True,
+        )
+        files = []
+        for line in changed.stdout.splitlines()[:200]:
+            parts = line.split("\t", 1)
+            if len(parts) == 2:
+                files.append({"status": {"A": "added", "M": "modified", "D": "deleted"}.get(parts[0], "modified"), "path": parts[1]})
+        return {"branch": self.branch(), "commit_sha": commit_sha, "message": message, "files": files}
+
+    def snapshot_commit(self) -> list[dict[str, str]]:
+        self._require_repo()
+        result = run_git(
+            ["diff", "HEAD^", "HEAD", "--name-status"],
+            cwd=self.root, check=True, capture_output=True, text=True,
+        )
+        files: list[dict[str, str]] = []
+        for line in result.stdout.splitlines()[:200]:
+            parts = line.split("\t", 1)
+            if len(parts) != 2:
+                continue
+            status, relative = parts
+            path = self._safe_path(relative)
+            entry = {"status": {"A": "added", "M": "modified", "D": "deleted"}.get(status, "modified"), "path": relative}
+            if entry["status"] != "deleted":
+                data = path.read_bytes()
+                if len(data) > _MAX_FILE_BYTES:
+                    raise WorktreeError("changed file exceeds the governed mutation limit")
+                entry["content"] = data.decode("utf-8")
+            files.append(entry)
+        if not files:
+            raise WorktreeError("commit contains no governed file changes")
+        return files
 
     def head(self) -> str:
         self._require_repo()
@@ -139,12 +137,7 @@ class RepositoryWorktree:
 
     def _safe_path(self, relative_path: str) -> Path:
         candidate = Path(relative_path)
-        if (
-            not relative_path
-            or candidate.is_absolute()
-            or ".." in candidate.parts
-            or candidate.parts[:1] == (".git",)
-        ):
+        if not relative_path or candidate.is_absolute() or ".." in candidate.parts or candidate.parts[:1] == (".git",):
             raise WorktreeError("path must remain inside the workspace and cannot target .git")
         resolved = (self.root / candidate).resolve()
         try:
