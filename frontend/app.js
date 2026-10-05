@@ -93,6 +93,7 @@
     try {
       state.tenant = await api("/v1/me");
       
+      window.localStorage.setItem(KEY_STORAGE, state.key);
       $("api-key").value = "";
       await enterWorkspace();
     } catch (error) {
@@ -110,6 +111,7 @@
     try {
       
       state.tenant = await api("/v1/me");
+      window.localStorage.setItem(KEY_STORAGE, state.key);
       $("key-dialog").hidden = true;
       state.createKey = "";
       await enterWorkspace();
@@ -138,6 +140,7 @@
     stopPolling();
     
     state.key = "";
+    window.localStorage.removeItem(KEY_STORAGE);
     state.tenant = null;
     state.jobs = [];
     $("api-key").value = "";
