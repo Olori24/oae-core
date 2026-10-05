@@ -357,8 +357,10 @@ def get_worker_authorization(
 @router.post("/v1/repositories", response_model=RepositoryResponse, status_code=201, tags=["repositories"])
 def create_repository(
     data: RepositoryCreate,
-    tenant_id: str = Depends(require_tenant),
+    principal: TenantPrincipal = Depends(require_principal),
 ) -> RepositoryResponse:
+    principal = require_requester_principal(principal)
+    tenant_id = principal.tenant_id
     repository_id = str(uuid4())
     now = _now()
     with db() as conn:
@@ -436,8 +438,10 @@ def list_repositories(
 def pin_repository_revision(
     repository_id: str,
     data: RevisionCreate,
-    tenant_id: str = Depends(require_tenant),
+    principal: TenantPrincipal = Depends(require_principal),
 ) -> RevisionResponse:
+    principal = require_requester_principal(principal)
+    tenant_id = principal.tenant_id
     revision_id = str(uuid4())
     observed_at = _now()
     with db() as conn:
@@ -575,9 +579,16 @@ def get_workspace(workspace_id: str, tenant_id: str = Depends(require_tenant)) -
 def create_job(
     data: JobCreate,
     background_tasks: BackgroundTasks,
-    tenant_id: str = Depends(require_tenant),
+    principal: TenantPrincipal = Depends(require_principal),
 ) -> JobResponse:
+    principal = require_requester_principal(principal)
+    tenant_id = principal.tenant_id
     _enforce_control_rate("job-create", tenant_id)
+    if data.operation == "build" and not settings.worker_authorization_enforcement_enabled:
+        raise HTTPException(
+            status_code=403,
+            detail="Build execution is disabled until governed worker authorization is enabled.",
+        )
     if data.operation == "build" and settings.worker_authorization_enforcement_enabled:
         if settings.database_backend != "postgres" or not settings.durable_jobs_enabled:
             raise HTTPException(
