@@ -39,3 +39,21 @@ def test_failed_verification_opens_repair_path():
     plan = build_engineering_plan(objective="repair an API regression", repository_kind="python").to_dict()
     decision = next_agent_decision(plan, ["inspect", "baseline", "implement", "diff", "verify", "verify_failed"])
     assert decision.action == "repair_failures"
+
+
+def test_plan_preserves_bounded_action_inputs():
+    plan = build_engineering_plan(
+        objective="update the health endpoint",
+        repository_kind="python",
+        action_inputs={
+            "implement": {
+                "mutation": {
+                    "type": "write",
+                    "path": "src/app.py",
+                    "content": "print('ok')\n",
+                }
+            }
+        },
+    )
+    implement = next(step for step in plan.steps if step.id == "implement")
+    assert implement.inputs["mutation"]["type"] == "write"
