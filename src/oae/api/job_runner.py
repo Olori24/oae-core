@@ -406,6 +406,7 @@ class JobRunner:
             has_typecheck=bool(payload.get("has_typecheck", False)),
             has_build=bool(payload.get("has_build", False)),
             security_required=bool(payload.get("security_required", True)),
+            action_inputs=payload.get("action_inputs") if isinstance(payload.get("action_inputs"), dict) else None,
         )
         return build_result(
             operation="build",
