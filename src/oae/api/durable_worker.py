@@ -7,6 +7,7 @@ import threading
 import time
 
 from oae.api.config import settings
+from oae.api.db import worker_database_context
 from oae.api.durable_jobs import DurableJobRepository, LeaseLost
 from oae.api.job_runner import JobRunner
 
@@ -89,13 +90,16 @@ def main() -> int:
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--poll-seconds", type=float, default=1.0)
     args = parser.parse_args()
-    repository = DurableJobRepository()
-    worker_id = repository.register_worker(worker_name=args.name, pool=args.pool)
-    worker = DurableWorker(repository, worker_id)
-    while True:
-        recovered = repository.recover_expired_leases()
-        ran = worker.run_once()
-        if args.once:
-            return 0
-        if not ran and recovered == 0:
-            time.sleep(max(args.poll_seconds, 0.1))
+    if not settings.resolved_worker_database_url:
+        raise SystemExit("OAE_WORKER_DATABASE_URL is required for the durable worker.")
+    with worker_database_context():
+        repository = DurableJobRepository()
+        worker_id = repository.register_worker(worker_name=args.name, pool=args.pool)
+        worker = DurableWorker(repository, worker_id)
+        while True:
+            recovered = repository.recover_expired_leases()
+            ran = worker.run_once()
+            if args.once:
+                return 0
+            if not ran and recovered == 0:
+                time.sleep(max(args.poll_seconds, 0.1))
