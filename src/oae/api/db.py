@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS workspaces (
 );
 CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
-CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC);\nCREATE TABLE IF NOT EXISTS rate_limit_buckets (\n    scope TEXT NOT NULL,\n    subject TEXT NOT NULL,\n    window_start BIGINT NOT NULL,\n    hit_count INTEGER NOT NULL CHECK (hit_count >= 0),\n    PRIMARY KEY (scope, subject, window_start)\n);
 CREATE INDEX IF NOT EXISTS idx_repositories_tenant_active
     ON repositories (tenant_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_repository_revisions_tenant_repository
@@ -128,7 +128,7 @@ POSTGRES_STATEMENTS = (
     """,
     "CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)",
     "CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)",
-    "CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC)",\n    """\n    CREATE TABLE IF NOT EXISTS rate_limit_buckets (\n        scope TEXT NOT NULL,\n        subject TEXT NOT NULL,\n        window_start BIGINT NOT NULL,\n        hit_count INTEGER NOT NULL CHECK (hit_count >= 0),\n        PRIMARY KEY (scope, subject, window_start)\n    )\n    """,
 )
 
 _POSTGRES_BOOTSTRAP_LOCK = threading.Lock()
