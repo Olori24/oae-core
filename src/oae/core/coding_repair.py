@@ -32,7 +32,7 @@ class CodingRepairBrain(CodingBrain):
         if not context:
             raise CodingBrainError("No readable repository source was found.")
 
-        bounded = json.dumps(failure_evidence, ensure_ascii=False, sort_keys=True)[:60_000]
+        bounded = json.dumps(failure_evidence, ensure_ascii=False, sort_keys=True)[:3_000]
         prompt = self._repair_prompt(objective, bounded, context)
         response = self.gateway.generate(
             tenant_id=tenant_id,
