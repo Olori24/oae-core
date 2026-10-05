@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
     app_env: str = "development"
     database_url: str = ""
+    worker_database_url: str = ""
     # Kept for backward compatibility. New API keys use per-key salted PBKDF2.
     api_key_pepper: str = ""
     api_control_rate_limit_per_minute: int = 60
@@ -151,6 +152,12 @@ class Settings(BaseSettings):
         if self.app_env == "production" or os.getenv("VERCEL"):
             return ""
         return "sqlite:///./oae.db"
+
+    @property
+    def resolved_worker_database_url(self) -> str:
+        if self.worker_database_url:
+            return self.worker_database_url
+        return os.getenv("OAE_WORKER_DATABASE_URL", "").strip()
 
     @property
     def database_backend(self) -> str:
