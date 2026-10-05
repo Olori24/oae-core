@@ -40,6 +40,12 @@ class EngineeringPlanRequest(EngineeringRequest):
     action_inputs: dict[str, dict] = Field(default_factory=dict, max_length=32)
 
 
+class CodingExecutionRequest(EngineeringRequest):
+    workspace_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    objective: str = Field(min_length=1, max_length=4000)
+
+
 class CodingProposalRequest(EngineeringRequest):
     workspace_id: str = Field(min_length=1, max_length=120)
     authorization_id: str = Field(min_length=1, max_length=120)
@@ -192,6 +198,19 @@ def create_engineering_plan(
         principal=principal,
         authorization_id=data.authorization_id,
         stage="plan",
+        payload=data.model_dump(exclude={"authorization_id"}),
+    )
+
+
+@router.post("/coding/execute", response_model=JobResponse, status_code=202)
+def execute_coding_objective(
+    data: CodingExecutionRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="coding_execute",
         payload=data.model_dump(exclude={"authorization_id"}),
     )
 
