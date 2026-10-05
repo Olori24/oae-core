@@ -2,149 +2,322 @@
 
 # OAE · Open Autonomous Engineer
 
-**Governed engineering control plane for software teams.**
+### Governed engineering control plane for AI-assisted software teams
 
-[![Documentation standard](https://img.shields.io/badge/README-Premium%20Standard-111827?style=flat-square)](#documentation-standard)
-[![Repository](https://img.shields.io/badge/GitHub-Olori24-181717?style=flat-square&logo=github)](https://github.com/Olori24)
+**Understand the system → plan the work → authorize consequential actions → execute durably → verify the result → preserve evidence**
+
+[![Status](https://img.shields.io/badge/STATUS-Controlled%20Beta-8b5cf6?style=for-the-badge)](#project-status)
+[![Version](https://img.shields.io/badge/VERSION-v0.6.0-22d3ee?style=for-the-badge)](#project-status)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](#technology)
+[![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](#technology)
+[![PostgreSQL](https://img.shields.io/badge/Durable%20Runtime-PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](#durable-execution)
+[![Docker](https://img.shields.io/badge/Runtime-Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](#production-topology)
+[![Security](https://img.shields.io/badge/Security-Hardened-10B981?style=for-the-badge)](#security-posture)
+[![License](https://img.shields.io/badge/License-Apache--2.0-EF4444?style=for-the-badge)](#license)
+
+<br>
+
+**A serious engineering system should not confuse generated output with verified engineering.**
 
 </div>
 
-![OAE · Open Autonomous Engineer architecture overview](./docs/assets/repo-hero.svg)
-
-> **Repository status:** Active development. This README describes implemented repository capabilities and explicitly separates shipped work from future or environment-dependent work.
-
-## Engineering focus
-
-Governed engineering control plane for AI-assisted software teams.
-
-
-## Documentation standard
-
-This repository follows the portfolio documentation standard established for NSMS: clear product positioning, visual orientation, architecture, security boundaries, setup, validation evidence, maturity tracking, roadmap, and honest production-status language. Claims are kept scoped to repository evidence rather than inferred from intent.
-
-### At a glance
-
-| Area | Standard |
-|---|---|
-| Product | Clear one-sentence purpose and user value |
-| Architecture | Visual system model plus technical boundaries |
-| Security | Explicit trust, permission, tenant and secret-handling boundaries |
-| Evidence | Tests, CI, deployment and production claims separated |
-| Maturity | Implemented / pending / environment-dependent status |
-| Roadmap | Future work clearly separated from shipped capability |
-
-### Evidence language
-
-**IMPLEMENTED** means present in the repository. **TESTED** means supported by an executed test or CI result. **DEPLOYED** means a deployment target is configured or documented. **VERIFIED IN PRODUCTION** requires production evidence. **MEASURED** requires an actual measurement. Roadmap items are not represented as shipped.
+<p align="center">
+  <img src="./docs/assets/repo-hero.svg" alt="OAE governed engineering control plane overview" width="100%">
+</p>
 
 ---
 
-## Table of contents
+## ⚡ The idea in one minute
 
-- [Why OAE](#why-oae)
-- [What is available today](#what-is-available-today)
-- [Architecture](#architecture)
-- [Quick start](#quick-start)
-- [API orientation](#api-orientation)
-- [Authorization and API control boundaries](#authorization-and-api-control-boundaries)
-- [Durable jobs and live events](#durable-jobs-and-live-events)
-- [Production deployment](#production-deployment)
-- [Security posture](#security-posture)
-- [Quality gates](#quality-gates)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
+OAE is a **governed engineering control plane** for AI-assisted software work.
 
-## Why OAE
+It is designed around a simple principle:
 
-AI can generate code quickly. Engineering still requires context, constraints, evidence, verification, and accountable decisions. OAE is built for that harder layer of work: it treats an engineering request as a **controlled operational loop**, not simply as a prompt that produces a patch.
+> **More automation should increase operational discipline, not remove human authority.**
 
-> **Autonomous engineering should be governed engineering, not unrestricted automation.**
+Instead of treating an engineering request as a prompt that produces an opaque patch, OAE models work as a controlled loop:
 
-The system begins with repository facts, represents work as inspectable missions, enforces tenant and policy boundaries, and preserves the evidence needed to explain what happened. It is intentionally designed so that greater automation does not mean less human authority over consequential actions.
+**repository context → mission → authorization → execution → verification → evidence → recovery**
 
-The beta interface follows familiar developer-workspace patterns—Overview, Missions, analyzed repositories, explicit status and expandable evidence—so first-time users can focus on the engineering result instead of learning a novel command center. This applies **Jakob's Law** without overstating today's autonomy: the guided workflow creates a workspace, analyzes a public GitHub repository, and keeps the resulting snapshot in history. Follow the [Developer Beta Guide](docs/BETA_DEVELOPER_GUIDE.md) to complete that path.
+The current repository is intentionally scoped. It is a **controlled beta core**, not an unrestricted remote shell, not a magic autonomous programmer, and not an automatic code-publishing service.
 
-| Instead of… | OAE is designed to… |
+### What makes the architecture interesting
+
+| Design principle | OAE interpretation |
 |---|---|
-| Starting with an isolated prompt | Start with repository and tenant context |
-| Treating generated code as completion | Require verification evidence before declaring success |
-| Giving an agent broad, opaque authority | Route work through explicit controls, scoped permissions, and audit records |
-| Keeping operational state in a chat transcript | Persist missions, workspaces, events, and recovery-relevant history |
-| Scaling by adding unconstrained agents | Compose specialized capabilities inside a shared engineering boundary |
+| 🧠 **Context first** | Understand repository and tenant context before consequential work |
+| 🎯 **Bounded missions** | Work is represented as inspectable operations rather than invisible agent state |
+| 🔐 **Explicit authority** | Principal roles, tenant scope and governed worker authorization constrain execution |
+| 🧱 **Durable state** | PostgreSQL provides durable jobs, attempts, events and recovery state |
+| 🔎 **Verification before confidence** | Tests and CI are evidence; production claims require production evidence |
+| ♻️ **Recoverability** | Leases, heartbeats, retries, outbox delivery, cursors and snapshots support recovery |
+| 🧾 **Auditability** | Important state transitions and operational evidence remain inspectable |
+| 👤 **Human control** | Consequential authority is deliberately kept explicit |
 
-## What is available today
+---
 
-OAE is an active **v0.6.0 controlled-beta core**. The following capabilities are implemented in this repository and exercised by the automated quality gates.
+# 🧭 Project status
 
-| Capability | What it provides | Operational boundary |
-|---|---|---|
-| Beta workspace UI | Workspace creation or API-key sign-in, public-repository analysis, readable mission history, and expandable result evidence | The guided interface is read-oriented; it does not modify or publish repositories |
-| Tenant control plane | FastAPI service with tenant creation, hashed API keys, authenticated tenant inspection, and tenant-scoped records | A tenant cannot retrieve another tenant’s jobs, repositories, workspaces, or event streams |
-| Repository foundations | Tenant-scoped repository registration and immutable revision pinning | Credentials are represented only by external `credential_ref` values; they are not stored in the database |
-| Workspace lifecycle | Persistent workspace manifests, quota reservation, retention, and cleanup controls | Shared storage is checked before commitment and cleaned up on failed provisioning |
-| Durable job delivery | PostgreSQL-backed job leasing, heartbeats, retries, attempt records, and worker recovery | Enabled only after tracked PostgreSQL migrations and healthy worker processes |
-| Governed build authorization | Tenant-scoped approval requests, separate owner, operator, approver, and viewer API principals, revocation, and optional worker-side enforcement | Build enforcement is inactive by default and must be proven on PostgreSQL staging before it is enabled |
-| Transactional events | Atomic outbox writes, leased relay projection, authenticated Server-Sent Events (SSE), cursor replay, and snapshots | Events remain tenant-scoped; stale cursors recover through an authenticated snapshot path |
-| Inventory control boundaries | Opaque cursors for repository, revision, workspace, and job inventories plus bounded process-local protection for selected control writes | The rate guard is not distributed and must be complemented by edge or shared-store limits for horizontal scale |
-| Production edge | Docker Compose topology with PostgreSQL, API, worker, relay, migration job, and Caddy HTTPS gateway | The API port remains private; the gateway alone exposes host ports 80 and 443 |
-| Quality and supply-chain controls | CI tests, coverage threshold enforcement, Ruff, mypy, dependency audit, secret scanning, and dependency-change review | A passing check is a gate, not a replacement for production validation |
+OAE currently describes itself as a **v0.6.0 controlled-beta core**.
+
+The labels below are intentional. They prevent architecture diagrams, code presence and production reality from being treated as the same thing.
+
+<p align="center">
+  <img src="./docs/assets/evidence-language.svg" alt="OAE evidence language: implemented, tested, deployed and verified in production" width="100%">
+</p>
+
+| Label | Meaning |
+|---|---|
+| 🟢 **IMPLEMENTED** | The capability exists in the repository |
+| 🔵 **TESTED** | The capability is exercised by an executed test or CI gate |
+| 🟣 **DEPLOYED** | A deployment target or runtime topology is configured |
+| 🟠 **VERIFIED IN PRODUCTION** | Real environment evidence proves the behavior |
+| ⚪ **ENVIRONMENT-DEPENDENT** | Requires infrastructure, credentials or host conditions outside the repository |
+| 🟡 **ROADMAP** | Future work; never presented as shipped capability |
+
+> **Evidence rule:** a green test does not automatically become a production claim. OAE deliberately keeps these labels separate.
+
+---
+
+# 🏗️ Architecture
+
+OAE separates the **product/control boundary**, the **engineering workflow**, and the **durable runtime**.
+
+<p align="center">
+  <img src="./docs/assets/system-map.svg" alt="OAE system architecture map" width="100%">
+</p>
+
+### The engineering loop
+
+```text
+UNDERSTAND
+    ↓
+PLAN
+    ↓
+AUTHORIZE
+    ↓
+EXECUTE
+    ↓
+VERIFY
+    ↓
+RECORD
+    ↓
+RECOVER / CONTINUE
+```
+
+The important architectural decision is the **boundary between intent and authority**.
+
+A user can express intent without automatically receiving unrestricted execution power. A worker can process durable jobs without becoming the source of authorization. A passing test can provide evidence without pretending to be production telemetry.
+
+---
+
+# 🧩 What is available today
+
+| Capability | Status | What it provides | Boundary |
+|---|:---:|---|---|
+| **Beta workspace UI** | 🟢 🧪 | Workspace creation/API-key sign-in, public repository analysis, mission history and expandable evidence | Guided workflow is intentionally read-oriented |
+| **Tenant control plane** | 🟢 🧪 | FastAPI service, tenant creation, hashed API keys and tenant-scoped records | Cross-tenant retrieval is rejected |
+| **Principal keys** | 🟢 🧪 | Owner, operator, approver and viewer roles with revocation | Server-side authorization is authoritative |
+| **Repository foundations** | 🟢 🧪 | Repository registration and immutable revision pinning | Raw credentials are not persisted; external credential references are used |
+| **Workspace lifecycle** | 🟢 🧪 | Persistent manifests, quotas, retention and cleanup controls | Provisioning failures trigger cleanup paths |
+| **Durable jobs** | 🟢 🧪 | PostgreSQL-backed leasing, heartbeats, retries, attempts and recovery | Requires PostgreSQL migrations and healthy worker processes |
+| **Governed build authorization** | 🟢 🧪 | Tenant-scoped requests, separate approval authority, expiry and revocation | Enforcement is opt-in and requires governed PostgreSQL runtime |
+| **Transactional events** | 🟢 🧪 | Atomic outbox writes, relay leasing, authenticated SSE, replay cursors and snapshots | Event access remains tenant-scoped |
+| **Database-backed rate limiting** | 🟢 🧪 | Shared control-plane buckets backed by the database | Edge/WAF controls are still recommended for internet-scale abuse resistance |
+| **Production topology** | 🟣 | PostgreSQL + API + worker + relay + migration job + Caddy | Host validation is a separate production evidence layer |
+| **Supply-chain controls** | 🟢 🧪 | Locked dependency audit, secret scanning, static checks and regression gates | CI is evidence, not a substitute for operational review |
 
 ### Deliberate beta limits
 
-OAE does **not** present itself as an unrestricted remote shell or an automatic code-publishing system. The public beta is intentionally constrained to read-oriented engineering workflows while the stronger isolation, authorization, verification, and recovery guarantees are matured. Do not treat future-looking material in the roadmap as a shipped capability.
+OAE **does not** present itself as:
 
-Build execution has an additional guard path: it can require an active tenant-scoped worker authorization from a principal distinct from the requester. That guard is deliberately disabled by default until the PostgreSQL migrations, principal-key lifecycle, approval flow, revocation flow, and durable worker claims have been exercised through the staging procedure.
+- an unrestricted remote shell;
+- a fully autonomous software engineer;
+- an automatic code-publishing pipeline;
+- a replacement for organizational change management;
+- proof that a deployment is production-ready merely because CI is green.
 
-## Architecture
+The stronger execution path is deliberately gated. When worker authorization enforcement is enabled, build execution requires an active, tenant-matching authorization and a durable worker capable of confirming that authority.
 
-OAE separates the product boundary from the engineering control loop and from the runtime delivery plane. This protects the core from becoming a flat collection of HTTP handlers or agent tools.
+---
 
-```mermaid
-flowchart LR
-    Developer[Developer / Team] --> Control[OAE Control Plane]
-    Control --> Auth[Tenant authentication]
-    Control --> Repo[Repositories + revision pins]
-    Control --> Jobs[Jobs + workspaces]
-    Control --> Events[Authenticated SSE]
+# 🔐 Security posture
 
-    Repo --> Engineering[Engineering control loop]
-    Jobs --> Engineering
-    Engineering --> Understand[Understand]
-    Understand --> Plan[Plan]
-    Plan --> Authorize[Authorize]
-    Authorize --> Execute[Execute]
-    Execute --> Verify[Verify]
-    Verify --> Record[Record + recover]
+Security is treated as an architectural boundary.
 
-    Jobs --> DB[(PostgreSQL)]
-    Events --> DB
-    DB --> Worker[Durable worker]
-    DB --> Relay[Outbox relay]
-    Relay --> Events
-```
+<p align="center">
+  <img src="./docs/assets/security-boundary.svg" alt="OAE security boundary architecture" width="100%">
+</p>
 
-In production, the runtime topology is intentionally explicit:
+### Security controls
+
+| Control | OAE position |
+|---|---|
+| **Tenant isolation** | Owned records are tenant-scoped; authenticated retrieval and database RLS reinforce the boundary |
+| **PostgreSQL RLS** | Tenant tables use row-level security with forced RLS policies; API sessions bind queries to tenant context |
+| **API keys** | Returned once and stored as hashes rather than plaintext |
+| **Principal roles** | Owner, operator, approver and viewer roles are enforced server-side |
+| **Approval separation** | Requester and approver responsibilities are separated; self-approval is rejected |
+| **Build execution** | Governed worker authorization can fail closed when enforcement is enabled |
+| **Worker isolation** | Durable worker and relay use a dedicated worker database configuration |
+| **Browser credentials** | Persistent `localStorage`/`sessionStorage` API-key storage is intentionally avoided |
+| **Repository credentials** | OAE stores external credential references rather than raw repository credentials |
+| **Production CORS/hosts** | Production configuration rejects wildcard CORS/host exposure |
+| **Security headers** | CSP, HSTS, Permissions-Policy and strict referrer policy are configured at the application/edge boundary |
+| **Error handling** | Job failure results and runtime logs avoid persisting raw exception text |
+| **Secret scanning** | Gitleaks scans complete Git history in CI |
+| **Dependency audit** | Locked dependencies are audited with `pip-audit` |
+| **API authorization** | Mutating routes require authenticated principals and server-side role checks |
+
+### Tenant isolation model
+
+The PostgreSQL security layer uses tenant-aware sessions:
 
 ```text
-Internet
-   │  HTTPS :443 / HTTP :80
-   ▼
-Caddy gateway ───────► FastAPI API ───────► PostgreSQL
-                              │                  │
-                              ▼                  ▼
-                        Shared workspace    Durable worker
-                                              Outbox relay
+authenticated principal
+        │
+        ▼
+  tenant_id resolved
+        │
+        ▼
+db(tenant_id)
+        │
+        ▼
+SET LOCAL oae.tenant_id
+        │
+        ▼
+PostgreSQL RLS policy
+        │
+        ▼
+only rows belonging to that tenant
 ```
 
-The API, worker, and relay share one durable authority—PostgreSQL—while the gateway terminates HTTPS and keeps SSE proxy buffering disabled. The full runtime and failure-handling procedure is maintained in the [durable event-delivery runbook](docs/REALTIME_EVENT_DELIVERY_RUNBOOK.md).
+The repository deliberately keeps `api_keys` and `tenants` outside the normal tenant RLS policy because authentication/bootstrap operations must be able to resolve identity before the tenant context exists.
 
-## Quick start
+The durable worker and outbox relay are isolated behind a dedicated worker database configuration so cross-tenant queue processing does not require weakening the API's tenant boundary.
 
-### Prerequisites
+> **Deployment note:** PostgreSQL role attributes such as `BYPASSRLS` are deployment responsibilities. The repository configures the separation contract; the actual production login roles must still be provisioned and verified on the target host.
 
-Local development requires **Python 3.11+** and Git. SQLite supports the basic local-development path. PostgreSQL 16 is required for the durable worker, outbox relay, migration, and live-event capabilities.
+---
 
-### Install
+# ⚙️ Durable execution
+
+Durable execution is deliberately **opt-in**.
+
+It requires:
+
+- PostgreSQL;
+- tracked migrations;
+- a healthy durable worker;
+- a healthy outbox relay;
+- the correct worker database configuration;
+- explicit feature-flag activation;
+- production/staging verification before consequential execution is enabled.
+
+### Job lifecycle
+
+```text
+CREATE
+  │
+  ▼
+QUEUED ──► LEASED ──► RUNNING ──► SUCCEEDED
+              │             │
+              │             └────► FAILED
+              │
+              └────────────► RETRY / RECOVERY
+```
+
+The worker records attempts and heartbeats rather than relying on process memory as the source of truth.
+
+### Outbox + SSE delivery
+
+```text
+application transaction
+        │
+        ├── domain change
+        ├── durable job
+        └── outbox event
+                │
+                ▼
+          relay lease
+                │
+                ▼
+       replayable event log
+                │
+                ▼
+       authenticated SSE
+                │
+        ┌───────┴────────┐
+        ▼                ▼
+     cursor          snapshot
+     replay          recovery
+```
+
+This means an event is not considered durable merely because an in-process function emitted it.
+
+See:
+
+- [Realtime event-delivery runbook](docs/REALTIME_EVENT_DELIVERY_RUNBOOK.md)
+- [System architecture](docs/architecture/SYSTEM_ARCHITECTURE.md)
+- [Engineering ledger](docs/ENGINEERING_LEDGER.md)
+
+---
+
+# 🛡️ Authorization model
+
+OAE uses a principal model instead of a single undifferentiated API key.
+
+| Principal | Intended authority |
+|---|---|
+| 👑 **Owner** | Tenant administration and high-trust control operations |
+| 🛠️ **Operator** | Operational actions within granted server-side boundaries |
+| ✅ **Approver** | Approval authority for governed execution |
+| 👁️ **Viewer** | Read-only access |
+
+### Governed build authorization
+
+The intended execution path is:
+
+```text
+Requester
+   │
+   ▼
+Authorization request
+   │
+   ├── tenant match
+   ├── operation match
+   ├── requester role
+   └── expiry
+   │
+   ▼
+Independent approver
+   │
+   ▼
+Approved authorization
+   │
+   ▼
+Durable worker claim
+   │
+   ▼
+Execution
+```
+
+An authorization can be **pending → approved/rejected → revoked**, with expiry checked at execution time.
+
+This is a focused execution control, not a replacement for an organization's full identity, policy, compliance or change-management system.
+
+---
+
+# 🚀 Quick start
+
+## Prerequisites
+
+- **Python 3.11+**
+- Git
+- SQLite for the basic local-development path
+- **PostgreSQL 16** for durable jobs, outbox relay, migrations and live-event capabilities
+
+## Install
 
 ```bash
 git clone https://github.com/Olori24/oae-core.git
@@ -155,39 +328,27 @@ python -m venv .venv
 
 pip install -r requirements.lock.txt
 pip install --no-deps -e .
+
 cp .env.example .env
 ```
 
-The committed lockfile is the dependency graph used by local development, CI, and container builds. Keep local secrets in `.env`; never commit populated environment files.
+Keep populated environment files local. Never commit secrets.
 
-### Run the local API
+## Start the API
 
 ```bash
 uvicorn oae.api.app:app --reload
 ```
 
-The local service then exposes the following useful entry points:
+Useful local endpoints:
 
 | URL | Purpose |
 |---|---|
-| `http://127.0.0.1:8000/health` | Service and database health check |
-| `http://127.0.0.1:8000/docs` | Interactive OpenAPI reference |
-| `http://127.0.0.1:8000/redoc` | Alternative OpenAPI rendering |
+| `/health` | API/database health |
+| `/docs` | Interactive OpenAPI reference |
+| `/redoc` | Alternative OpenAPI rendering |
 
-### Confirm the local quality gate
-
-```bash
-ruff check src tests scripts
-mypy src
-pytest --cov=oae --cov-report=term-missing --cov-report=json:coverage.json
-python scripts/check_coverage_threshold.py --coverage-file coverage.json --threshold 70
-```
-
-The repository’s tests are the executable contract. Run focused tests while iterating, then run the full gate before proposing a change for review.
-
-## API orientation
-
-The API uses a tenant API key presented as a Bearer token. Create a tenant once, store the returned key securely, and use that same key for tenant-scoped operations.
+## Create a tenant
 
 ```bash
 export OAE_URL='http://127.0.0.1:8000'
@@ -197,7 +358,7 @@ curl -sS -X POST "$OAE_URL/v1/tenants" \
   -d '{"name":"example-engineering-team"}'
 ```
 
-The response contains the one-time API key. Treat it as a password: OAE stores a hash, not the plaintext value.
+The returned API key is shown once. Treat it like a password.
 
 ```bash
 export OAE_API_KEY='oae_...'
@@ -206,184 +367,271 @@ curl -sS "$OAE_URL/v1/me" \
   -H "Authorization: Bearer $OAE_API_KEY"
 ```
 
-The first key is an `owner` principal. An owner can issue a separate `operator`, `approver`, or `viewer` key through `POST /v1/principal-keys`. Store every returned key once in an approved secret store. Requester and approver responsibilities are deliberately separate; an authorization requester cannot approve the same request.
+An owner can then issue separate principal keys through `POST /v1/principal-keys`.
+
+---
+
+# 🧭 API orientation
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /health` | Checks API and database availability |
-| `POST /v1/tenants` | Creates a tenant and returns a one-time API key |
-| `GET /v1/me` | Returns the authenticated tenant identity |
-| `POST /v1/principal-keys` | An owner issues a one-time key for an operator, approver, or viewer principal |
-| `POST /v1/principal-keys/{key_id}/revoke` | An owner revokes an issued principal key other than the active owner key |
-| `POST /v1/worker-authorizations` | An owner or operator requests a governed build authorization in durable PostgreSQL mode |
-| `POST /v1/worker-authorizations/{authorization_id}/approve` | A distinct owner or approver principal approves a pending request |
-| `POST /v1/worker-authorizations/{authorization_id}/revoke` | An owner or approver revokes an active authorization |
-| `POST /v1/repositories` | Registers a tenant-scoped repository connection |
-| `POST /v1/repositories/{repository_id}/revisions` | Pins an observed repository revision |
-| `POST /v1/jobs` | Queues a supported engineering operation |
-| `GET /v1/jobs` / `GET /v1/jobs/{job_id}` | Lists or retrieves tenant-scoped job state |
-| `GET /v1/events/snapshot` | Rebuilds the current authenticated event state |
-| `GET /v1/events` | Opens a tenant-scoped SSE replay stream |
-| `GET /v1/jobs/{job_id}/events` | Opens an SSE stream for one authorized job |
-| `GET /v1/workspaces/{workspace_id}/events` | Opens an SSE stream for one authorized workspace |
+| `GET /health` | Service and database health |
+| `POST /v1/tenants` | Create tenant + one-time owner API key |
+| `GET /v1/me` | Inspect authenticated tenant identity |
+| `POST /v1/principal-keys` | Issue operator/approver/viewer keys |
+| `POST /v1/principal-keys/{key_id}/revoke` | Revoke an issued principal key |
+| `POST /v1/worker-authorizations` | Request governed build authority |
+| `POST /v1/worker-authorizations/{id}/approve` | Approve a pending authorization |
+| `POST /v1/worker-authorizations/{id}/revoke` | Revoke active authorization |
+| `POST /v1/repositories` | Register a tenant-scoped repository |
+| `POST /v1/repositories/{id}/revisions` | Pin an observed revision |
+| `POST /v1/jobs` | Queue a supported engineering operation |
+| `GET /v1/jobs` | List tenant-scoped jobs |
+| `GET /v1/jobs/{id}` | Retrieve one authorized job |
+| `GET /v1/events/snapshot` | Recover authenticated event state |
+| `GET /v1/events` | Open tenant-scoped SSE replay |
+| `GET /v1/jobs/{id}/events` | Stream one authorized job |
+| `GET /v1/workspaces/{id}/events` | Stream one authorized workspace |
 
-Use the interactive [`/docs`](http://127.0.0.1:8000/docs) reference as the authoritative request and response contract for the running version.
+For exact request/response schemas, the running OpenAPI document at `/docs` is authoritative.
 
-## Authorization and API control boundaries
+---
 
-Authorization governance is opt-in and requires PostgreSQL with durable jobs. When `WORKER_AUTHORIZATION_ENFORCEMENT_ENABLED=true`, a build request must carry an active tenant-matching authorization and a durable worker must confirm the same active record before it can claim work. An expired, revoked, wrong-operation, cross-tenant, or self-approved authorization is not valid execution authority.
+# 🧪 Quality gates
 
-The authorization state machine is deliberately narrow: `pending` requests can become `approved` or `rejected`; active approvals can become `revoked`; expiry is checked at execution time. Each state transition emits a tenant-scoped durable event. This is an execution guard, not a substitute for an organization’s complete identity, policy, or change-management system.
+OAE treats the automated suite as an engineering contract.
 
-List routes support `limit` and an opaque `after` cursor. When another page exists, OAE returns `X-Next-Cursor`. Selected control writes use a small process-local limit and return `429` with `Retry-After: 60` when the local budget is exhausted. The guard reduces accidental or single-process abuse but is not safe to treat as a horizontally distributed rate-limit service.
-
-## Durable jobs and live events
-
-The durable delivery system is intentionally opt-in. It must run against PostgreSQL after the tracked migrations have completed and after at least one worker plus one relay are healthy. Turning the feature flags on against SQLite, or without the supporting processes, is an invalid deployment.
-
-```text
-application transaction
-        │
-        ├── durable job / domain change
-        └── outbox event written atomically
-                    │
-                    ▼
-             outbox relay lease
-                    │
-                    ▼
-       authenticated replay log + SSE
-                    │
-                    ▼
-      browser cursor, deduplication, recovery
-```
-
-This arrangement avoids declaring an event delivered merely because it was emitted in process. The relay can recover leased work, and clients can replay from a cursor or recover through a snapshot when a cursor expires. Read the [event-delivery runbook](docs/REALTIME_EVENT_DELIVERY_RUNBOOK.md) before activating these flags on any shared environment.
-
-## Production deployment
-
-The production stack is defined by [`docker-compose.production.yml`](docker-compose.production.yml). It starts PostgreSQL, API, worker, relay, and Caddy gateway; the migration service runs as a one-shot tool job. Copy the non-secret template and populate it only through the host or secret-management environment:
+Run the baseline checks locally:
 
 ```bash
-cp .env.production.example .env.production
-chmod 600 .env.production
-# Set the real domain, generated secrets, exact CORS origin, and PostgreSQL password.
+ruff check src tests scripts
+mypy src
+
+pytest \
+  --cov=oae \
+  --cov-report=term-missing \
+  --cov-report=json:coverage.json
+
+python scripts/check_coverage_threshold.py \
+  --coverage-file coverage.json \
+  --threshold 70
+
+git diff --check
 ```
 
-The required activation order is deliberate:
+### CI control matrix
+
+| Gate | Why it exists |
+|---|---|
+| 🧪 **Pytest + coverage** | Behavioral regression protection |
+| 🐘 **PostgreSQL integration** | Exercises migrations, durability and tenant event isolation against a real database |
+| 🧹 **Ruff** | Static style/correctness checks |
+| 🔬 **mypy** | Type-oriented source checks |
+| 📦 **Locked dependency audit** | Detects known vulnerable dependencies |
+| 🔎 **Gitleaks** | Detects accidentally committed secrets across repository history |
+| 🛡️ **Deployment configuration tests** | Protects ports, environment contracts, gateway and SSE behavior |
+
+A green CI run means the tested checks passed. It does **not** automatically certify an external deployment.
+
+---
+
+# 🐳 Production topology
+
+The production topology is intentionally explicit:
+
+```text
+                         INTERNET
+                            │
+                      HTTPS :443
+                            │
+                            ▼
+                    ┌──────────────┐
+                    │ Caddy Gateway│
+                    └──────┬───────┘
+                           │
+                    ┌──────▼───────┐
+                    │  FastAPI API │
+                    └──────┬───────┘
+                           │
+                  ┌────────▼─────────┐
+                  │   PostgreSQL     │
+                  │ RLS + durable DB │
+                  └────┬────────┬────┘
+                       │        │
+                 ┌─────▼───┐ ┌──▼─────────┐
+                 │ Worker  │ │ Outbox Relay│
+                 └─────────┘ └─────────────┘
+```
+
+The API, worker, relay and database remain private to the Compose network. Caddy is the public edge.
+
+The repository provides:
+
+- `docker-compose.production.yml`
+- `.env.production.example`
+- migration service
+- Caddy HTTPS gateway
+- staging TLS dry-run procedure
+- production preflight tooling
+- governed execution validation procedure
+
+### Activation order
 
 ```bash
 docker compose -f docker-compose.production.yml --env-file .env.production build
-docker compose -f docker-compose.production.yml --env-file .env.production up -d db
-docker compose -f docker-compose.production.yml --env-file .env.production run --rm migrate
-docker compose -f docker-compose.production.yml --env-file .env.production up -d api worker relay gateway
-docker compose -f docker-compose.production.yml --env-file .env.production ps
+
+docker compose -f docker-compose.production.yml \
+  --env-file .env.production up -d db
+
+docker compose -f docker-compose.production.yml \
+  --env-file .env.production run --rm migrate
+
+docker compose -f docker-compose.production.yml \
+  --env-file .env.production up -d api worker relay gateway
+
+docker compose -f docker-compose.production.yml \
+  --env-file .env.production ps
 ```
 
-Before enabling production traffic, verify database health, worker and relay logs, HTTPS reachability, and one low-risk end-to-end job. The API container intentionally has no public `8000:8000` host binding; Caddy is the only public edge and uses unbuffered forwarding for SSE. The authoritative procedure, rollback controls, and feature-flag preconditions are in the [production runbook](docs/REALTIME_EVENT_DELIVERY_RUNBOOK.md).
+Do not enable durable production execution merely because containers start. Verify database health, worker/relay health, HTTPS, event delivery and a controlled end-to-end operation on the target environment.
 
-Before enabling governed build execution, follow [Phase 2 real-host validation](docs/REAL_HOST_PHASE_2_VALIDATION.md). It covers applying migrations `0005` and `0006`, issuing separate principals, proving no self-approval, validating revocation, exercising durable worker enforcement, walking opaque cursors, and confirming the intentionally local rate-limit response. Do not enable the enforcement flag based on local tests alone.
+---
 
-Before the host operator runs Docker Compose, use the [environment placeholder preflight](docs/ENVIRONMENT_PLACEHOLDER_PREFLIGHT.md). It checks every declared variable and required deployment key without printing values, then returns a machine-readable PASS or FAIL result suitable for the protected staging-evidence directory.
+# 🗄️ Database and migration model
 
-For the production-only domain and secret values, use the host-side [production secret-injection utility](docs/PRODUCTION_SECRET_INJECTION.md). It reads a protected, non-versioned source file, writes an atomic mode-0600 target, and emits names and readiness only. It does not generate secrets or replace the required host-mode checks.
+The PostgreSQL migration history is part of the runtime contract.
 
-The repository includes two host-side aids for that procedure. On the isolated staging host, run the preflight first, then collect evidence only after the governed validation has completed. Both tools report configuration names and redacted output only; they must never be pointed at a local development host as proof of a real deployment.
+Recent security/data-boundary migrations include:
 
-```bash
-python scripts/staging_preflight.py \
-  --env-file .env.production \
-  --stage bootstrap \
-  --expected-revision 0cd01e638cfe2355a1d3d3f22490fe888ae65276 \
-  --report /var/lib/oae-evidence/preflight.json
-
-# Run only after the real-host validation, using a protected evidence directory.
-python scripts/collect_staging_telemetry.py \
-  --env-file .env.production \
-  --output-dir /var/lib/oae-evidence/governed-run-001 \
-  --trace-id governed-run-001
-```
-
-For an honest sandbox rehearsal, add `--execution-context sandbox` to the preflight. Host-only checks then remain `UNKNOWN`, not passed. The [staging evidence template](docs/STAGING_TELEMETRY_EVIDENCE_TEMPLATE.md) defines the required PASS, FAIL, and UNKNOWN record for a real run.
-
-### TLS staging dry run
-
-Before a real domain is placed behind the production issuer, use the isolated [Caddy TLS dry-run procedure](docs/CADDY_TLS_DRY_RUN.md). It uses Let’s Encrypt’s staging CA, a disposable hostname, and the `Caddyfile.staging` Compose override so configuration experiments do not consume production issuance limits.
-
-## Security posture
-
-Security is an architectural boundary, not a feature tier. OAE’s controls are designed to keep authority explicit and tenant ownership enforceable.
-
-| Control | OAE position |
+| Migration | Purpose |
 |---|---|
-| Tenant isolation | Every owned record is scoped to a tenant; authenticated retrieval checks ownership |
-| API keys | Returned once, stored as hashes, and sent with `Authorization: Bearer` |
-| Principal roles | Owners issue separate operator, approver, and viewer keys; an authorization requester cannot approve the same request |
-| Governed build work | Optional PostgreSQL enforcement checks active, tenant-matching authorization before build execution and durable worker claim |
-| Repository credentials | Store an external secret reference only; never persist raw credentials in OAE tables |
-| Production exposure | API, worker, relay, and database remain private to the Compose network; Caddy exposes 80/443 |
-| Real-time delivery | SSE is authenticated, cursor-based, replayable, and protected from proxy buffering |
-| Supply-chain checks | Dependency audit, secret scanning, and PR dependency review supplement the CI gate |
-| Vulnerability reporting | Report suspected vulnerabilities privately; do not open a public issue |
+| `0007_tenant_row_security.sql` | Enables and forces tenant RLS across tenant-owned tables |
+| `0008_job_result_payload.sql` | Adds the persisted durable job result payload |
 
-See [SECURITY.md](SECURITY.md) for automated security checks, reporting guidance, and response expectations. See the [security architecture](docs/architecture/SECURITY_ARCHITECTURE.md) for the broader system model.
+The API binds tenant-scoped database sessions to the authenticated tenant context.
 
-## Quality gates
+The durable worker and outbox relay use a separate worker database configuration so operational cross-tenant queue processing does not depend on granting the API broad bypass privileges.
 
-Every production-facing change should include focused regression coverage and pass the repository’s baseline checks.
+---
 
-| Check | Purpose |
+# 📚 Documentation map
+
+The README is the visual front door. The repository documentation contains the operational depth.
+
+| Document | Best for |
 |---|---|
-| `pytest` with coverage threshold | Behavioural safety net and minimum coverage floor |
-| PostgreSQL integration tests in CI | Exercises migrations, outbox relay ordering, and tenant event isolation against a real database service |
-| Ruff | Fast static style and correctness checks |
-| mypy | Type-oriented checks across source modules |
-| Dependency audit | Identifies known vulnerable locked dependencies |
-| Secret scan | Detects accidentally committed sensitive material |
-| Deployment configuration tests | Protects gateway ports, production environment contract, and SSE proxy rules |
+| [Developer beta guide](docs/BETA_DEVELOPER_GUIDE.md) | First-run developer workflow |
+| [UX revival plan](docs/UX_REVIVAL_PLAN.md) | Product/interface decisions and Jakob's Law |
+| [System architecture](docs/architecture/SYSTEM_ARCHITECTURE.md) | Layered architecture and boundaries |
+| [Security architecture](docs/architecture/SECURITY_ARCHITECTURE.md) | Security and governance model |
+| [Engineering ledger](docs/ENGINEERING_LEDGER.md) | Evidence and durable engineering records |
+| [Realtime event-delivery runbook](docs/REALTIME_EVENT_DELIVERY_RUNBOOK.md) | Worker, relay and SSE operations |
+| [TLS dry-run](docs/CADDY_TLS_DRY_RUN.md) | Safe staging certificate validation |
+| [Production handoff](docs/PRODUCTION_HANDOFF.md) | Host activation and browser-live verification |
+| [Real-host Phase 2 validation](docs/REAL_HOST_PHASE_2_VALIDATION.md) | Governed authorization and staging proof |
+| [Environment placeholder preflight](docs/ENVIRONMENT_PLACEHOLDER_PREFLIGHT.md) | Deployment configuration readiness |
+| [Production secret injection](docs/PRODUCTION_SECRET_INJECTION.md) | Protected production secret handling |
+| [Staging evidence template](docs/STAGING_TELEMETRY_EVIDENCE_TEMPLATE.md) | Traceable real-host evidence |
+| [Open-weight model gateway](docs/OPEN_WEIGHT_MODEL_GATEWAY.md) | Private model endpoint evaluation |
+| [Developer collaboration](docs/DEVELOPER_COLLABORATION.md) | Bounded contribution workflow |
+| [Architecture decisions](docs/adr/README.md) | Technical decisions and rationale |
+| [Repository standard](docs/governance/repository-standard.md) | Repository engineering expectations |
+| [Project charter](docs/OAE_PROJECT_CHARTER.md) | Product thesis and long-term direction |
+| [Security policy](SECURITY.md) | Security checks and vulnerability reporting |
 
-Run `git diff --check` before opening a pull request. A green automated suite is necessary evidence; it is not a substitute for a targeted API, browser, and production smoke test when a change affects a user-facing or operational flow.
+---
 
-## Documentation
+# 🧠 Engineering doctrine
 
-The README is the entry point. The documents below provide the next level of detail without duplicating implementation claims.
+OAE is being built around a few rules that are more important than any individual feature.
 
-| Document | Use it when you need to… |
-|---|---|
-| [Developer beta guide](docs/BETA_DEVELOPER_GUIDE.md) | Follow the intended first-run and feedback workflow |
-| [UX revival plan](docs/UX_REVIVAL_PLAN.md) | Understand the Jakob's Law product and interface decisions |
-| [System architecture](docs/architecture/SYSTEM_ARCHITECTURE.md) | Understand the layered engineering-system design |
-| [Security architecture](docs/architecture/SECURITY_ARCHITECTURE.md) | Study the security and governance model |
-| [Engineering ledger](docs/ENGINEERING_LEDGER.md) | Understand durable engineering evidence and recordkeeping |
-| [Event-delivery runbook](docs/REALTIME_EVENT_DELIVERY_RUNBOOK.md) | Activate or operate workers, relay, and SSE delivery |
-| [TLS dry-run procedure](docs/CADDY_TLS_DRY_RUN.md) | Validate Caddy and staging ACME before production certificate issuance |
-| [Production handoff](docs/PRODUCTION_HANDOFF.md) | Move from a staging TLS proof to a protected host activation and browser-live verification |
-| [Engineering change record, August 2026](docs/ENGINEERING_CHANGE_RECORD_2026_08.md) | Review the completed hardening work and its evidence boundary |
-| [Production-platform baseline](docs/PRODUCTION_PLATFORM_MANDATE_BASELINE.md) | Distinguish verified code controls from unmeasured and real-host-only claims |
-| [Phase 2 real-host validation](docs/REAL_HOST_PHASE_2_VALIDATION.md) | Prove principal, approval, revocation, enforcement, pagination, and rate-limit behavior on staging |
-| [Staging validation recommendation](docs/GOVERNED_EXECUTION_STAGING_RECOMMENDATION.md) | Select the minimum host posture and activation hold points for governed execution |
-| [Staging evidence template](docs/STAGING_TELEMETRY_EVIDENCE_TEMPLATE.md) | Record redacted, trace-linked real-host control evidence |
-| [Governed open-weight model gateway](docs/OPEN_WEIGHT_MODEL_GATEWAY.md) | Evaluate a private, allowlisted model endpoint without granting it execution authority |
-| [Developer collaboration guide](docs/DEVELOPER_COLLABORATION.md) | Contribute through bounded changes, evidence-led reviews, and tenant-safe issue workflows |
-| [Architecture decisions](docs/adr/README.md) | Review durable technical decisions and their rationale |
-| [Repository standards](docs/governance/repository-standard.md) | Follow repository-level engineering expectations |
-| [Project charter](docs/OAE_PROJECT_CHARTER.md) | Read the product thesis and long-term direction |
+### 01 — Context before mutation
 
-## Contributing
+Understand the repository and operational context before changing it.
 
-Contributions should preserve OAE’s boundaries: repository understanding before mutation, verification before completion, tenant isolation, recoverability, and auditable operations. Start with [CONTRIBUTING.md](CONTRIBUTING.md), then make focused changes with accompanying tests and documentation.
+### 02 — Authority before execution
 
-Before requesting review, run the relevant tests, the full quality gate for wider changes, and `git diff --check`. Do not weaken security controls or tenant checks merely to simplify a demo or fixture. For production-facing work, ask for at least one reviewer and make the operational impact legible in the pull request.
+The ability to request work is not automatically the authority to perform every consequential operation.
 
-## License
+### 03 — Verification before completion
 
-OAE Core is released under the [MIT License](LICENSE).
+A generated artifact is not a completed engineering task until the relevant verification evidence exists.
+
+### 04 — Durable state over hidden process memory
+
+If a worker crashes, important operational state should remain recoverable.
+
+### 05 — Tenant boundaries are server-side boundaries
+
+Frontend visibility is never treated as authorization.
+
+### 06 — Secrets are not application data
+
+Credentials belong in controlled secret handling, not ordinary database records or browser persistence.
+
+### 07 — Production is an evidence claim
+
+A deployment target, a passing test and a live production measurement are three different things.
+
+---
+
+# 🗺️ Roadmap
+
+The roadmap intentionally stays separate from shipped capability.
+
+| Direction | Status |
+|---|:---:|
+| Stronger durable engineering orchestration | 🟡 **ROADMAP** |
+| Broader governed repository mutation | 🟡 **ROADMAP** |
+| Automated branch/commit/pull-request workflows | 🟡 **ROADMAP** |
+| Richer verification/evidence pipelines | 🟡 **ROADMAP** |
+| Restart-safe multi-step engineering missions | 🟡 **ROADMAP** |
+| Expanded model/provider routing | 🟡 **ROADMAP** |
+| Production-scale observability and operational measurement | 🟡 **ENVIRONMENT-DEPENDENT** |
+
+The roadmap is deliberately conservative: future capability is not described as if it already exists.
+
+---
+
+# 🤝 Contributing
+
+Contributions should preserve the system's boundaries:
+
+**IMPLEMENT → TEST → FIX → VERIFY → COMMIT → PUSH → REPORT**
+
+Before opening a pull request:
+
+1. Make the change narrowly.
+2. Add or update regression coverage.
+3. Run the relevant focused tests.
+4. Run the broader quality gate when the change crosses subsystem boundaries.
+5. Run `git diff --check`.
+6. Document operational or security impact.
+7. Separate implementation evidence from deployment claims.
+
+Do not weaken tenant checks, authorization controls or security boundaries to make a demo easier.
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+# 📄 License
+
+OAE Core is released under the **Apache License 2.0**. See [LICENSE](LICENSE).
 
 ---
 
 <div align="center">
 
-**OAE · Open Autonomous Engineer**
+## OAE · Open Autonomous Engineer
 
-*Understand the system. Plan the work. Execute with control. Verify the result.*
+**Understand the system. Plan the work. Execute with control. Verify the result.**
+
+*Governed engineering, not unrestricted automation.*
+
+<br>
+
+[![GitHub](https://img.shields.io/badge/GitHub-OAE%20Core-181717?style=for-the-badge&logo=github)](https://github.com/Olori24/oae-core)
+[![Live UI](https://img.shields.io/badge/Preview-oae--core.vercel.app-000000?style=for-the-badge&logo=vercel)](https://oae-core.vercel.app)
 
 </div>
