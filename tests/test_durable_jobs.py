@@ -263,6 +263,7 @@ def test_enabled_durable_dispatch_rejects_sqlite_instead_of_falling_back(monkeyp
     monkeypatch.setattr(database.settings, "database_url", f"sqlite:///{db_path}")
     monkeypatch.setattr(auth.settings, "database_url", f"sqlite:///{db_path}")
     monkeypatch.setattr(routes.settings, "durable_jobs_enabled", True)
+    monkeypatch.setattr(routes.settings, "worker_authorization_enforcement_enabled", True)
     client = TestClient(app)
     tenant = client.post("/v1/tenants", json={"name": "Durable Tenant"})
 
