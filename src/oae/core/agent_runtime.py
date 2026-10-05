@@ -44,7 +44,9 @@ def start_agent_run(
         raise ValueError("plan must contain 1 to 32 steps")
     if not 0 <= max_repairs <= MAX_REPAIRS:
         raise ValueError(f"max_repairs must be between 0 and {MAX_REPAIRS}")
-    return AgentRunState(run_id=run_id, status="running", plan=plan)
+    resolved_plan = dict(plan)
+    resolved_plan["max_repairs"] = max_repairs
+    return AgentRunState(run_id=run_id, status="running", plan=resolved_plan)
 
 
 def record_step_result(
@@ -118,24 +120,23 @@ def record_step_result(
         ),
         None,
     )
-    max_repairs = int(state.plan.get("max_repairs", 2))
-    max_repairs = max(0, min(max_repairs, MAX_REPAIRS))
-    if repair_step is None or state.repair_count >= max_repairs:
+    if repair_step is None or state.repair_count >= int(state.plan.get("max_repairs", 2)):
         return AgentRunState(
             run_id=state.run_id,
             status="failed",
             plan=state.plan,
-            completed_steps=tuple(completed),
+            completed_steps=tuple(completed + ["verify_failed"]),
             failed_step="verify",
             repair_count=state.repair_count,
             evidence=tuple(evidence_items[-MAX_EVIDENCE_ITEMS:]),
         )
 
+    completed.extend(["verify", "verify_failed"])
     return AgentRunState(
         run_id=state.run_id,
         status="running",
         plan=state.plan,
-        completed_steps=tuple(completed + ["verify_failed"]),
+        completed_steps=tuple(completed),
         failed_step="verify",
         repair_count=state.repair_count + 1,
         evidence=tuple(evidence_items[-MAX_EVIDENCE_ITEMS:]),
