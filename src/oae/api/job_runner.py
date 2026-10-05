@@ -30,8 +30,11 @@ class JobRunner:
             payload = json.loads(payload_json)
             result = self._dispatch(operation, payload, job_id)
             status = "completed"
-        except Exception:
-            logger.exception("job_execution_failed job_id=%s operation=%s", job_id, operation)
+        except Exception as exc:
+            logger.error(
+                "job_execution_failed",
+                extra={"job_id": job_id, "operation": operation, "error_type": type(exc).__name__},
+            )
             result = {
                 "schema_version": "1.0",
                 "operation": operation,
