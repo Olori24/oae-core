@@ -121,10 +121,10 @@ class Settings(BaseSettings):
 
     @field_validator("app_env")
     @classmethod
-    def validate_production_security(cls, value):
+    def validate_production_security(cls, value, info):
         if value == "production":
-            cors = os.getenv("CORS_ORIGINS", "").strip()
-            hosts = os.getenv("ALLOWED_HOSTS", "").strip()
+            cors = info.data.get("cors_origins", [])
+            hosts = info.data.get("allowed_hosts", [])
             if not cors or "*" in cors:
                 raise ValueError("Production requires explicit CORS_ORIGINS; wildcard CORS is forbidden.")
             if not hosts or "*" in hosts:
@@ -137,8 +137,6 @@ class Settings(BaseSettings):
         if self.database_url:
             return self.database_url
 
-        # Vercel storage integrations can apply a custom prefix to the
-        # generated DATABASE_URL. For example, OAE_DB_DATABASE_URL.
         for name in (
             "OAE_DB_DATABASE_URL",
             "OAE_DB_URL",
