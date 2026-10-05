@@ -38,6 +38,7 @@ class EngineeringPlanRequest(EngineeringRequest):
 
 
 class AgentDecisionRequest(EngineeringRequest):
+    authorization_id: str = Field(min_length=1, max_length=120)
     plan: dict
     completed_steps: list[str] = Field(default_factory=list, max_length=32)
 
@@ -156,7 +157,12 @@ def select_next_agent_action(
     data: AgentDecisionRequest,
     principal: TenantPrincipal = Depends(require_principal),
 ) -> JobResponse:
-    raise HTTPException(status_code=422, detail="Agent decision endpoint requires a tenant-scoped authorization_id in the plan payload.")
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="agent",
+        payload=data.model_dump(exclude={"authorization_id"}),
+    )
 
 
 @router.post("/workspaces/provision", response_model=JobResponse, status_code=202)
