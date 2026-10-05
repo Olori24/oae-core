@@ -42,6 +42,24 @@ class AgentDecisionRequest(EngineeringRequest):
     plan: dict
     completed_steps: list[str] = Field(default_factory=list, max_length=32)
 
+
+class CiStatusRequest(EngineeringRequest):
+    workspace_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    commit_sha: str = Field(min_length=40, max_length=40)
+
+
+class ProductionReadinessRequest(EngineeringRequest):
+    workspace_id: str = Field(min_length=1, max_length=120)
+    authorization_id: str = Field(min_length=1, max_length=120)
+    quality_verified: bool
+    workspace_verified: bool
+    ci_status: Literal["passed", "pending", "failed"]
+    change_set_synced: bool
+    pull_request_open: bool
+    deployment_verified: bool = False
+    rollback_verified: bool = False
+
 class WorkspaceProvisionRequest(EngineeringRequest):
     repository_id: str = Field(min_length=1, max_length=120)
     revision_id: str = Field(min_length=1, max_length=120)
@@ -161,6 +179,33 @@ def select_next_agent_action(
         principal=principal,
         authorization_id=data.authorization_id,
         stage="agent",
+        payload=data.model_dump(exclude={"authorization_id"}),
+    )
+
+
+
+@router.post("/ci/status", response_model=JobResponse, status_code=202)
+def inspect_ci_status(
+    data: CiStatusRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="ci_status",
+        payload=data.model_dump(exclude={"authorization_id"}),
+    )
+
+
+@router.post("/readiness/gate", response_model=JobResponse, status_code=202)
+def evaluate_readiness_gate(
+    data: ProductionReadinessRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="readiness_gate",
         payload=data.model_dump(exclude={"authorization_id"}),
     )
 
