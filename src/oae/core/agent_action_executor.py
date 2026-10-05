@@ -75,11 +75,22 @@ def execute_agent_action(
             raise AgentActionBlocked("analyze_repository requires repository_url.")
         return invoke("analyze", {"repository_url": repository_url})
 
-    if action in {"mutate_workspace", "repair_failures"}:
+    if action == "repair_failures":
+        failure_evidence = payload.get("failure_evidence")
+        objective = payload.get("objective")
+        if not isinstance(objective, str) or not objective.strip():
+            raise AgentActionBlocked("repair_failures requires the engineering objective.")
+        if not isinstance(failure_evidence, dict) or not failure_evidence:
+            raise AgentActionBlocked("repair_failures requires actual governed failure evidence.")
+        payload["stage"] = "coding_repair"
+        payload["failure_evidence"] = failure_evidence
+        return invoke("build", payload)
+
+    if action == "mutate_workspace":
         mutation = payload.get("mutation")
         if not isinstance(mutation, dict):
             raise AgentActionBlocked(
-                f"{action} requires an explicit governed mutation specification."
+                "mutate_workspace requires an explicit governed mutation specification."
             )
         mutation_type = mutation.get("type")
         if mutation_type not in {"write", "delete", "branch"}:
