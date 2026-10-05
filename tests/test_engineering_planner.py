@@ -16,6 +16,7 @@ def test_plan_has_bounded_reviewed_lifecycle():
     assert actions[-1] == "create_pull_request"
     assert "verify_workspace" in actions
     assert len(plan.steps) <= 16
+    assert any(step.optional for step in plan.steps if step.id == "repair")
 
 
 def test_agent_respects_dependencies():
@@ -32,3 +33,9 @@ def test_agent_rejects_unknown_action():
     except ValueError:
         return
     raise AssertionError("unsafe action was accepted")
+
+
+def test_failed_verification_opens_repair_path():
+    plan = build_engineering_plan(objective="repair an API regression", repository_kind="python").to_dict()
+    decision = next_agent_decision(plan, ["inspect", "baseline", "implement", "diff", "verify", "verify_failed"])
+    assert decision.action == "repair_failures"
