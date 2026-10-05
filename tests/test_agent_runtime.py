@@ -49,3 +49,15 @@ def test_repair_budget_is_fail_closed():
     state = record_step_result(state, step_id="verify", success=False)
     assert state.status == "failed"
     assert state.repair_count == 0
+
+
+def test_reverification_failure_reopens_bounded_repair_path():
+    state = start_agent_run(run_id="r4", plan=_plan())
+    state = record_step_result(state, step_id="inspect", success=True)
+    state = record_step_result(state, step_id="verify", success=False)
+    state = record_step_result(state, step_id="repair", success=True)
+    state = record_step_result(state, step_id="reverify", success=False)
+    assert state.status == "running"
+    assert state.repair_count == 2
+    assert "repair" not in state.completed_steps
+    assert state.next_decision().action == "repair_failures"
