@@ -50,6 +50,7 @@ def build_engineering_plan(
     has_linter: bool = True,
     has_typecheck: bool = False,
     has_build: bool = False,
+    test_runner: str = "none",
     security_required: bool = True,
     action_inputs: dict[str, dict[str, Any]] | None = None,
 ) -> EngineeringPlan:
@@ -57,6 +58,8 @@ def build_engineering_plan(
     if not objective or len(objective) > 4000:
         raise ValueError("objective must contain 1 to 4000 characters")
 
+    if test_runner not in {"none", "vitest", "jest"}:
+        raise ValueError("test_runner must be none, vitest, or jest")
     action_inputs = action_inputs or {}
     if len(action_inputs) > 32 or any(not isinstance(v, dict) for v in action_inputs.values()):
         raise ValueError("action_inputs must contain at most 32 object entries")
@@ -85,8 +88,10 @@ def build_engineering_plan(
         verification.append("pytest")
     if kind in {"node", "typescript", "mixed"} and has_typecheck:
         verification.append("typescript_check")
-    if kind == "node" and has_tests:
+    if test_runner == "vitest":
         verification.append("vitest_check")
+    elif test_runner == "jest":
+        verification.append("jest_check")
 
     steps.append(PlanStep("verify", "verify_workspace", "Run the repository's approved verification set and stop on the first failure.", ("diff",), "medium"))
     steps.extend([
