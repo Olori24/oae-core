@@ -66,7 +66,7 @@ class RealtimeEventStore:
         self._require_available()
         self._validate_cursor(after)
         resolved_limit = self._limit(limit)
-        with db() as conn:
+        with db(tenant_id) as conn:
             oldest = conn.execute(
                 "SELECT MIN(tenant_sequence) FROM realtime_events WHERE tenant_id=?", (tenant_id,)
             ).fetchone()[0]
@@ -96,7 +96,7 @@ class RealtimeEventStore:
         self._require_available()
         self._validate_cursor(after)
         resolved_limit = self._limit(limit)
-        with db() as conn:
+        with db(tenant_id) as conn:
             oldest = conn.execute(
                 """
                 SELECT MIN(aggregate_sequence) FROM realtime_events
@@ -121,7 +121,7 @@ class RealtimeEventStore:
 
     def snapshot(self, tenant_id: str) -> dict[str, Any]:
         self._require_available()
-        with db() as conn:
+        with db(tenant_id) as conn:
             cursor = conn.execute(
                 "SELECT COALESCE(MAX(tenant_sequence),0) FROM realtime_events WHERE tenant_id=?",
                 (tenant_id,),
@@ -157,7 +157,7 @@ class RealtimeEventStore:
         query = AGGREGATE_OWNERSHIP_QUERIES.get(aggregate_type)
         if query is None:
             return False
-        with db() as conn:
+        with db(tenant_id) as conn:
             row = conn.execute(
                 query,
                 (aggregate_id, tenant_id),
