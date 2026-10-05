@@ -193,6 +193,21 @@ def _migrate_sqlite(adapter: _ConnectionAdapter) -> None:
         except sqlite3.OperationalError:
             pass
     adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
+    adapter.execute("""CREATE TABLE IF NOT EXISTS engineering_change_sets (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
+        repository_id TEXT NOT NULL, source_revision_id TEXT NOT NULL,
+        local_commit_sha TEXT NOT NULL, remote_commit_sha TEXT, branch_name TEXT NOT NULL,
+        status TEXT NOT NULL, pr_number INTEGER, pr_url TEXT, title TEXT, summary TEXT,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        UNIQUE (tenant_id, id)
+    )""")
+    adapter.execute("""CREATE TABLE IF NOT EXISTS engineering_change_files (
+        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, change_set_id TEXT NOT NULL,
+        path TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL,
+        UNIQUE (tenant_id, change_set_id, path)
+    )""")
+    adapter.execute("CREATE INDEX IF NOT EXISTS idx_change_sets_tenant_created ON engineering_change_sets(tenant_id, created_at DESC)")
+    adapter.execute("CREATE INDEX IF NOT EXISTS idx_change_files_set ON engineering_change_files(tenant_id, change_set_id)")
 
 
 @contextmanager
@@ -256,6 +271,34 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
         adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_id TEXT")
         adapter.execute("ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS principal_role TEXT")
         adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
+        adapter.execute("""CREATE TABLE IF NOT EXISTS engineering_change_sets (
+            id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
+            repository_id TEXT NOT NULL, source_revision_id TEXT NOT NULL,
+            local_commit_sha TEXT NOT NULL, remote_commit_sha TEXT, branch_name TEXT NOT NULL,
+            status TEXT NOT NULL, pr_number INTEGER, pr_url TEXT, title TEXT, summary TEXT,
+            created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+            UNIQUE (tenant_id, id)
+        )""")
+        adapter.execute("""CREATE TABLE IF NOT EXISTS engineering_change_files (
+            id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, change_set_id TEXT NOT NULL,
+            path TEXT NOT NULL, status TEXT NOT NULL, created_at TEXT NOT NULL,
+            UNIQUE (tenant_id, change_set_id, path)
+        )""")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_change_sets_tenant_created ON engineering_change_sets(tenant_id, created_at DESC)")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_change_files_set ON engineering_change_files(tenant_id, change_set_id)")
+        adapter.execute("""CREATE TABLE IF NOT EXISTS engineering_agent_runs (
+            id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
+            plan JSONB NOT NULL, status TEXT NOT NULL,
+            completed_steps JSONB NOT NULL DEFAULT '[]'::jsonb, failed_step TEXT,
+            repair_count INTEGER NOT NULL DEFAULT 0,
+            evidence JSONB NOT NULL DEFAULT '[]'::jsonb, idempotency_key TEXT,
+            correlation_id TEXT, authorization_id TEXT, active_step_id TEXT,
+            active_token TEXT, lease_until TIMESTAMPTZ,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (tenant_id, idempotency_key)
+        )""")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_created ON engineering_agent_runs(tenant_id, created_at DESC)")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_agent_runs_workspace ON engineering_agent_runs(tenant_id, workspace_id, created_at DESC)")
         adapter.commit()
         _POSTGRES_BOOTSTRAPPED_URLS.add(database_url)
 
