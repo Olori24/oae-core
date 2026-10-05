@@ -1,6 +1,7 @@
 (() => {
   const POLL_INTERVAL = 3500;
   const state = { key: "", jobs: [], tenant: null, pollTimer: null, createKey: "" };
+  const KEY_STORAGE = "oae.api_key";
   const $ = (id) => document.getElementById(id);
 
   function escapeHtml(value) {
@@ -93,6 +94,7 @@
     try {
       state.tenant = await api("/v1/me");
       
+      window.localStorage.setItem(KEY_STORAGE, state.key);
       $("api-key").value = "";
       await enterWorkspace();
     } catch (error) {
@@ -110,6 +112,7 @@
     try {
       
       state.tenant = await api("/v1/me");
+      window.localStorage.setItem(KEY_STORAGE, state.key);
       $("key-dialog").hidden = true;
       state.createKey = "";
       await enterWorkspace();
@@ -138,6 +141,7 @@
     stopPolling();
     
     state.key = "";
+    window.localStorage.removeItem(KEY_STORAGE);
     state.tenant = null;
     state.jobs = [];
     $("api-key").value = "";
@@ -443,7 +447,21 @@
       if (event.target === $("key-dialog")) event.preventDefault();
     });
 
-    // Authentication credentials are intentionally kept only in volatile memory.\n    showWelcome();
+    const savedKey = window.localStorage.getItem(KEY_STORAGE);
+    if (savedKey) {
+      state.key = savedKey;
+      api("/v1/me").then(async (tenant) => {
+        state.tenant = tenant;
+        await enterWorkspace();
+      }).catch(() => {
+        state.key = "";
+        window.localStorage.removeItem(KEY_STORAGE);
+        showWelcome();
+      });
+    } else {
+      showWelcome();
+    }
+  }
 
   document.addEventListener("DOMContentLoaded", boot);
 })();
