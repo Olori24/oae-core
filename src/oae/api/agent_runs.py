@@ -38,19 +38,13 @@ class AgentRunRepository:
         state = start_agent_run(run_id=run_id, plan=plan, max_repairs=max_repairs)
         now = datetime.now(timezone.utc)
         with db(tenant_id) as conn:
-            if idempotency_key:
-                existing = conn.execute(
-                    "SELECT id FROM engineering_agent_runs WHERE tenant_id=? AND idempotency_key=?",
-                    (tenant_id, idempotency_key),
-                ).fetchone()
-                if existing:
-                    return self.get(tenant_id=tenant_id, run_id=str(existing[0]))
             conn.execute(
                 """
                 INSERT INTO engineering_agent_runs(
                     id,tenant_id,workspace_id,plan,status,completed_steps,failed_step,
                     repair_count,evidence,idempotency_key,correlation_id,created_at,updated_at
                 ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT(tenant_id,idempotency_key) DO NOTHING
                 """,
                 (
                     run_id,
@@ -68,6 +62,13 @@ class AgentRunRepository:
                     now,
                 ),
             )
+            if idempotency_key:
+                existing = conn.execute(
+                    "SELECT id FROM engineering_agent_runs WHERE tenant_id=? AND idempotency_key=?",
+                    (tenant_id, idempotency_key),
+                ).fetchone()
+                if existing:
+                    return self.get(tenant_id=tenant_id, run_id=str(existing[0]))
         return self.get(tenant_id=tenant_id, run_id=run_id)
 
     def get(self, *, tenant_id: str, run_id: str) -> AgentRunRecord:
