@@ -12,7 +12,7 @@ def test_build_mission_is_exposed_as_real_saas_operation(tmp_path):
     database.settings.database_url = f"sqlite:///{db_path}"
     auth.settings.database_url = f"sqlite:///{db_path}"
     routes.settings.worker_authorization_enforcement_enabled = True
-database.settings.durable_jobs_enabled = False
+    database.settings.durable_jobs_enabled = False
     auth.settings.durable_jobs_enabled = False
     routes.settings.durable_jobs_enabled = False
 
