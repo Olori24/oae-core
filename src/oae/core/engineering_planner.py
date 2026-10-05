@@ -27,6 +27,7 @@ class EngineeringPlan:
     steps: tuple[PlanStep, ...]
     completion_criteria: tuple[str, ...]
     blocked_reasons: tuple[str, ...] = ()
+    verification_commands: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -36,6 +37,7 @@ class EngineeringPlan:
             "steps": [asdict(step) for step in self.steps],
             "completion_criteria": list(self.completion_criteria),
             "blocked_reasons": list(self.blocked_reasons),
+            "verification_commands": list(self.verification_commands),
         }
 
 
@@ -73,10 +75,8 @@ def build_engineering_plan(
         verification.append("mypy")
     if has_tests:
         verification.append("pytest")
-    if kind in {"node", "typescript", "mixed"} and has_build:
-        verification.append("node_build")
-    if security_required:
-        verification.append("security_review")
+    if kind in {"node", "typescript", "mixed"} and has_typecheck:
+        verification.append("typescript_check")
 
     steps.append(PlanStep("verify", "verify_workspace", "Run the repository's approved verification set and stop on the first failure.", ("diff",), "medium"))
     steps.extend([
@@ -98,4 +98,12 @@ def build_engineering_plan(
         "GitHub synchronization completed without force update",
         "pull request created for human/CI review",
     )
-    return EngineeringPlan("1.0", objective, kind, tuple(steps), criteria, tuple(blocked))
+    return EngineeringPlan(
+        "1.0",
+        objective,
+        kind,
+        tuple(steps),
+        criteria,
+        tuple(blocked),
+        tuple(verification),
+    )
