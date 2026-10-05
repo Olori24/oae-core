@@ -14,6 +14,7 @@ from oae.api.durable_jobs import DurableJobRepository
 from oae.api.rate_limits import RateLimitExceeded, rate_limiter
 from oae.api.schemas import JobResponse
 from oae.api.worker_authorizations import WorkerAuthorizationRepository
+from oae.api.agent_runs import AgentRunRepository
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -225,6 +226,28 @@ def record_agent_run_step(
         stage="agent_run_step",
         payload=data.model_dump(exclude={"authorization_id"}, exclude_none=True),
     )
+
+
+@router.get("/agent/runs/{run_id}")
+def get_agent_run(
+    run_id: str,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> dict:
+    principal = require_requester_principal(principal)
+    record = AgentRunRepository().get(tenant_id=principal.tenant_id, run_id=run_id)
+    decision = record.state.next_decision() if record.state.status == "running" else None
+    return {
+        "id": record.id,
+        "workspace_id": record.workspace_id,
+        "status": record.state.status,
+        "completed_steps": list(record.state.completed_steps),
+        "failed_step": record.state.failed_step,
+        "repair_count": record.state.repair_count,
+        "decision": decision.to_dict() if decision else None,
+        "evidence": list(record.state.evidence),
+        "created_at": record.created_at,
+        "updated_at": record.updated_at,
+    }
 
 
 @router.post("/ci/status", response_model=JobResponse, status_code=202)
