@@ -65,14 +65,19 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'"
+    if settings.app_env == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Cache-Control"] = "no-store" if request.url.path.startswith("/v1/") else "no-cache"
     return response
 
 
 @app.exception_handler(RuntimeError)
 async def runtime_error_handler(request: Request, exc: RuntimeError):
+    error_type = type(exc).__name__
+    logger.error("runtime_error", extra={"path": request.url.path, "error_type": error_type})
     message = str(exc)
-    logger.exception("runtime_error", extra={"path": request.url.path})
     if "database" in message.lower() or "postgres" in message.lower():
         detail = "Database configuration is unavailable. Check the production database integration."
     else:
