@@ -127,6 +127,13 @@ class Settings(BaseSettings):
                 raise ValueError("Production requires explicit CORS_ORIGINS; wildcard CORS is forbidden.")
             if not self.allowed_hosts or "*" in self.allowed_hosts:
                 raise ValueError("Production requires explicit ALLOWED_HOSTS; wildcard hosts are forbidden.")
+            if self.durable_jobs_enabled:
+                worker_url = self.resolved_worker_database_url
+                api_url = self.resolved_database_url
+                if not worker_url:
+                    raise ValueError("Production durable jobs require OAE_WORKER_DATABASE_URL.")
+                if worker_url == api_url:
+                    raise ValueError("Production API and worker database URLs must use separate roles.")
         return self
 
     @property
