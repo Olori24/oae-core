@@ -29,3 +29,45 @@ def test_failed_job_emits_log(monkeypatch, caplog):
 
     assert "job_execution_failed" in caplog.text
     assert "job-123" in caplog.text
+
+
+def test_failed_job_result_is_redacted(monkeypatch):
+    import oae.api.job_runner as module
+
+    updates = []
+
+    class Result:
+        def __init__(self, row=None):
+            self._row = row
+
+        def fetchone(self):
+            return self._row
+
+    class Connection:
+        def execute(self, query, params=()):
+            if query.startswith("SELECT operation,payload"):
+                return Result(("unsupported", "{}"))
+            if query.startswith("UPDATE jobs SET status=?,result=?"):
+                updates.append(params)
+            return Result()
+
+    @contextmanager
+    def fake_db():
+        yield Connection()
+
+    monkeypatch.setattr(module, "db", fake_db)
+    monkeypatch.setattr(
+        JobRunner,
+        "_dispatch",
+        lambda *_args: (_ for _ in ()).throw(
+            RuntimeError("secret=super-secret database=postgresql://user:pass@internal/db")
+        ),
+    )
+
+    JobRunner().run("job-redacted")
+
+    assert updates
+    result = updates[-1][1]
+    assert "super-secret" not in result
+    assert "postgresql://" not in result
+    assert "mission_execution_failed" in result
