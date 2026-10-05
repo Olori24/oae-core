@@ -17,6 +17,7 @@ _ALLOWED = {
     "commit_change_set",
     "sync_github",
     "create_pull_request",
+    "code_objective",
 }
 
 
@@ -57,8 +58,16 @@ def execute_agent_action(
         "commit_change_set": "commit",
         "sync_github": "sync",
         "create_pull_request": "pull_request",
+        "code_objective": "coding_execute",
     }
     stage = mapping[action]
+
+    if action == "code_objective":
+        objective = payload.get("objective")
+        if not isinstance(objective, str) or not objective.strip():
+            raise AgentActionBlocked("code_objective requires objective.")
+        payload["stage"] = "coding_execute"
+        return invoke("build", payload)
 
     if action == "analyze_repository":
         repository_url = payload.get("repository_url")
