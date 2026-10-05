@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from oae.api.app import app
 
 
-def test_build_mission_is_exposed_as_real_saas_operation(tmp_path):
+def test_build_mission_requires_governed_worker_runtime(tmp_path):
     import oae.api.auth as auth
     import oae.api.db as database
     import oae.api.routes as routes
@@ -33,13 +33,7 @@ def test_build_mission_is_exposed_as_real_saas_operation(tmp_path):
         },
     )
 
-    assert response.status_code == 202
-    job_id = response.json()["id"]
-    result = client.get(f"/v1/jobs/{job_id}", headers=headers)
-
-    assert result.status_code == 200
-    body = result.json()
-    assert body["status"] == "completed"
-    assert body["result"]["operation"] == "build"
-    assert body["result"]["evidence"]["mission"]["application"] == "TeamPulse"
-    assert body["result"]["evidence"]["mission"]["verified"] is True
+    assert response.status_code == 503
+    assert response.json()["detail"] == (
+        "Build execution requires PostgreSQL durable jobs while authorization enforcement is enabled."
+    )
