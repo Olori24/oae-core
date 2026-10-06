@@ -44,7 +44,7 @@ def test_failed_verification_opens_bounded_repair_path():
 
 def test_repair_budget_is_fail_closed():
     plan = {**_plan(), "max_repairs": 0}
-    state = start_agent_run(run_id="r3", plan=plan)
+    state = start_agent_run(run_id="r3", plan=plan, max_repairs=0)
     state = record_step_result(state, step_id="inspect", success=True)
     state = record_step_result(state, step_id="verify", success=False)
     assert state.status == "failed"
