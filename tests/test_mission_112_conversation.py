@@ -121,6 +121,11 @@ def test_command_center_attachment_and_send_contract():
     assert "if ((!content && !state.pendingFiles.length)" in script
     assert "new FormData()" in script
     assert ".oae-attachment-chip" in styles
+    assert "/plan" in script
+    assert "/authorization" in script
+    assert "watchAuthorization" in script
+    assert "watchRun" in script
+    assert "oae-run-action" in styles
 
 
 
