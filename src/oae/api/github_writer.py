@@ -5,8 +5,8 @@ import json
 import os
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
-from urllib.request import HTTPRedirectHandler, Request, build_opener
 from typing import Any
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 MAX_RESPONSE = 2_000_000
 
