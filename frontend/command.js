@@ -60,7 +60,7 @@
             <input id="oae-file" type="file" hidden accept=".pdf,.txt,.md,.docx,.png,.jpg,.jpeg,.webp,.mp4,.mp3,.wav,.m4a" multiple />
             <textarea id="oae-input" rows="1" placeholder="Describe an engineering task..."></textarea>
             <button id="oae-mic" class="oae-icon-button" title="Voice input">●</button>
-            <button id="oae-send" class="oae-send" type="button">Send <span>↗</span></button>
+            <button id="oae-send" class="oae-send" type="submit">Send <span>↗</span></button>
           </div>
           <div id="oae-pending-attachments" class="oae-pending-attachments" aria-live="polite"></div><div class="oae-composer-foot"><span>Ask is read-only. Plan prepares. Execute requires an active governed authorization.</span><span id="oae-attachment-status"></span></div>
         </section>
