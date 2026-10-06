@@ -81,11 +81,11 @@ class RepositoryContextAssembler:
         for path in selected:
             relative = path.relative_to(self.root).as_posix()
             try:
-                content = path.read_text(encoding="utf-8")
+                file_content = path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
-            content = content[:MAX_FILE_CHARS]
-            chunk = f"\n===== FILE: {relative} =====\n{content}\n"
+            file_content = file_content[:MAX_FILE_CHARS]
+            chunk = f"\n===== FILE: {relative} =====\n{file_content}\n"
             if total + len(chunk) > MAX_CONTEXT_CHARS:
                 break
             chunks.append(chunk)
