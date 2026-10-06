@@ -5,27 +5,27 @@ from pathlib import Path
 from uuid import uuid4
 from urllib.parse import urlparse
 
+from oae.api.agent_runs import AgentRunRepository
 from oae.api.config import settings
 from oae.api.db import db
+from oae.api.durable_jobs import DurableJobRepository
 from oae.api.github import GitHubPublicAnalyzer
 from oae.api.github_writer import GitHubRepositoryWriter
 from oae.api.mission_results import build_result
 from oae.api.workspace_manager import WorkspaceManager
 from oae.api.workspace_models import WorkspacePurpose
-from oae.core.repository_quality_gate import RepositoryQualityGate
-from oae.core.repository_worktree import RepositoryWorktree
-from oae.core.governed_execution import run_governed_command, supported_commands
-from oae.core.engineering_planner import build_engineering_plan
+from oae.core.agent_action_executor import execute_agent_action
 from oae.core.autonomous_agent import next_agent_decision
 from oae.core.ci_inspector import GitHubCiInspector
-from oae.core.production_readiness import evaluate_production_readiness
-from oae.core.vertical_slice_mission import VerticalSliceMission
-from oae.api.agent_runs import AgentRunRepository
-from oae.api.durable_jobs import DurableJobRepository
-from oae.core.agent_action_executor import execute_agent_action
 from oae.core.coding_brain import CodingBrain
-from oae.core.coding_repair import CodingRepairBrain
 from oae.core.coding_executor import apply_coding_proposal
+from oae.core.coding_repair import CodingRepairBrain
+from oae.core.engineering_planner import build_engineering_plan
+from oae.core.governed_execution import run_governed_command, supported_commands
+from oae.core.production_readiness import evaluate_production_readiness
+from oae.core.repository_quality_gate import RepositoryQualityGate
+from oae.core.repository_worktree import RepositoryWorktree
+from oae.core.vertical_slice_mission import VerticalSliceMission
 from oae.providers.open_weight import OpenWeightModelGateway, open_weight_config_from_settings
 
 logger = logging.getLogger("oae.api.job_runner")
@@ -461,7 +461,7 @@ class JobRunner:
             ).fetchone()
         if not row or row[1] != "ready":
             raise ValueError("Workspace must be ready before coding execution.")
-        root = self._safe_workspace_path(row[0])
+        root = JobRunner._safe_workspace_path(row[0])
         gateway = OpenWeightModelGateway(open_weight_config_from_settings(settings))
         proposal = CodingBrain(gateway, model).propose(
             tenant_id=tenant_id, workspace=root, objective=objective
