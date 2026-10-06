@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     open_weight_model_max_prompt_chars: int = 12_000
     open_weight_model_max_output_tokens: int = 1_024
     open_weight_model_max_response_chars: int = 16_000
+    coding_brain_model: str = ""
 
     @field_validator("app_env", "database_url", "api_key_pepper", mode="before")
     @classmethod
