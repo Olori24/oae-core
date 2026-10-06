@@ -66,8 +66,8 @@ class RepositoryContextAssembler:
         for path in self.root.rglob("*"):
             if not path.is_file():
                 continue
-            relative = path.relative_to(self.root)
-            if any(part in IGNORED_DIRS for part in relative.parts):
+            relative_path = path.relative_to(self.root)
+            if any(part in IGNORED_DIRS for part in relative_path.parts):
                 continue
             if path.stat().st_size > MAX_FILE_CHARS * 4:
                 continue
@@ -79,13 +79,13 @@ class RepositoryContextAssembler:
         total = 0
 
         for path in selected:
-            relative = path.relative_to(self.root).as_posix()
+            relative_name = path.relative_to(self.root).as_posix()
             try:
                 file_content = path.read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
             file_content = file_content[:MAX_FILE_CHARS]
-            chunk = f"\n===== FILE: {relative} =====\n{file_content}\n"
+            chunk = f"\n===== FILE: {relative_name} =====\n{file_content}\n"
             if total + len(chunk) > MAX_CONTEXT_CHARS:
                 break
             chunks.append(chunk)
