@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable
 
-from oae.core.coding_brain import CodingProposal, CodingBrainError
+from oae.core.coding_brain import CodingProposal
 
 
 class CodingExecutionError(ValueError):
