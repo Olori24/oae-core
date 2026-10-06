@@ -54,6 +54,8 @@ def _now() -> str:
 
 
 def _ensure_tables() -> None:
+    if settings.database_backend == "postgres":
+        return
     with db() as conn:
         conn.execute("""CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, title TEXT NOT NULL,
