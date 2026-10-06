@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS conversations (
     id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, title TEXT NOT NULL,
     repository_id TEXT, workspace_id TEXT, mode TEXT NOT NULL CHECK (mode IN ('ask','plan','execute')),
-    created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL,
+    UNIQUE (tenant_id, id)
 );
 
 CREATE TABLE IF NOT EXISTS conversation_messages (
