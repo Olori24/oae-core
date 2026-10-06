@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from oae.api.config import settings
+from oae.api.conversation_routes import router as conversation_router
 from oae.api.engineering_routes import router as engineering_router
 from oae.api.observability import configure_error_tracking
 from oae.api.routes import router
@@ -92,6 +93,7 @@ async def runtime_error_handler(request: Request, exc: RuntimeError):
 
 app.include_router(router)
 app.include_router(engineering_router)
+app.include_router(conversation_router)
 
 
 _FRONTEND = Path(__file__).resolve().parents[3] / "frontend" / "index.html"
