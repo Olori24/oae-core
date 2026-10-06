@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     operation TEXT NOT NULL,
     payload TEXT NOT NULL,
     result TEXT,
+    authorization_id TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -193,6 +194,10 @@ def _migrate_sqlite(adapter: _ConnectionAdapter) -> None:
         except sqlite3.OperationalError:
             pass
     adapter.execute("CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)")
+    try:
+        adapter.execute("ALTER TABLE jobs ADD COLUMN authorization_id TEXT")
+    except sqlite3.OperationalError:
+        pass
     adapter.execute("""CREATE TABLE IF NOT EXISTS engineering_change_sets (
         id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, workspace_id TEXT NOT NULL,
         repository_id TEXT NOT NULL, source_revision_id TEXT NOT NULL,
