@@ -5,7 +5,7 @@ from oae.api.job_runner import JobRunner
 
 class _Result:
     def fetchone(self):
-        return ("unsupported", "{}")
+        return ("unsupported", "{}", "tenant-1", None)
 
 
 class _Connection:
@@ -49,7 +49,7 @@ def test_failed_job_result_is_redacted(monkeypatch):
     class Connection:
         def execute(self, query, params=()):
             if query.startswith("SELECT operation,payload"):
-                return Result(("unsupported", "{}"))
+                return Result(("unsupported", "{}", "tenant-1", None))
             if query.startswith("UPDATE jobs SET status=?,result=?"):
                 updates.append(params)
             return Result()
