@@ -3,9 +3,9 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
-from typing import Any
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 MAX_RESPONSE = 2_000_000
