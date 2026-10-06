@@ -89,3 +89,19 @@ def test_command_center_assets_are_referenced():
     assert "/assets/command.css" in page.text
     assert "/assets/command.js" in page.text
     assert "What do you want me to build?" in client.get("/assets/command.js").text
+
+
+def test_command_center_send_and_viewport_contract(tmp_path):
+    client = _client(tmp_path)
+    page = client.get("/")
+    script = client.get("/assets/command.js")
+    styles = client.get("/assets/command.css")
+    assert page.status_code == 200
+    assert script.status_code == 200
+    assert styles.status_code == 200
+    assert 'id="oae-send"' in script.text
+    assert 'type="button"' in script.text
+    assert 'addEventListener("click", send)' in script.text
+    assert 'height:100dvh' in styles.text
+    assert 'overflow:hidden' in styles.text
+    assert 'min-height:0' in styles.text

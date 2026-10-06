@@ -1,6 +1,6 @@
 (() => {
   const KEY = "oae.api_key";
-  const state = { conversation: null, mode: "ask", repositories: [], recognition: null };
+  const state = { conversation: null, mode: "ask", repositories: [], recognition: null, busy: false, mounted: false };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
   const key = () => localStorage.getItem(KEY) || "";
@@ -18,6 +18,7 @@
     const app = $("app");
     if (!app || app.dataset.commandMounted === "1" || app.hidden) return;
     app.dataset.commandMounted = "1";
+    state.mounted = true;
     const shell = document.createElement("section");
     shell.id = "oae-command-center";
     shell.innerHTML = `
@@ -59,7 +60,7 @@
             <input id="oae-file" type="file" hidden accept=".pdf,.txt,.md,.docx,.png,.jpg,.jpeg,.webp,.mp4,.mp3,.wav,.m4a" multiple />
             <textarea id="oae-input" rows="1" placeholder="Describe an engineering task..."></textarea>
             <button id="oae-mic" class="oae-icon-button" title="Voice input">●</button>
-            <button id="oae-send" class="oae-send">Send <span>↗</span></button>
+            <button id="oae-send" class="oae-send" type="button">Send <span>↗</span></button>
           </div>
           <div class="oae-composer-foot"><span>Ask is read-only. Plan prepares. Execute requires an active governed authorization.</span><span id="oae-attachment-status"></span></div>
         </section>
@@ -74,13 +75,14 @@
 
   function bind() {
     $("oae-new-session").onclick = createSession;
-    $("oae-send").onclick = send;
+    $("oae-send").addEventListener("click", send);
     $("oae-attach").onclick = () => $("oae-file").click();
     $("oae-file").onchange = uploadFiles;
     $("oae-mic").onclick = toggleVoice;
     $("oae-mode").onchange = async e => { state.mode = e.target.value; if (state.conversation) await updateContext(); };
     $("oae-repository").onchange = updateContext;
     $("oae-workspace").onchange = updateContext;
+    $("oae-input").addEventListener("input", () => autoSizeInput());
     $("oae-input").addEventListener("keydown", e => {
       if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
     });
@@ -159,22 +161,42 @@
     renderContext();
   }
 
+  function autoSizeInput() {
+    const input = $("oae-input");
+    if (!input) return;
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 150) + "px";
+  }
+
+  function setComposerBusy(busy, label = "Send") {
+    state.busy = busy;
+    const button = $("oae-send");
+    if (!button) return;
+    button.disabled = busy;
+    button.setAttribute("aria-busy", busy ? "true" : "false");
+    button.innerHTML = busy ? `Sending…` : `${esc(label)} <span aria-hidden="true">↗</span>`;
+  }
+
   async function send() {
-    const input=$("oae-input"), content=input.value.trim();
-    if (!content || !state.conversation) return;
-    $("oae-send").disabled=true;
+    const input=$("oae-input"), content=input?.value.trim();
+    if (!content || !state.conversation || state.busy) {
+      if (!state.conversation) toast("OAE is still opening your engineering session. Please try again in a moment.");
+      return;
+    }
+    setComposerBusy(true);
+    $("oae-attachment-status").textContent = "Sending to OAE…";
     try {
       state.conversation=await api(`/v1/conversations/${state.conversation.id}/messages`, {
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({content,mode:$("oae-mode").value})
       });
-      input.value=""; render();
+      input.value=""; input.style.height="auto"; render();
       if ($("oae-mode").value==="execute") {
         const auth=prompt("EXECUTE mode requires an active worker authorization ID. Enter the authorization ID, or Cancel to keep this objective planned.");
         if (auth) await execute(auth);
       }
       await loadSessions();
-    } catch(e) { toast(e.message); } finally { $("oae-send").disabled=false; }
+    } catch(e) { toast(e.message); $("oae-attachment-status").textContent = `Send failed: ${e.message}`; } finally { setComposerBusy(false); }
   }
 
   async function execute(auth) {
@@ -222,6 +244,6 @@
     const t=$("toast"); if (t) { t.hidden=false; t.textContent=message; setTimeout(()=>t.hidden=true,3500); }
   }
 
-  const boot=setInterval(()=>{ if ($("app") && !$("app").hidden) { mount(); clearInterval(boot); } },250);
-  window.addEventListener("storage",()=>{ if ($("app") && !$("app").hidden) mount(); });
+  const boot=setInterval(()=>{ if ($("app") && !$("app").hidden && !state.mounted) mount(); if (state.mounted) clearInterval(boot); },250);
+  window.addEventListener("storage",()=>{ if ($("app") && !$("app").hidden && !state.mounted) mount(); });
 })();
