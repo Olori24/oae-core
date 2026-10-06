@@ -25,3 +25,6 @@
 .oae-plan-card li{padding-left:2px}
 .oae-risk{margin-left:6px;font-size:9px;text-transform:uppercase;opacity:.7}
 .oae-run-card small{display:block;margin-top:4px;opacity:.72}
+
+.oae-run-action{margin-top:8px;border:1px solid rgba(125,255,205,.35);background:rgba(125,255,205,.08);color:#eafff7;border-radius:9px;padding:7px 10px;font:inherit;font-size:11px;cursor:pointer}
+.oae-run-action:disabled{opacity:.55;cursor:wait}
