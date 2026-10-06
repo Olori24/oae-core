@@ -311,18 +311,48 @@ def request_execution_authorization(conversation_id: str, data: AuthorizationCre
 def get_execution_authorization(conversation_id: str, principal: TenantPrincipal = Depends(require_principal)):
     _get(conversation_id, principal.tenant_id)
     with db(principal.tenant_id) as conn:
-        row = conn.execute(
-            "SELECT id FROM worker_authorizations WHERE tenant_id=? AND operation='build' AND scope->>'conversation_id'=? ORDER BY requested_at DESC LIMIT 1",
-            (principal.tenant_id, conversation_id),
-        ).fetchone()
-    if not row:
+        rows = conn.execute(
+            "SELECT id,scope FROM worker_authorizations WHERE tenant_id=? AND operation='build' ORDER BY requested_at DESC LIMIT 20",
+            (principal.tenant_id,),
+        ).fetchall()
+    authorization_id = None
+    for candidate in rows:
+        scope = candidate[1]
+        scope = json.loads(scope) if isinstance(scope, str) else scope
+        if isinstance(scope, dict) and scope.get("conversation_id") == conversation_id:
+            authorization_id = str(candidate[0])
+            break
+    if not authorization_id:
         return {"authorization": None}
-    record = WorkerAuthorizationRepository().get(tenant_id=principal.tenant_id, authorization_id=str(row[0]))
+    record = WorkerAuthorizationRepository().get(tenant_id=principal.tenant_id, authorization_id=authorization_id)
     if not record:
         return {"authorization": None}
     return {"authorization": {"id": record.id, "status": record.status, "operation": record.operation,
                               "scope": record.scope, "expires_at": record.expires_at.isoformat(),
                               "decided_at": record.decided_at.isoformat() if record.decided_at else None}}
+
+
+@router.post("/{conversation_id}/authorization/{authorization_id}/approve")
+def approve_execution_authorization(
+    conversation_id: str,
+    authorization_id: str,
+    principal: TenantPrincipal = Depends(require_principal),
+):
+    principal = require_approver_principal(principal)
+    current = _get(conversation_id, principal.tenant_id)
+    record = WorkerAuthorizationRepository().get(
+        tenant_id=principal.tenant_id, authorization_id=authorization_id
+    )
+    if not record or record.scope.get("conversation_id") != conversation_id:
+        raise HTTPException(status_code=404, detail="Authorization not found for this conversation.")
+    if record.scope.get("workspace_id") != str(current.get("workspace_id")):
+        raise HTTPException(status_code=403, detail="Authorization scope does not match this workspace.")
+    WorkerAuthorizationRepository().approve(
+        tenant_id=principal.tenant_id, authorization_id=authorization_id,
+        approver=principal.principal_id, approver_role=principal.role,
+        decision_reason_redacted="Approved from OAE engineering control surface.",
+    )
+    return {"authorization_id": authorization_id, "status": "approved"}
 
 
 @router.get("/{conversation_id}/runs/{run_id}")
