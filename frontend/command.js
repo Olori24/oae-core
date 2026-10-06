@@ -69,8 +69,20 @@
     app.prepend(shell);
     document.querySelector(".workspace-layout")?.setAttribute("hidden", "");
     bind();
-    loadSessions();
-    createSession();
+    bootstrap();
+  }
+
+  async function bootstrap() {
+    try {
+      await loadRepositories();
+      await createSession();
+      await loadSessions();
+      if (state.conversation) {
+        $("oae-attachment-status").textContent = "Ready";
+      }
+    } catch (e) {
+      toast(e.message || "Unable to open an engineering session.");
+    }
   }
 
   function bind() {
@@ -120,7 +132,7 @@
       });
       render();
       await loadSessions();
-    } catch (e) { toast(e.message); }
+    } catch (e) { toast(`Unable to open engineering session: ${e.message}`); throw e; }
   }
 
   async function openSession(id) {
