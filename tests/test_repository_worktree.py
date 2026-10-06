@@ -12,8 +12,9 @@ def test_worktree_mutation_diff_and_commit(tmp_path: Path):
     run_git(["init"], cwd=tmp_path, check=True, capture_output=True, text=True)
     run_git(["add", "README.md"], cwd=tmp_path, check=True, capture_output=True, text=True)
     run_git(
-        ["-c", "user.name=seed", "-c", "user.email=seed@example.invalid", "commit", "-m", "seed"],
+        ["commit", "-m", "seed"],
         cwd=tmp_path, check=True, capture_output=True, text=True,
+        commit_identity=True,
     )
     wt.create_branch("oae/task-1")
     wt.write_file("src/app.py", "print('ok')\n")
