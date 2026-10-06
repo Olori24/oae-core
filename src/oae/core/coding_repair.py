@@ -10,7 +10,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from oae.core.coding_brain import CodingBrain, CodingBrainError, CodingProposal, RepositoryContextAssembler
+from oae.core.coding_brain import (
+    CodingBrain,
+    CodingBrainError,
+    CodingProposal,
+    RepositoryContextAssembler,
+)
 
 
 class CodingRepairBrain(CodingBrain):
