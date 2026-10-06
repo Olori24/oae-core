@@ -87,7 +87,6 @@ def test_sync_refuses_to_update_a_moved_branch():
         writer.synchronize(
             base_sha="a" * 40,
             branch="oae/task",
-            files=[{"path": "src/app.py", "status": "modified", "content": "print('ok')
-"}],
+            files=[{"path": "src/app.py", "status": "modified", "content": "print('ok')\n"}],
             commit_message="feat: change",
         )
