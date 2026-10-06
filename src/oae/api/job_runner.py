@@ -2,8 +2,8 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4
 from urllib.parse import urlparse
+from uuid import uuid4
 
 from oae.api.agent_runs import AgentRunRepository
 from oae.api.config import settings
