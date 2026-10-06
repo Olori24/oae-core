@@ -100,8 +100,11 @@ def test_command_center_send_and_viewport_contract(tmp_path):
     assert script.status_code == 200
     assert styles.status_code == 200
     assert 'id="oae-send"' in script.text
-    assert 'type="button"' in script.text
-    assert 'addEventListener("click", send)' in script.text
+    assert 'id="oae-composer-form" class="oae-composer"' in script.text
+    assert 'type="submit"' in script.text
+    assert 'id="oae-attach" type="button"' in script.text
+    assert 'id="oae-mic" type="button"' in script.text
+    assert 'addEventListener("submit", e => { e.preventDefault(); send(); })' in script.text
     assert 'height:100dvh' in styles.text
     assert 'overflow:hidden' in styles.text
     assert 'min-height:0' in styles.text
