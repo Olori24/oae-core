@@ -14,10 +14,15 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
 
-from oae.api.auth import TenantPrincipal, require_approver_principal, require_principal, require_requester_principal
+from oae.api.agent_runs import AgentRunRepository
+from oae.api.auth import (
+    TenantPrincipal,
+    require_approver_principal,
+    require_principal,
+    require_requester_principal,
+)
 from oae.api.config import settings
 from oae.api.db import db
-from oae.api.agent_runs import AgentRunRepository
 from oae.api.durable_jobs import DurableJobRepository
 from oae.api.worker_authorizations import WorkerAuthorizationRepository
 from oae.core.engineering_planner import build_engineering_plan
@@ -246,7 +251,7 @@ def add_message(
 @router.post("/{conversation_id}/plan")
 def create_plan(conversation_id: str, data: PlanRequest, principal: TenantPrincipal = Depends(require_principal)):
     principal = require_requester_principal(principal)
-    current = _get(conversation_id, principal.tenant_id)
+    _get(conversation_id, principal.tenant_id)
     with db(principal.tenant_id) as conn:
         row = conn.execute(
             "SELECT content,metadata FROM conversation_messages WHERE conversation_id=? AND tenant_id=? AND role='user' ORDER BY created_at DESC LIMIT 1",
