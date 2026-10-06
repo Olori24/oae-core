@@ -1,6 +1,7 @@
-from oae.core.autonomous_agent import next_agent_decision
-from oae.core.agent_action_executor import AgentActionBlocked, execute_agent_action
+import pytest
 
+from oae.core.agent_action_executor import AgentActionBlocked, execute_agent_action
+from oae.core.autonomous_agent import next_agent_decision
 
 def test_code_objective_is_allowed():
     plan = {
@@ -13,7 +14,7 @@ def test_code_objective_is_allowed():
 
 
 def test_repair_requires_actual_failure_evidence():
-    with __import__("pytest").raises(AgentActionBlocked):
+    with pytest.raises(AgentActionBlocked):
         execute_agent_action(
             action="repair_failures",
             step={"id": "repair", "action": "repair_failures", "inputs": {}},
@@ -25,6 +26,7 @@ def test_repair_requires_actual_failure_evidence():
 
 def test_repair_maps_to_coding_repair_with_evidence():
     calls = []
+
     def invoke(operation, payload):
         calls.append((operation, payload))
         return {"verified": True}
