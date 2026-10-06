@@ -7,7 +7,6 @@ keeping consequential execution behind the existing worker-authorization gate.
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-
 from pydantic import BaseModel, ConfigDict, Field
 
 from oae.api.agent_runs import AgentRunRepository
