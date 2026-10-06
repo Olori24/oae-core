@@ -191,10 +191,20 @@
 
   async function send() {
     const input=$("oae-input"), content=input?.value.trim();
-    if ((!content && !state.pendingFiles.length) || !state.conversation || state.busy) {
-      if (!state.conversation) toast("OAE is still opening your engineering session. Please try again in a moment.");
-      return;
+    if ((!content && !state.pendingFiles.length) || state.busy) return;
+    if (!state.conversation) {
+      setComposerBusy(true, "Opening…");
+      $("oae-attachment-status").textContent = "Opening engineering session…";
+      try {
+        await createSession();
+      } catch (e) {
+        $("oae-attachment-status").textContent = `Send failed: ${e.message}`;
+        setComposerBusy(false);
+        return;
+      }
+      setComposerBusy(false);
     }
+    if (!state.conversation) return;
     setComposerBusy(true);
     $("oae-attachment-status").textContent = "Sending to OAE…";
     try {
