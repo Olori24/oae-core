@@ -303,6 +303,33 @@ def _bootstrap_postgres(adapter: _ConnectionAdapter, database_url: str) -> None:
             updated_at TIMESTAMPTZ NOT NULL DEFAULT now(), UNIQUE (tenant_id, idempotency_key)
         )""")
         adapter.execute("CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_created ON engineering_agent_runs(tenant_id, created_at DESC)")
+        adapter.execute("""CREATE TABLE IF NOT EXISTS conversations (
+            id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, title TEXT NOT NULL,
+            repository_id TEXT, workspace_id TEXT, mode TEXT NOT NULL CHECK (mode IN ('ask','plan','execute')),
+            created_at TIMESTAMPTZ NOT NULL, updated_at TIMESTAMPTZ NOT NULL,
+            UNIQUE (tenant_id, id)
+        )""")
+        adapter.execute("""CREATE TABLE IF NOT EXISTS conversation_messages (
+            id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, conversation_id TEXT NOT NULL,
+            role TEXT NOT NULL CHECK (role IN ('user','assistant')), content TEXT NOT NULL,
+            message_type TEXT NOT NULL DEFAULT 'text', metadata JSONB, created_at TIMESTAMPTZ NOT NULL,
+            UNIQUE (tenant_id, id),
+            FOREIGN KEY (tenant_id, conversation_id) REFERENCES conversations (tenant_id, id) ON DELETE CASCADE
+        )""")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_conversations_tenant_updated ON conversations (tenant_id, updated_at DESC)")
+        adapter.execute("CREATE INDEX IF NOT EXISTS idx_conversation_messages_tenant_conversation ON conversation_messages (tenant_id, conversation_id, created_at)")
+        adapter.execute("ALTER TABLE conversations ENABLE ROW LEVEL SECURITY")
+        adapter.execute("ALTER TABLE conversation_messages ENABLE ROW LEVEL SECURITY")
+        adapter.execute("ALTER TABLE conversations FORCE ROW LEVEL SECURITY")
+        adapter.execute("ALTER TABLE conversation_messages FORCE ROW LEVEL SECURITY")
+        adapter.execute("DROP POLICY IF EXISTS conversations_tenant_isolation ON conversations")
+        adapter.execute("""CREATE POLICY conversations_tenant_isolation ON conversations
+            USING (tenant_id = current_setting('oae.tenant_id', true))
+            WITH CHECK (tenant_id = current_setting('oae.tenant_id', true))""")
+        adapter.execute("DROP POLICY IF EXISTS conversation_messages_tenant_isolation ON conversation_messages")
+        adapter.execute("""CREATE POLICY conversation_messages_tenant_isolation ON conversation_messages
+            USING (tenant_id = current_setting('oae.tenant_id', true))
+            WITH CHECK (tenant_id = current_setting('oae.tenant_id', true))""")
         adapter.execute("CREATE INDEX IF NOT EXISTS idx_agent_runs_workspace ON engineering_agent_runs(tenant_id, workspace_id, created_at DESC)")
         adapter.commit()
         _POSTGRES_BOOTSTRAPPED_URLS.add(database_url)
