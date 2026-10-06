@@ -1,6 +1,6 @@
 (() => {
   const KEY = "oae.api_key";
-  const state = { conversation: null, mode: "ask", repositories: [], recognition: null, busy: false, mounted: false };
+  const state = { conversation: null, mode: "ask", repositories: [], recognition: null, busy: false, mounted: false, pendingFiles: [] };
   const $ = (id) => document.getElementById(id);
   const esc = (v) => String(v ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
   const key = () => localStorage.getItem(KEY) || "";
@@ -62,7 +62,7 @@
             <button id="oae-mic" class="oae-icon-button" title="Voice input">●</button>
             <button id="oae-send" class="oae-send" type="button">Send <span>↗</span></button>
           </div>
-          <div class="oae-composer-foot"><span>Ask is read-only. Plan prepares. Execute requires an active governed authorization.</span><span id="oae-attachment-status"></span></div>
+          <div id="oae-pending-attachments" class="oae-pending-attachments" aria-live="polite"></div><div class="oae-composer-foot"><span>Ask is read-only. Plan prepares. Execute requires an active governed authorization.</span><span id="oae-attachment-status"></span></div>
         </section>
       </main>
     `;
@@ -186,6 +186,22 @@
     setComposerBusy(true);
     $("oae-attachment-status").textContent = "Sending to OAE…";
     try {
+      if (state.pendingFiles.length) {
+        const files = [...state.pendingFiles];
+        for (const file of files) {
+          const form = new FormData();
+          form.append("file", file, file.name);
+          state.conversation = await api(`/v1/conversations/${state.conversation.id}/attachments`, { method:"POST", body:form });
+        }
+        state.pendingFiles = [];
+        renderPendingAttachments();
+      }
+      if (!content) {
+        input.value = "";
+        render();
+        await loadSessions();
+        return;
+      }
       state.conversation=await api(`/v1/conversations/${state.conversation.id}/messages`, {
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({content,mode:$("oae-mode").value})
@@ -208,18 +224,41 @@
     } catch(e) { appendLive(`Execution blocked: ${e.message}`); }
   }
 
-  async function uploadFiles() {
+  function uploadFiles() {
     const files=[...$("oae-file").files];
-    if (!files.length || !state.conversation) return;
-    $("oae-attachment-status").textContent=`Uploading ${files.length} attachment(s)…`;
-    try {
-      for (const file of files) {
-        const form=new FormData(); form.append("file",file);
-        state.conversation=await api(`/v1/conversations/${state.conversation.id}/attachments`, {method:"POST",body:form});
-      }
-      render(); $("oae-attachment-status").textContent=`${files.length} attachment(s) accepted`;
-    } catch(e) { $("oae-attachment-status").textContent=e.message; }
+    if (!files.length) return;
+    const total = [...state.pendingFiles, ...files];
+    if (total.length > 10) {
+      toast("You can attach up to 10 files per send.");
+      $("oae-file").value="";
+      return;
+    }
+    const oversized = files.find(file => file.size > 12 * 1024 * 1024);
+    if (oversized) {
+      toast(`${oversized.name} exceeds the 12 MB limit.`);
+      $("oae-file").value="";
+      return;
+    }
+    state.pendingFiles.push(...files);
+    renderPendingAttachments();
     $("oae-file").value="";
+  }
+
+  function renderPendingAttachments() {
+    const wrap=$("oae-pending-attachments");
+    if (!wrap) return;
+    wrap.innerHTML = state.pendingFiles.length
+      ? state.pendingFiles.map((file,index) => `<span class="oae-attachment-chip"><span>${esc(file.name)}</span><button type="button" data-remove-attachment="${index}" aria-label="Remove ${esc(file.name)}">×</button></span>`).join("")
+      : "";
+    wrap.querySelectorAll("[data-remove-attachment]").forEach(button => {
+      button.onclick=()=> {
+        state.pendingFiles.splice(Number(button.dataset.removeAttachment),1);
+        renderPendingAttachments();
+      };
+    });
+    $("oae-attachment-status").textContent = state.pendingFiles.length
+      ? `${state.pendingFiles.length} attachment${state.pendingFiles.length === 1 ? "" : "s"} ready to send`
+      : "";
   }
 
   function toggleVoice() {
