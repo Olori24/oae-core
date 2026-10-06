@@ -526,7 +526,7 @@ class JobRunner:
             ).fetchone()
         if not row or row[1] != "ready":
             raise ValueError("Workspace must be ready before coding repair.")
-        root = self._safe_workspace_path(row[0])
+        root = JobRunner._safe_workspace_path(row[0])
         gateway = OpenWeightModelGateway(open_weight_config_from_settings(settings))
         proposal = CodingRepairBrain(gateway, model).propose_repair(
             tenant_id=tenant_id,
