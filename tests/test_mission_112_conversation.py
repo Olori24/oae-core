@@ -105,3 +105,16 @@ def test_command_center_send_and_viewport_contract(tmp_path):
     assert 'height:100dvh' in styles.text
     assert 'overflow:hidden' in styles.text
     assert 'min-height:0' in styles.text
+
+
+def test_command_center_attachment_and_send_contract():
+    client = TestClient(app)
+    script = client.get("/assets/command.js").text
+    styles = client.get("/assets/command.css").text
+    assert "pendingFiles" in script
+    assert "oae-pending-attachments" in script
+    assert "ready to send" in script
+    assert "allow attachment-only sends" not in script
+    assert "if ((!content && !state.pendingFiles.length)" in script
+    assert "new FormData()" in script
+    assert ".oae-attachment-chip" in styles
