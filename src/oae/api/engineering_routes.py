@@ -7,16 +7,22 @@ keeping consequential execution behind the existing worker-authorization gate.
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
 
+from oae.api.agent_runs import AgentRunRepository
 from oae.api.auth import TenantPrincipal, require_principal, require_requester_principal
 from oae.api.config import settings
 from oae.api.durable_jobs import DurableJobRepository
 from oae.api.rate_limits import RateLimitExceeded, rate_limiter
 from oae.api.schemas import JobResponse
 from oae.api.worker_authorizations import WorkerAuthorizationRepository
-from oae.api.agent_runs import AgentRunRepository
-from pydantic import BaseModel, ConfigDict, Field
 
+
+DEFAULT_WORKSPACE_VERIFICATION_COMMANDS: list[Literal["python_compile", "pytest", "ruff", "mypy", "typescript_check"]] = [
+    "python_compile",
+    "ruff",
+    "pytest",
+]
 
 router = APIRouter(prefix="/v1/engineering", tags=["engineering"])
 
@@ -134,7 +140,7 @@ class CommandExecutionRequest(EngineeringRequest):
 class WorkspaceVerificationRequest(EngineeringRequest):
     workspace_id: str = Field(min_length=1, max_length=120)
     authorization_id: str = Field(min_length=1, max_length=120)
-    commands: list[Literal["python_compile", "pytest", "ruff", "mypy", "typescript_check"]] = Field(default_factory=lambda: ["python_compile", "ruff", "pytest"], max_length=8)
+    commands: list[Literal["python_compile", "pytest", "ruff", "mypy", "typescript_check"]] = Field(default_factory=lambda: DEFAULT_WORKSPACE_VERIFICATION_COMMANDS.copy(), max_length=8)
 
 
 def _queue(
