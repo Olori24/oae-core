@@ -45,6 +45,9 @@ def test_postgres_migration_files_are_ordered_and_present():
         "0006_principal_and_authorization_decision_metadata.sql",
         "0007_tenant_row_security.sql",
         "0008_job_result_payload.sql",
+        "0009_engineering_change_sets.sql",
+        "0010_engineering_agent_runs.sql",
+        "0011_agent_run_execution_leases.sql",
     ]
 
 
