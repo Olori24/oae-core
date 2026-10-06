@@ -179,7 +179,7 @@
 
   async function send() {
     const input=$("oae-input"), content=input?.value.trim();
-    if (!content || !state.conversation || state.busy) {
+    if ((!content && !state.pendingFiles.length) || !state.conversation || state.busy) {
       if (!state.conversation) toast("OAE is still opening your engineering session. Please try again in a moment.");
       return;
     }
