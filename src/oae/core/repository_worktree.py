@@ -74,10 +74,39 @@ class RepositoryWorktree:
 
     def diff(self) -> dict[str, Any]:
         self._require_repo()
-        result = run_git(["diff", "--no-ext-diff", "--binary"], cwd=self.root, check=True, capture_output=True, text=True)
-        if len(result.stdout.encode("utf-8")) > _MAX_DIFF_BYTES:
+        result = run_git(
+            ["diff", "--no-ext-diff", "--binary"],
+            cwd=self.root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        diff_text = result.stdout
+        status = run_git(
+            ["status", "--porcelain=v1", "--untracked-files=all"],
+            cwd=self.root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        for line in status.stdout.splitlines():
+            if not line.startswith("?? "):
+                continue
+            relative_path = line[3:]
+            self._safe_path(relative_path)
+            untracked = run_git(
+                ["diff", "--no-ext-diff", "--no-index", "--", "/dev/null", relative_path],
+                cwd=self.root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            diff_text += untracked.stdout
+            if len(diff_text.encode("utf-8")) > _MAX_DIFF_BYTES:
+                raise WorktreeError("diff exceeds the governed evidence limit")
+        if len(diff_text.encode("utf-8")) > _MAX_DIFF_BYTES:
             raise WorktreeError("diff exceeds the governed evidence limit")
-        return {"branch": self.branch(), "commit_sha": self.head(), "diff": result.stdout}
+        return {"branch": self.branch(), "commit_sha": self.head(), "diff": diff_text}
 
     def commit(self, message: str) -> dict[str, Any]:
         self._require_repo()
