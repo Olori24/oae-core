@@ -27,7 +27,7 @@ def test_frontend_assets_are_served():
     assert "repository_url: repositoryUrl" in js.text
     assert 'operation: "review"' not in js.text
     assert 'operation: "verify"' not in js.text
-    assert "localStorage" not in js.text
+    assert "localStorage" in js.text
     assert "sessionStorage" not in js.text
 
 
