@@ -105,6 +105,9 @@ def test_command_center_send_and_viewport_contract(tmp_path):
     assert 'id="oae-attach" type="button"' in script.text
     assert 'id="oae-mic" type="button"' in script.text
     assert 'addEventListener("submit", e => { e.preventDefault(); send(); })' in script.text
+    assert "bootstrap();" in script.text
+    assert "await createSession();" in script.text
+    assert "throw e;" in script.text
     assert 'height:100dvh' in styles.text
     assert 'overflow:hidden' in styles.text
     assert 'min-height:0' in styles.text
