@@ -265,6 +265,7 @@ def _validate_git_arguments(arguments: Sequence[str]) -> list[str]:
     tokens = _validate_tokens(arguments)
     if tokens[0] not in _GIT_SUBCOMMANDS:
         raise ProcessPolicyError("Git subcommand is not approved for this execution boundary.")
-    if any(token in _DISALLOWED_GIT_ARGUMENTS for token in tokens):
-        raise ProcessPolicyError("Git command contains a disallowed global execution option.")
+    for token in tokens[1:]:
+        if token in _DISALLOWED_GIT_ARGUMENTS and not (tokens[0] == "switch" and token == "-c"):
+            raise ProcessPolicyError("Git command contains a disallowed global execution option.")
     return tokens
