@@ -40,7 +40,8 @@ class RepositoryQualityGate:
             for filename in ("pyproject.toml", "package.json", "go.mod", "Cargo.toml", "pom.xml")
         )
         checks_passed = required > 0 and passed == required
-        unsupported_execution = any(result.get("name") == "node-project-contract" for result in results)\n        readiness = checks_passed and has_application_contract and not blockers and not unsupported_execution
+        unsupported_execution = any(result.get("name") == "node-project-contract" for result in results)
+        readiness = checks_passed and has_application_contract and not blockers and not unsupported_execution
 
         return {
             "schema_version": "1.0",
