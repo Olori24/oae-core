@@ -4,6 +4,8 @@ These routes make the first repository-to-readiness workflow explicit while
 keeping consequential execution behind the existing worker-authorization gate.
 """
 
+# isort: skip_file
+
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
