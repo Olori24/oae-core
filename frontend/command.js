@@ -55,7 +55,7 @@
             <label class="oae-select"><span>REPOSITORY</span><select id="oae-repository"><option value="">Current / none</option></select></label>
             <label class="oae-input-mini"><span>WORKSPACE</span><input id="oae-workspace" placeholder="ready workspace id" /></label>
           </div>
-          <div class="oae-composer">
+          <form id="oae-composer-form" class="oae-composer">
             <button id="oae-attach" class="oae-icon-button" title="Attach document, image, audio or video">＋</button>
             <input id="oae-file" type="file" hidden accept=".pdf,.txt,.md,.docx,.png,.jpg,.jpeg,.webp,.mp4,.mp3,.wav,.m4a" multiple />
             <textarea id="oae-input" rows="1" placeholder="Describe an engineering task..."></textarea>
@@ -75,7 +75,7 @@
 
   function bind() {
     $("oae-new-session").onclick = createSession;
-    $("oae-send").addEventListener("click", send);
+    $("oae-composer-form").addEventListener("submit", e => { e.preventDefault(); send(); });
     $("oae-attach").onclick = () => $("oae-file").click();
     $("oae-file").onchange = uploadFiles;
     $("oae-mic").onclick = toggleVoice;
