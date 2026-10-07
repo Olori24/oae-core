@@ -104,10 +104,13 @@ def build_engineering_plan(
     steps.extend([
         PlanStep("repair", "repair_failures", "If verification fails, diagnose the bounded failure evidence and apply the smallest safe repair.", ("verify",), "high", True),
         PlanStep("reverify", "verify_workspace", "Re-run verification after a repair.", ("repair",), "medium", True),
-        PlanStep("commit", "commit_change_set", "Create a governed commit only after verification succeeds.", ("verify",), "medium"),
-        PlanStep("sync", "sync_github", "Synchronize the verified commit to a GitHub branch without force pushing.", ("commit",), "high"),
-        PlanStep("pr", "create_pull_request", "Open a reviewable pull request containing the change-set evidence.", ("sync",), "high"),
     ])
+    if not greenfield:
+        steps.extend([
+            PlanStep("commit", "commit_change_set", "Create a governed commit only after verification succeeds.", ("verify",), "medium"),
+            PlanStep("sync", "sync_github", "Synchronize the verified commit to a remote branch without force pushing.", ("commit",), "high"),
+            PlanStep("pr", "create_pull_request", "Open a reviewable pull request containing the change-set evidence.", ("sync",), "high"),
+        ])
 
     blocked: list[str] = []
     if not verification:
