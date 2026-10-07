@@ -259,7 +259,7 @@
         watchAuthorization(gate.authorization_id);
       }
       await loadSessions();
-    } catch(e) { toast(e.message); $("oae-attachment-status").textContent = `Send failed: ${e.message}`; } finally { setComposerBusy(false); }
+    } catch(e) { toast(e.message); $("oae-attachment-status").textContent = `Send failed: ${e.message}`; } finally { setComposerBusy(false); if (!$("oae-attachment-status").textContent.startsWith("Send failed")) $("oae-attachment-status").textContent = "Ready"; }
   }
 
   function uploadFiles() {
@@ -370,14 +370,17 @@
         .filter(m => m.role === "user" || m.role === "assistant")
         .slice(-12)
         .map(m => ({ role:m.role, content:m.content }));
-      const result = await api("/v1/ai/respond", {
-        method:"POST",
+      const result = await Promise.race([
+        api("/v1/ai/respond", {
+          method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           messages,
           system:"You are OAE, a technical co-founder for people who may have never coded. Explain software decisions in plain language, ask only essential questions, turn vague ideas into concrete product requirements, and never claim that code was built, tested, deployed, or changed unless OAE has actual evidence. Repository mutation and consequential actions are handled only by OAE's governed execution pipeline."
         })
-      });
+      }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("model timeout")), 12000))
+      ]);
       return result.response || "";
     } catch (e) {
       return "";
