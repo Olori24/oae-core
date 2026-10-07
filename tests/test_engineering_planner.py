@@ -57,3 +57,18 @@ def test_plan_preserves_bounded_action_inputs():
     )
     implement = next(step for step in plan.steps if step.id == "implement")
     assert implement.inputs["mutation"]["type"] == "write"
+
+
+def test_greenfield_plan_stops_at_verified_workspace():
+    plan = build_engineering_plan(
+        objective="build a school management system",
+        repository_kind="python",
+        has_tests=True,
+        has_linter=True,
+        greenfield=True,
+    )
+    actions = [step.action for step in plan.steps]
+    assert actions[:2] == ["capture_baseline", "code_objective"]
+    assert "verify_workspace" in actions
+    assert "create_pull_request" not in actions
+    assert "sync_github" not in actions
