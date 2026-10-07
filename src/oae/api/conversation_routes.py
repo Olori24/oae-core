@@ -474,6 +474,7 @@ def execute_conversation(
     plan = build_engineering_plan(
         objective=str(objective), repository_kind="unknown", has_tests=True, has_linter=True,
         has_typecheck=False, test_runner="none", security_required=True,
+        greenfield=not bool(current.get("repository_id")),
     ).to_dict()
     key = hashlib.sha256(objective.encode("utf-8")).hexdigest()[:24]
     run = AgentRunRepository().start(
