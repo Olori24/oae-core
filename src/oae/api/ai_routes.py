@@ -23,10 +23,12 @@ class AIMessage(BaseModel):
 
 
 class AIRespondRequest(BaseModel):
+    """Conversation request with explicit response-language control."""
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     messages: list[AIMessage] = Field(min_length=1, max_length=24)
     system: str | None = Field(default=None, max_length=12000)
     model: str | None = Field(default=None, max_length=120)
+    language: Literal["en", "it", "de"] = "en"
 
 
 @router.get("/status")
@@ -46,6 +48,7 @@ def ai_respond(
             messages=[message.model_dump() for message in data.messages],
             system=data.system,
             model=data.model,
+            language=data.language,
         )
     except AIGatewayUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
