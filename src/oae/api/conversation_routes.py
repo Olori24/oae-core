@@ -101,7 +101,7 @@ def _row(row) -> dict:
 def _message(row) -> dict:
     return {
         "id": str(row[0]), "role": str(row[1]), "content": str(row[2]),
-        "message_type": str(row[3]), "metadata": json.loads(row[4]) if row[4] else {},
+        "message_type": str(row[3]), "metadata": row[4] if isinstance(row[4], dict) else (json.loads(row[4]) if row[4] else {}),
         "created_at": row[5],
     }
 
