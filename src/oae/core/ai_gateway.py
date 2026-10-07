@@ -8,12 +8,59 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from urllib import request
 from urllib.error import HTTPError, URLError
 
 
 class AIGatewayUnavailable(RuntimeError):
     """Raised when the configured model gateway cannot be reached or is not configured."""
+
+@dataclass(frozen=True)
+class AIGatewayAudit:
+    provider: str
+    tenant_pseudonym: str
+    model: str
+    operation: str
+    status: str
+    input_chars: int
+    output_chars: int
+    duration_ms: int
+
+@dataclass(frozen=True)
+class AIGatewayResponse:
+    content: str
+    audit: AIGatewayAudit
+
+class AIGatewayCodingGateway:
+    """Adapter for the coding brain using the same governed gateway as chat."""
+
+    def generate(self, *, tenant_id: str, operation: str, model: str, prompt: str) -> AIGatewayResponse:
+        if operation not in {"code_proposal", "code_repair"}:
+            raise AIGatewayUnavailable("This operation is not permitted for the coding gateway.")
+        started = time.monotonic()
+        content = generate_engineering_response(
+            messages=[{"role": "user", "content": prompt}],
+            model=model,
+            system=(
+                "You are OAE's bounded coding brain. Propose code only. "
+                "Never claim execution, verification, deployment, or repository mutation."
+            ),
+        )
+        duration_ms = int((time.monotonic() - started) * 1000)
+        return AIGatewayResponse(
+            content=content,
+            audit=AIGatewayAudit(
+                provider="vercel-ai-gateway",
+                tenant_pseudonym=__import__("hashlib").sha256(tenant_id.encode()).hexdigest()[:16],
+                model=model,
+                operation=operation,
+                status="completed",
+                input_chars=len(prompt),
+                output_chars=len(content),
+                duration_ms=duration_ms,
+            ),
+        )
 
 
 def model_available() -> bool:
@@ -30,7 +77,7 @@ def generate_engineering_response(
     if not api_key:
         raise AIGatewayUnavailable("AI model gateway is not configured.")
 
-    selected_model = model or os.getenv("OAE_AI_MODEL", "openai/gpt-5.6-sol")
+    selected_model = model or os.getenv("OAE_AI_MODEL", "alibaba/qwen3-coder-next")
     prompt_messages: list[dict[str, str]] = []
     if system:
         prompt_messages.append({"role": "system", "content": system})
