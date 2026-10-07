@@ -66,7 +66,7 @@ class AIGatewayCodingGateway:
 
 
 def model_available() -> bool:
-    return bool(os.getenv("AI_GATEWAY_API_KEY"))
+    return bool(os.getenv("AI_GATEWAY_API_KEY") or os.getenv("VERCEL_OIDC_TOKEN"))
 
 
 def generate_engineering_response(
@@ -75,7 +75,7 @@ def generate_engineering_response(
     model: str | None = None,
     system: str | None = None,
 ) -> str:
-    api_key = os.getenv("AI_GATEWAY_API_KEY")
+    api_key = os.getenv("AI_GATEWAY_API_KEY") or os.getenv("VERCEL_OIDC_TOKEN")
     if not api_key:
         raise AIGatewayUnavailable("AI model gateway is not configured.")
 
