@@ -497,7 +497,7 @@ class JobRunner:
         if not row or row[1] != "ready":
             raise ValueError("Workspace must be ready before coding execution.")
         root = JobRunner._safe_workspace_path(row[0])
-        gateway = AIGatewayCodingGateway() if os.getenv("AI_GATEWAY_API_KEY") else OpenWeightModelGateway(open_weight_config_from_settings(settings))
+        gateway = AIGatewayCodingGateway() if (os.getenv("AI_GATEWAY_API_KEY") or os.getenv("VERCEL_OIDC_TOKEN")) else OpenWeightModelGateway(open_weight_config_from_settings(settings))
         proposal = CodingBrain(gateway, model).propose(
             tenant_id=tenant_id, workspace=root, objective=objective
         )
