@@ -16,13 +16,13 @@ from oae.api.mission_results import build_result
 from oae.api.workspace_manager import WorkspaceManager
 from oae.api.workspace_models import WorkspacePurpose
 from oae.core.agent_action_executor import execute_agent_action
+from oae.core.ai_gateway import AIGatewayCodingGateway
 from oae.core.autonomous_agent import next_agent_decision
 from oae.core.ci_inspector import GitHubCiInspector
 from oae.core.coding_brain import CodingBrain
 from oae.core.coding_executor import apply_coding_proposal
 from oae.core.coding_repair import CodingRepairBrain
 from oae.core.engineering_planner import build_engineering_plan
-from oae.core.ai_gateway import AIGatewayCodingGateway
 from oae.core.governed_execution import run_governed_command, supported_commands
 from oae.core.production_readiness import evaluate_production_readiness
 from oae.core.repository_quality_gate import RepositoryQualityGate
