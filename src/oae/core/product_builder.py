@@ -28,7 +28,7 @@ class ProductBrief:
 
 _REQUIRED = ("problem", "users", "core_workflows", "deployment")
 
-def _fallback(text: str) -> ProductBrief:
+def _fallback(text: str, language: str = "en") -> ProductBrief:
     lower = text.lower()
     product_name = "New product"
     for marker in ("called ", "named "):
@@ -53,6 +53,33 @@ def _fallback(text: str) -> ProductBrief:
     missing = ["exact target users", "must-have workflow", "deployment preference"]
     if "school" in lower or "clinic" in lower:
         missing = ["exact MVP scope", "deployment preference"]
+    labels = {
+        "it": {
+            "users": ["Amministratori", "Insegnanti", "Genitori", "Studenti"],
+            "workflows": ["Onboarding utenti", "Flusso principale del prodotto", "Amministrazione"],
+            "screens": ["Accesso / onboarding", "Dashboard", "Flusso principale", "Impostazioni"],
+            "entities": ["Utente", "Organizzazione", "Attività"],
+            "auth": "Email/password o SSO dell'organizzazione, da confermare",
+            "deployment": "Applicazione web, destinazione da confermare",
+            "missing": ["utenti target esatti", "flusso obbligatorio", "preferenza di deployment"],
+        },
+        "de": {
+            "users": ["Administratoren", "Lehrkräfte", "Eltern", "Schüler"],
+            "workflows": ["Benutzer-Onboarding", "Kernprozess des Produkts", "Administration"],
+            "screens": ["Anmeldung / Onboarding", "Dashboard", "Kernprozess", "Einstellungen"],
+            "entities": ["Benutzer", "Organisation", "Aktivität"],
+            "auth": "E-Mail/Passwort oder Organisations-SSO, noch zu bestätigen",
+            "deployment": "Webanwendung, Zielumgebung noch zu bestätigen",
+            "missing": ["genauer Zielnutzerkreis", "verbindlicher Kernprozess", "Deployment-Präferenz"],
+        },
+    }.get(language, {})
+    users = labels.get("users", users)
+    workflows = labels.get("workflows", workflows)
+    screens = labels.get("screens", screens)
+    entities = labels.get("entities", entities)
+    auth = labels.get("auth", "Email/password or organization SSO, to be confirmed")
+    deployment = labels.get("deployment", "Web application, deployment target to be confirmed")
+    missing = labels.get("missing", missing)
     return ProductBrief(
         product_name=product_name,
         problem=text.strip(),
@@ -60,11 +87,11 @@ def _fallback(text: str) -> ProductBrief:
         core_workflows=workflows,
         screens=screens,
         entities=list(dict.fromkeys(entities)),
-        auth="Email/password or organization SSO, to be confirmed",
+        auth=auth,
         integrations=[],
         payments=("payment" in lower or "fee" in lower or "pay" in lower),
         notifications=("notification" in lower or "alert" in lower or "sms" in lower),
-        deployment="Web application, deployment target to be confirmed",
+        deployment=deployment,
         build_ready=False,
         missing=missing,
     )
@@ -83,9 +110,9 @@ Rules: infer conservatively; missing means information genuinely needed before a
         data = json.loads(raw)
         if not isinstance(data, dict):
             raise ValueError("brief must be an object")
-        fallback = _fallback(text)
+        fallback = _fallback(text, language)
         for key, value in fallback.to_dict().items():
             data.setdefault(key, value)
         return data
     except (AIGatewayUnavailable, ValueError, json.JSONDecodeError):
-        return _fallback(text).to_dict()
+        return _fallback(text, language).to_dict()
