@@ -186,3 +186,27 @@ def test_conversation_routes_expose_governance_surface():
     client = TestClient(app)
     script = client.get("/assets/command.js")
     assert script.status_code == 200
+
+
+def test_postgres_message_metadata_accepts_native_json_objects():
+    from oae.api.conversation_routes import _message
+
+    message = _message([
+        "message-1",
+        "assistant",
+        "Ready.",
+        "welcome",
+        {"type": "welcome"},
+        "2026-10-07T09:00:00+00:00",
+    ])
+    assert message["metadata"] == {"type": "welcome"}
+
+
+def test_postgres_bootstrap_contains_workspace_foundation():
+    from oae.api.db import POSTGRES_STATEMENTS
+
+    schema = "\n".join(POSTGRES_STATEMENTS)
+    assert "CREATE TABLE IF NOT EXISTS repositories" in schema
+    assert "CREATE TABLE IF NOT EXISTS repository_revisions" in schema
+    assert "CREATE TABLE IF NOT EXISTS workspaces" in schema
+    assert "CREATE TABLE IF NOT EXISTS workspace_manifest_entries" in schema
