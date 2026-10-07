@@ -117,7 +117,7 @@ def build_engineering_plan(
         blocked.append("No supported verification command is available.")
     criteria = (
         "objective implemented in the governed workspace",
-        "diff reviewed",
+        "verification completed successfully",
         "verification completed successfully",
         "commit created from the verified worktree",
         "GitHub synchronization completed without force update",
