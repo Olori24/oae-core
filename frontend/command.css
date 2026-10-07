@@ -28,3 +28,9 @@
 
 .oae-run-action{margin-top:8px;border:1px solid rgba(125,255,205,.35);background:rgba(125,255,205,.08);color:#eafff7;border-radius:9px;padding:7px 10px;font:inherit;font-size:11px;cursor:pointer}
 .oae-run-action:disabled{opacity:.55;cursor:wait}
+
+
+.oae-plan-context{display:flex;flex-direction:column;gap:3px;margin:14px 0;padding:11px 12px;border:1px solid rgba(255,255,255,.09);border-radius:12px;background:rgba(255,255,255,.025)}
+.oae-plan-context span{font-size:10px;letter-spacing:.12em;color:#72d7b4}
+.oae-plan-context strong{font-size:13px;color:#f4f8f6}
+.oae-plan-context small{font-size:11px;color:#8e9b97}
