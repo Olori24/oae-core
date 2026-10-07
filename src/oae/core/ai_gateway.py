@@ -6,9 +6,11 @@ Set AI_GATEWAY_API_KEY to enable model-backed responses.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
+from dataclasses import dataclass
 from urllib import request
 from urllib.error import HTTPError, URLError
 
@@ -52,7 +54,7 @@ class AIGatewayCodingGateway:
             content=content,
             audit=AIGatewayAudit(
                 provider="vercel-ai-gateway",
-                tenant_pseudonym=__import__("hashlib").sha256(tenant_id.encode()).hexdigest()[:16],
+                tenant_pseudonym=hashlib.sha256(tenant_id.encode()).hexdigest()[:16],
                 model=model,
                 operation=operation,
                 status="completed",
