@@ -100,7 +100,7 @@ def build_product_brief(text: str, context: list[dict[str, str]] | None = None, 
     prompt = """Return ONLY valid JSON for a software product brief.
 Schema:
 {"product_name":str,"problem":str,"users":[str],"core_workflows":[str],"screens":[str],"entities":[str],"auth":str,"integrations":[str],"payments":bool,"notifications":bool,"deployment":str,"build_ready":bool,"missing":[str]}
-Rules: infer conservatively; missing means information genuinely needed before autonomous implementation. Never claim implementation, testing, deployment, or repository changes. A non-coder should understand the result. Respond entirely in the requested language. Requested language: {language}. Keep technical identifiers and code terms stable where appropriate.
+Rules: infer conservatively; missing means information genuinely needed before autonomous implementation. Never claim implementation, testing, deployment, or repository changes. A non-coder should understand the result. Respond entirely in the requested language. Requested language: """ + language + """. Keep technical identifiers and code terms stable where appropriate.
 """
     messages = [{"role":"user","content":text}]
     if context:
