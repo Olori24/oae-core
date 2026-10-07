@@ -200,7 +200,17 @@ POSTGRES_STATEMENTS = (
         workspace_id TEXT NOT NULL,
         relative_path TEXT NOT NULL,
         object_key TEXT NOT NULL,
-        sha256 TEXT NOT NULL CHECK (sha256 ~ '^[a-f0-9]{64} (
+        sha256 TEXT NOT NULL CHECK (sha256 ~ '^[a-f0-9]{64}$'),
+        size_bytes BIGINT NOT NULL CHECK (size_bytes >= 0),
+        content_type TEXT NOT NULL,
+        is_executable BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (tenant_id, workspace_id, relative_path),
+        FOREIGN KEY (tenant_id, workspace_id) REFERENCES workspaces (tenant_id, id)
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS rate_limit_buckets (
         scope TEXT NOT NULL,
         subject TEXT NOT NULL,
         window_start BIGINT NOT NULL,
@@ -211,6 +221,11 @@ POSTGRES_STATEMENTS = (
     "CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix)",
     "CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash)",
     "CREATE INDEX IF NOT EXISTS idx_jobs_tenant_created ON jobs(tenant_id, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_repositories_tenant_active ON repositories (tenant_id, status, created_at DESC) WHERE deleted_at IS NULL",
+    "CREATE INDEX IF NOT EXISTS idx_repository_revisions_tenant_repository ON repository_revisions (tenant_id, repository_id, observed_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_workspace_expiry ON workspaces (tenant_id, retention_expires_at) WHERE state IN ('ready', 'failed')",
+    "CREATE INDEX IF NOT EXISTS idx_workspace_repository_state ON workspaces (tenant_id, repository_id, state, created_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_workspace_manifest_listing ON workspace_manifest_entries (tenant_id, workspace_id, relative_path)",
 )
 
 _POSTGRES_BOOTSTRAP_LOCK = threading.Lock()
