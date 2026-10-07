@@ -15,7 +15,7 @@ class ProductBriefRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     idea: str = Field(min_length=10, max_length=12000)
     context: list[dict[str, str]] = Field(default_factory=list, max_length=12)
-    language: Literal["en", "it", "de"] = "en"
+    language: Literal["en", "it", "de", "fr", "es", "pt", "ar", "yo", "ha", "ig"] = "en"
 
 @router.post("/brief")
 def create_product_brief(
