@@ -9,9 +9,8 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from oae.api.config import settings
-from oae.api.conversation_routes import router as conversation_router
 from oae.api.ai_routes import router as ai_router
+from oae.api.config import settings
 from oae.api.engineering_routes import router as engineering_router
 from oae.api.observability import configure_error_tracking
 from oae.api.routes import router
