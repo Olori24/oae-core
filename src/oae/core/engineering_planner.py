@@ -69,12 +69,18 @@ def build_engineering_plan(
     if kind not in {"python", "node", "typescript", "mixed", "unknown"}:
         kind = "unknown"
 
-    steps: list[PlanStep] = [
-        PlanStep("inspect", "analyze_repository", "Confirm repository structure, entry points, dependencies, and existing quality signals."),
-        PlanStep("baseline", "capture_baseline", "Run only supported read/verification operations before mutation.", ("inspect",)),
-        PlanStep("implement", "code_objective", f"Generate, apply, and verify bounded code changes for the objective: {objective}", ("baseline",), "high", False, {"objective": objective}),
-        PlanStep("diff", "review_diff", "Inspect the complete governed diff before verification.", ("implement",)),
-    ]
+    if greenfield:
+        steps: list[PlanStep] = [
+            PlanStep("baseline", "capture_baseline", "Confirm the generated greenfield scaffold is readable and ready for governed coding."),
+            PlanStep("implement", "code_objective", f"Generate, apply, and verify bounded code changes for the objective: {objective}", ("baseline",), "high", False, {"objective": objective}),
+        ]
+    else:
+        steps = [
+            PlanStep("inspect", "analyze_repository", "Confirm repository structure, entry points, dependencies, and existing quality signals."),
+            PlanStep("baseline", "capture_baseline", "Run only supported read/verification operations before mutation.", ("inspect",)),
+            PlanStep("implement", "code_objective", f"Generate, apply, and verify bounded code changes for the objective: {objective}", ("baseline",), "high", False, {"objective": objective}),
+            PlanStep("diff", "review_diff", "Inspect the complete governed diff before verification.", ("implement",)),
+        ]
 
     verification: list[str] = []
     if kind in {"python", "mixed", "unknown"}:
@@ -94,7 +100,7 @@ def build_engineering_plan(
     elif test_runner == "jest":
         verification.append("jest_check")
 
-    steps.append(PlanStep("verify", "verify_workspace", "Run the repository's approved verification set and stop on the first failure.", ("diff",), "medium"))
+    steps.append(PlanStep("verify", "verify_workspace", "Run the approved verification set and stop on the first failure.", ("implement",) if greenfield else ("diff",), "medium"))
     steps.extend([
         PlanStep("repair", "repair_failures", "If verification fails, diagnose the bounded failure evidence and apply the smallest safe repair.", ("verify",), "high", True),
         PlanStep("reverify", "verify_workspace", "Re-run verification after a repair.", ("repair",), "medium", True),
