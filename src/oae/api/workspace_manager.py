@@ -352,7 +352,8 @@ class WorkspaceManager:
             reserved = True
             (staging_root / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
             final_root.parent.mkdir(parents=True, exist_ok=True)
-            if final_root.exists(): raise WorkspaceError("A workspace storage path collision occurred.")
+            if final_root.exists():
+                raise WorkspaceError("A workspace storage path collision occurred.")
             shutil.move(str(staging_root), str(final_root))
             ready_at = datetime.now(timezone.utc)
             self.repository.mark_ready(tenant_id, workspace_id, ready_at)
