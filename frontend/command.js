@@ -235,7 +235,7 @@
           method:"POST", headers:{"Content-Type":"application/json"},
           body:JSON.stringify({repository_kind:"unknown",has_tests:true,has_linter:true})
         });
-        appendPlan(planned.plan);
+        appendPlan(planned.plan, planned.repository_context);
       } else if (mode==="execute") {
         const gate=await api(`/v1/conversations/${state.conversation.id}/authorization`, {
           method:"POST", headers:{"Content-Type":"application/json"},
@@ -352,9 +352,10 @@
     }
   }
 
-  function appendPlan(plan) {
+  function appendPlan(plan, repositoryContext = null) {
     const steps=(plan.steps||[]).map(step => `<li><strong>${esc(step.id)}</strong> · ${esc(step.purpose)} <span class="oae-risk">${esc(step.risk)}</span></li>`).join("");
-    appendLive("Engineering plan ready. No repository mutation was performed.", {plan:true, html:`<div class="oae-plan-card"><span>PLAN ${esc(plan.version)}</span><strong>${esc(plan.objective)}</strong><ol>${steps}</ol></div>`});
+    const context = repositoryContext?.selected ? `<div class="oae-plan-context"><span>REPOSITORY CONTEXT</span><strong>${esc(repositoryContext.external_id)}</strong><small>${esc(repositoryContext.provider)} · ${esc(repositoryContext.default_branch)} · ${esc(repositoryContext.status)}</small></div>` : `<div class="oae-plan-context"><span>REPOSITORY CONTEXT</span><strong>No repository selected</strong><small>Plan is bounded to the supplied engineering objective.</small></div>`;
+    appendLive("Engineering plan ready. No repository mutation was performed.", {plan:true, html:`<div class="oae-plan-card"><span>PLAN ${esc(plan.version)}</span><strong>${esc(plan.objective)}</strong>${context}<ol>${steps}</ol></div>`});
   }
 
   function appendLive(text, meta={}) {
