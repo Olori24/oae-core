@@ -62,6 +62,7 @@ class PlanRequest(BaseModel):
     has_linter: bool = True
     has_typecheck: bool = False
     test_runner: Literal["none", "vitest", "jest"] = "none"
+    auto_context: bool = True
 
 
 class AuthorizationCreate(BaseModel):
@@ -269,13 +270,36 @@ def create_plan(conversation_id: str, data: PlanRequest, principal: TenantPrinci
         raise HTTPException(status_code=422, detail="No engineering objective found.")
     metadata = _metadata(row[1])
     objective = metadata.get("objective", {}).get("objective") or row[0]
+    current = _get(conversation_id, principal.tenant_id)
+    repository_context: dict[str, object] = {"selected": False}
+    repository_kind = data.repository_kind
+    has_tests = data.has_tests
+    has_linter = data.has_linter
+    has_typecheck = data.has_typecheck
+    test_runner = data.test_runner
+    if data.auto_context and current.get("repository_id"):
+        with db(principal.tenant_id) as conn:
+            repo = conn.execute(
+                "SELECT id,provider,external_id,default_branch,status FROM repositories "
+                "WHERE id=? AND tenant_id=? AND deleted_at IS NULL",
+                (current["repository_id"], principal.tenant_id),
+            ).fetchone()
+        if repo:
+            repository_context = {
+                "selected": True,
+                "repository_id": str(repo[0]),
+                "provider": str(repo[1]),
+                "external_id": str(repo[2]),
+                "default_branch": str(repo[3]),
+                "status": str(repo[4]),
+            }
     plan = build_engineering_plan(
         objective=str(objective),
-        repository_kind=data.repository_kind,
-        has_tests=data.has_tests,
-        has_linter=data.has_linter,
-        has_typecheck=data.has_typecheck,
-        test_runner=data.test_runner,
+        repository_kind=repository_kind,
+        has_tests=has_tests,
+        has_linter=has_linter,
+        has_typecheck=has_typecheck,
+        test_runner=test_runner,
         security_required=True,
     ).to_dict()
     now = _now()
@@ -287,7 +311,7 @@ def create_plan(conversation_id: str, data: PlanRequest, principal: TenantPrinci
              "plan", json.dumps({"plan": plan}, separators=(",", ":")), now),
         )
         conn.execute("UPDATE conversations SET updated_at=? WHERE id=? AND tenant_id=?", (now, conversation_id, principal.tenant_id))
-    return {"conversation_id": conversation_id, "plan": plan, "status": "planned"}
+    return {"conversation_id": conversation_id, "plan": plan, "repository_context": repository_context, "status": "planned"}
 
 
 @router.post("/{conversation_id}/authorization", status_code=201)

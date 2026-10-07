@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from oae.core.ai_gateway import AIGatewayUnavailable, generate_engineering_response, model_available
+
+
+def test_model_gateway_is_disabled_without_key(monkeypatch):
+    monkeypatch.delenv("AI_GATEWAY_API_KEY", raising=False)
+    assert model_available() is False
+    with pytest.raises(AIGatewayUnavailable, match="not configured"):
+        generate_engineering_response(messages=[{"role": "user", "content": "Build a shop."}])
+
+
+def test_model_gateway_uses_configured_model(monkeypatch):
+    class Response:
+        def read(self):
+            return json.dumps({"choices": [{"message": {"content": "I can build that."}}]}).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+    captured = {}
+
+    def fake_urlopen(req, timeout):
+        captured["url"] = req.full_url
+        captured["payload"] = json.loads(req.data.decode())
+        captured["timeout"] = timeout
+        return Response()
+
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "test-key")
+    monkeypatch.setenv("OAE_AI_MODEL", "openai/test-model")
+    monkeypatch.setattr("oae.core.ai_gateway.request.urlopen", fake_urlopen)
+
+    result = generate_engineering_response(
+        messages=[{"role": "user", "content": "Build a school app."}],
+        system="You are OAE.",
+    )
+
+    assert result == "I can build that."
+    assert captured["url"].endswith("/v1/chat/completions")
+    assert captured["payload"]["model"] == "openai/test-model"
+    assert captured["payload"]["messages"][0]["role"] == "system"
+    assert captured["payload"]["messages"][1]["content"] == "Build a school app."

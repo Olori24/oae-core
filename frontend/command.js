@@ -228,6 +228,9 @@
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({content,mode:$("oae-mode").value})
       });
+      const modelReply = await requestModelResponse();
+      if (modelReply) appendLive(modelReply, {model:true});
+
       input.value=""; input.style.height="auto"; render();
       const mode=$("oae-mode").value;
       if (mode==="plan") {
@@ -235,7 +238,7 @@
           method:"POST", headers:{"Content-Type":"application/json"},
           body:JSON.stringify({repository_kind:"unknown",has_tests:true,has_linter:true})
         });
-        appendPlan(planned.plan);
+        appendPlan(planned.plan, planned.repository_context);
       } else if (mode==="execute") {
         const gate=await api(`/v1/conversations/${state.conversation.id}/authorization`, {
           method:"POST", headers:{"Content-Type":"application/json"},
@@ -352,9 +355,30 @@
     }
   }
 
-  function appendPlan(plan) {
+  async function requestModelResponse() {
+    try {
+      const messages = (state.conversation?.messages || [])
+        .filter(m => m.role === "user" || m.role === "assistant")
+        .slice(-12)
+        .map(m => ({ role:m.role, content:m.content }));
+      const result = await api("/v1/ai/respond", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          messages,
+          system:"You are OAE, a technical co-founder for people who may have never coded. Explain software decisions in plain language, ask only essential questions, turn vague ideas into concrete product requirements, and never claim that code was built, tested, deployed, or changed unless OAE has actual evidence. Repository mutation and consequential actions are handled only by OAE's governed execution pipeline."
+        })
+      });
+      return result.response || "";
+    } catch (e) {
+      return "";
+    }
+  }
+
+  function appendPlan(plan, repositoryContext = null) {
     const steps=(plan.steps||[]).map(step => `<li><strong>${esc(step.id)}</strong> · ${esc(step.purpose)} <span class="oae-risk">${esc(step.risk)}</span></li>`).join("");
-    appendLive("Engineering plan ready. No repository mutation was performed.", {plan:true, html:`<div class="oae-plan-card"><span>PLAN ${esc(plan.version)}</span><strong>${esc(plan.objective)}</strong><ol>${steps}</ol></div>`});
+    const context = repositoryContext?.selected ? `<div class="oae-plan-context"><span>REPOSITORY CONTEXT</span><strong>${esc(repositoryContext.external_id)}</strong><small>${esc(repositoryContext.provider)} · ${esc(repositoryContext.default_branch)} · ${esc(repositoryContext.status)}</small></div>` : `<div class="oae-plan-context"><span>REPOSITORY CONTEXT</span><strong>No repository selected</strong><small>Plan is bounded to the supplied engineering objective.</small></div>`;
+    appendLive("Engineering plan ready. No repository mutation was performed.", {plan:true, html:`<div class="oae-plan-card"><span>PLAN ${esc(plan.version)}</span><strong>${esc(plan.objective)}</strong>${context}<ol>${steps}</ol></div>`});
   }
 
   function appendLive(text, meta={}) {
