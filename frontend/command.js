@@ -51,7 +51,7 @@
         </section>
         <section class="oae-composer-wrap">
           <div class="oae-toolbar">
-            <label class="oae-select"><span>MODE</span><select id="oae-mode"><option value="ask">ASK · investigate</option><option value="plan">PLAN · prepare changes</option><option value="execute">EXECUTE · authorized changes</option></select></label>
+            <label class="oae-select"><span>MODE</span><select id="oae-mode"><option value="ask">BUILD · from idea</option><option value="plan">PLAN · prepare changes</option><option value="execute">EXECUTE · authorized changes</option></select></label>
             <label class="oae-select"><span>REPOSITORY</span><select id="oae-repository"><option value="">Current / none</option></select></label>
             <label class="oae-input-mini"><span>WORKSPACE</span><input id="oae-workspace" placeholder="ready workspace id" /></label>
           </div>
@@ -228,6 +228,15 @@
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({content,mode:$("oae-mode").value})
       });
+      const wantsToBuild = /\\b(build|create|make|develop|launch)\\b/i.test(content);
+      if (wantsToBuild) {
+        const product = await api("/v1/product/brief", {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({idea:content,context:(state.conversation.messages||[]).filter(m=>m.role==="user"||m.role==="assistant").slice(-8).map(m=>({role:m.role,content:m.content}))})
+        });
+        appendProductBrief(product.brief);
+      }
       const modelReply = await requestModelResponse();
       if (modelReply) appendLive(modelReply, {model:true});
 
@@ -373,6 +382,14 @@
     } catch (e) {
       return "";
     }
+  }
+
+  function appendProductBrief(brief) {
+    const missing=(brief.missing||[]).map(x=>`<li>${esc(x)}</li>`).join("");
+    const workflows=(brief.core_workflows||[]).map(x=>`<li>${esc(x)}</li>`).join("");
+    appendLive("I turned your idea into a product brief. I will not start coding until the missing decisions are clear.", {
+      html:`<div class="oae-plan-card"><span>PRODUCT BRIEF</span><strong>${esc(brief.product_name||"New product")}</strong><p>${esc(brief.problem||"")}</p><small><b>Users</b>: ${esc((brief.users||[]).join(", "))}</small><small><b>Workflows</b></small><ol>${workflows}</ol><small><b>Missing before build</b></small><ol>${missing||"<li>None</li>"}</ol></div>`
+    });
   }
 
   function appendPlan(plan, repositoryContext = null) {

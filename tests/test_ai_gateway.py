@@ -47,3 +47,21 @@ def test_model_gateway_uses_configured_model(monkeypatch):
     assert captured["payload"]["model"] == "openai/test-model"
     assert captured["payload"]["messages"][0]["role"] == "system"
     assert captured["payload"]["messages"][1]["content"] == "Build a school app."
+
+
+def test_coding_gateway_uses_same_ai_gateway(monkeypatch):
+    from oae.core.ai_gateway import AIGatewayCodingGateway
+
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "test-key")
+    monkeypatch.setattr(
+        "oae.core.ai_gateway.generate_engineering_response",
+        lambda **kwargs: "proposal-json",
+    )
+    result = AIGatewayCodingGateway().generate(
+        tenant_id="tenant-1",
+        operation="code_proposal",
+        model="alibaba/qwen3-coder-next",
+        prompt="Return a proposal.",
+    )
+    assert result.content == "proposal-json"
+    assert result.audit.provider == "vercel-ai-gateway"
