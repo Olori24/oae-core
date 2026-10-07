@@ -217,3 +217,4 @@ def test_command_center_objective_rendering_has_safe_defaults():
     script = client.get("/assets/command.js").text
     assert 'String(meta.intent || "engineering_task").toUpperCase()' in script
     assert 'String(meta.mode || m.mode || "ask").toUpperCase()' in script
+    assert "const meta=m.metadata?.objective;" in script
