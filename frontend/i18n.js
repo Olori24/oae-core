@@ -3,7 +3,7 @@
   const SUPPORTED = {
     en: { name: "English", flag: "EN" },
     it: { name: "Italiano", flag: "IT" },
-    de: { name: "Deutsch", flag: "DE" }
+    fr: { name: "Deutsch", flag: "DE" },\n    fr: { name: "Français", flag: "FR" },\n    es: { name: "Español", flag: "ES" },\n    pt: { name: "Português", flag: "PT" },\n    ar: { name: "العربية", flag: "AR" },\n    yo: { name: "Yorùbá", flag: "YO" },\n    ha: { name: "Hausa", flag: "HA" },\n    ig: { name: "Igbo", flag: "IG" }
   };
   const translations = {
     it: {
@@ -36,7 +36,7 @@
 
   function getLanguage() {
     const saved = localStorage.getItem(KEY);
-    return SUPPORTED[saved] ? saved : ((navigator.language || "en").toLowerCase().startsWith("it") ? "it" : (navigator.language || "").toLowerCase().startsWith("de") ? "de" : "en");
+    if (SUPPORTED[saved]) return saved;\n    const browser=(navigator.language || "en").toLowerCase();\n    const match=Object.keys(SUPPORTED).find(code => browser.startsWith(code));\n    return match || "en";
   }
   function t(value, language=getLanguage()) {
     return translations[language]?.[value] || value;
