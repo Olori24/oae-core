@@ -21,6 +21,7 @@ from oae.core.coding_brain import CodingBrain
 from oae.core.coding_executor import apply_coding_proposal
 from oae.core.coding_repair import CodingRepairBrain
 from oae.core.engineering_planner import build_engineering_plan
+from oae.core.ai_gateway import AIGatewayCodingGateway
 from oae.core.governed_execution import run_governed_command, supported_commands
 from oae.core.production_readiness import evaluate_production_readiness
 from oae.core.repository_quality_gate import RepositoryQualityGate
@@ -451,9 +452,7 @@ class JobRunner:
         objective = str(payload.get("objective", "")).strip()
         if not workspace_id or not objective:
             raise ValueError("coding_execute requires workspace_id and objective")
-        model = settings.coding_brain_model.strip()
-        if not model:
-            raise ValueError("Coding brain model is not configured server-side.")
+        model = settings.coding_brain_model.strip() or __import__("os").getenv("OAE_AI_MODEL", "alibaba/qwen3-coder-next")
         with db(tenant_id) as conn:
             row = conn.execute(
                 "SELECT storage_uri,state,repository_id FROM workspaces WHERE id=? AND tenant_id=?",
@@ -462,7 +461,7 @@ class JobRunner:
         if not row or row[1] != "ready":
             raise ValueError("Workspace must be ready before coding execution.")
         root = JobRunner._safe_workspace_path(row[0])
-        gateway = OpenWeightModelGateway(open_weight_config_from_settings(settings))
+        gateway = AIGatewayCodingGateway() if __import__("os").getenv("AI_GATEWAY_API_KEY") else OpenWeightModelGateway(open_weight_config_from_settings(settings))
         proposal = CodingBrain(gateway, model).propose(
             tenant_id=tenant_id, workspace=root, objective=objective
         )
@@ -527,7 +526,7 @@ class JobRunner:
         if not row or row[1] != "ready":
             raise ValueError("Workspace must be ready before coding repair.")
         root = JobRunner._safe_workspace_path(row[0])
-        gateway = OpenWeightModelGateway(open_weight_config_from_settings(settings))
+        gateway = AIGatewayCodingGateway() if __import__("os").getenv("AI_GATEWAY_API_KEY") else OpenWeightModelGateway(open_weight_config_from_settings(settings))
         proposal = CodingRepairBrain(gateway, model).propose_repair(
             tenant_id=tenant_id,
             workspace=root,
