@@ -1,5 +1,6 @@
 from oae.core.product_builder import build_product_brief
 
+
 def test_product_builder_fallback_understands_school_product():
     brief = build_product_brief(
         "Build a school management app where admins register students, teachers take attendance, parents see results, and the school collects fees."
