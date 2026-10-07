@@ -232,3 +232,10 @@ def test_plan_contract_surfaces_repository_context():
     script = client.get("/assets/command.js").text
     assert "planned.repository_context" in script
     assert "REPOSITORY CONTEXT" in script
+
+def test_command_center_uses_model_reasoning_when_available():
+    client = TestClient(app)
+    script = client.get("/assets/command.js").text
+    assert '"/v1/ai/respond"' in script
+    assert "requestModelResponse" in script
+    assert "technical co-founder" in script
