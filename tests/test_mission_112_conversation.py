@@ -210,3 +210,11 @@ def test_postgres_bootstrap_contains_workspace_foundation():
     assert "CREATE TABLE IF NOT EXISTS repository_revisions" in schema
     assert "CREATE TABLE IF NOT EXISTS workspaces" in schema
     assert "CREATE TABLE IF NOT EXISTS workspace_manifest_entries" in schema
+
+
+def test_command_center_objective_rendering_has_safe_defaults():
+    client = TestClient(app)
+    script = client.get("/assets/command.js").text
+    assert 'String(meta.intent || "engineering_task").toUpperCase()' in script
+    assert 'String(meta.mode || m.mode || "ask").toUpperCase()' in script
+    assert "const meta=m.metadata?.objective;" in script
