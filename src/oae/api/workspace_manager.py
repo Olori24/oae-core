@@ -412,8 +412,8 @@ class WorkspaceManager:
     def _manifest_sha256(
         tenant_id: str,
         workspace_id: str,
-        repository_id: str,
-        revision_id: str,
+        repository_id: str | None,
+        revision_id: str | None,
         purpose: WorkspacePurpose,
         entries: list[WorkspaceManifestEntry],
     ) -> str:
