@@ -259,7 +259,7 @@
         watchAuthorization(gate.authorization_id);
       }
       await loadSessions();
-    } catch(e) { toast(e.message); $("oae-attachment-status").textContent = `Send failed: ${e.message}`; } finally { setComposerBusy(false); }
+    } catch(e) { toast(e.message); $("oae-attachment-status").textContent = `Send failed: ${e.message}`; } finally { setComposerBusy(false); if (!$("oae-attachment-status").textContent.startsWith("Send failed")) $("oae-attachment-status").textContent = "Ready"; }
   }
 
   function uploadFiles() {
