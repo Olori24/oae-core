@@ -24,6 +24,7 @@ from oae.api.auth import (
 from oae.api.config import settings
 from oae.api.db import db
 from oae.api.durable_jobs import DurableJobRepository
+from oae.api.job_runner import JobRunner
 from oae.api.worker_authorizations import WorkerAuthorizationRepository
 from oae.core.engineering_planner import build_engineering_plan
 
@@ -457,7 +458,17 @@ def execute_conversation(
             authorization_id=data.authorization_id,
             idempotency_key=f"conversation-agent-tick:{run.id}:0:0", priority=90,
         )
+        # Do not leave the run waiting for a nonexistent always-on worker.
+        # Serverless execution drains a bounded number of authorized steps now;
+        # the durable queue remains the recovery mechanism.
+        processed_jobs = JobRunner().drain_authorized_queue(
+            worker_name=f"conversation-{conversation_id[:12]}",
+            max_jobs=8,
+        )
+    else:
+        processed_jobs = 0
     return {"run_id": run.id, "status": run.state.status, "objective": objective,
+            "processed_jobs": processed_jobs,
             "authorization_id": data.authorization_id, "plan": plan}
 
 
