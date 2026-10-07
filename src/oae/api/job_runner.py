@@ -562,7 +562,7 @@ class JobRunner:
         if not row or row[1] != "ready":
             raise ValueError("Workspace must be ready before coding repair.")
         root = JobRunner._safe_workspace_path(row[0])
-        gateway = AIGatewayCodingGateway() if __import__("os").getenv("AI_GATEWAY_API_KEY") else OpenWeightModelGateway(open_weight_config_from_settings(settings))
+        gateway = AIGatewayCodingGateway() if (__import__("os").getenv("AI_GATEWAY_API_KEY") or __import__("os").getenv("VERCEL_OIDC_TOKEN")) else OpenWeightModelGateway(open_weight_config_from_settings(settings))
         proposal = CodingRepairBrain(gateway, model).propose_repair(
             tenant_id=tenant_id,
             workspace=root,
