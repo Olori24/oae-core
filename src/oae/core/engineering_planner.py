@@ -52,6 +52,7 @@ def build_engineering_plan(
     has_build: bool = False,
     test_runner: str = "none",
     security_required: bool = True,
+    greenfield: bool = False,
     action_inputs: dict[str, dict[str, Any]] | None = None,
 ) -> EngineeringPlan:
     objective = objective.strip()
