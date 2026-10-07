@@ -38,7 +38,7 @@
       target.appendChild(select);
     });
   }
-  const originalFetch=window.fetch;
+  if (window.OAEI18n) {\n    const dir=["ar"].includes(window.OAEI18n.getLanguage()) ? "rtl" : "ltr";\n    document.documentElement.dir=dir;\n  }\n  const originalFetch=window.fetch;
   window.fetch=async (input,init={}) => {
     const url=typeof input==="string" ? input : input?.url || "";
     if (["/v1/ai/respond","/v1/product/brief"].some(path => url.includes(path)) && init.body && typeof init.body==="string") {
@@ -51,7 +51,7 @@
     return originalFetch(input,init);
   };
   const observer=new MutationObserver(() => { addLanguageSelectors(); translateTree(document); });
-  window.addEventListener("oae:language", () => { addLanguageSelectors(); translateTree(document); });
+  window.addEventListener("oae:language", () => { document.documentElement.dir=["ar"].includes(window.OAEI18n?.getLanguage?.()) ? "rtl" : "ltr"; addLanguageSelectors(); translateTree(document); });
   window.addEventListener("DOMContentLoaded", () => {
     addLanguageSelectors();
     translateTree(document);
