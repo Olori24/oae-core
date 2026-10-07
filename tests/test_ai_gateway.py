@@ -65,3 +65,10 @@ def test_coding_gateway_uses_same_ai_gateway(monkeypatch):
     )
     assert result.content == "proposal-json"
     assert result.audit.provider == "vercel-ai-gateway"
+
+
+def test_model_gateway_accepts_vercel_oidc_without_api_key(monkeypatch):
+    monkeypatch.delenv("AI_GATEWAY_API_KEY", raising=False)
+    monkeypatch.setenv("VERCEL_OIDC_TOKEN", "oidc-token")
+    from oae.core.ai_gateway import model_available
+    assert model_available() is True
