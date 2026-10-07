@@ -228,7 +228,7 @@
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({content,mode:$("oae-mode").value})
       });
-      const wantsToBuild = /\\b(build|create|make|develop|launch)\\b/i.test(content);
+      const wantsToBuild = /\b(build|create|make|develop|launch)\b/i.test(content);
       if (wantsToBuild) {
         const product = await api("/v1/product/brief", {
           method:"POST",

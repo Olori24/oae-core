@@ -76,6 +76,24 @@ class JobRunner:
                 (status, json.dumps(result), self._now(), job_id),
             )
 
+    def run_lease(self, lease) -> None:
+        """Execute exactly one leased job and fence completion through the durable queue."""
+        repository = DurableJobRepository()
+        try:
+            result = self._dispatch(
+                lease.operation,
+                dict(lease.payload),
+                lease.job_id,
+                tenant_id=lease.tenant_id,
+            )
+            repository.complete(lease, result)
+        except Exception as exc:
+            logger.error(
+                "leased_job_execution_failed",
+                extra={"job_id": lease.job_id, "operation": lease.operation, "error_type": type(exc).__name__},
+            )
+            repository.fail(lease, "mission_execution_failed")
+
     def _dispatch(
         self,
         operation: str,
