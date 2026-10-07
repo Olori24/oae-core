@@ -121,3 +121,68 @@ def test_command_center_attachment_and_send_contract():
     assert "if ((!content && !state.pendingFiles.length)" in script
     assert "new FormData()" in script
     assert ".oae-attachment-chip" in styles
+    assert "/plan" in script
+    assert "/authorization" in script
+    assert "watchAuthorization" in script
+    assert "watchRun" in script
+    assert "oae-run-action" in styles
+
+
+
+def test_engineering_plan_is_generated_without_mutation(tmp_path):
+    client = _client(tmp_path)
+    tenant = client.post("/v1/tenants", json={"name": "Planner Tenant"})
+    headers = {"Authorization": f"Bearer {tenant.json()['api_key']}"}
+    created = client.post(
+        "/v1/conversations",
+        headers=headers,
+        json={"mode": "plan", "repository_id": "repo-1"},
+    )
+    conversation_id = created.json()["id"]
+    client.post(
+        f"/v1/conversations/{conversation_id}/messages",
+        headers=headers,
+        json={"content": "Fix the authentication bug and add regression tests.", "mode": "plan"},
+    )
+    planned = client.post(
+        f"/v1/conversations/{conversation_id}/plan",
+        headers=headers,
+        json={"repository_kind": "python", "has_tests": True, "has_linter": True},
+    )
+    assert planned.status_code == 200
+    body = planned.json()
+    assert body["status"] == "planned"
+    assert body["plan"]["objective"].startswith("Fix the authentication bug")
+    assert [step["id"] for step in body["plan"]["steps"]][:4] == [
+        "inspect", "baseline", "implement", "diff"
+    ]
+    assert "verification completed successfully" in body["plan"]["completion_criteria"]
+
+
+def test_execute_requires_approved_scoped_authorization(tmp_path):
+    client = _client(tmp_path)
+    tenant = client.post("/v1/tenants", json={"name": "Execution Tenant"})
+    headers = {"Authorization": f"Bearer {tenant.json()['api_key']}"}
+    created = client.post(
+        "/v1/conversations",
+        headers=headers,
+        json={"mode": "execute", "workspace_id": "workspace-1"},
+    )
+    conversation_id = created.json()["id"]
+    client.post(
+        f"/v1/conversations/{conversation_id}/messages",
+        headers=headers,
+        json={"content": "Build the requested feature.", "mode": "execute"},
+    )
+    response = client.post(
+        f"/v1/conversations/{conversation_id}/execute",
+        headers=headers,
+        json={"authorization_id": "not-approved"},
+    )
+    assert response.status_code == 503 or response.status_code == 403
+
+
+def test_conversation_routes_expose_governance_surface():
+    client = TestClient(app)
+    script = client.get("/assets/command.js")
+    assert script.status_code == 200

@@ -92,8 +92,8 @@ class AgentRunRepository:
             raise ValueError("Agent run not found for tenant.")
         state = AgentRunState(
             run_id=str(row[0]),
-            status=str(row[3]),
-            plan=json.loads(row[4]),
+            status=str(row[4]),
+            plan=json.loads(row[3]),
             completed_steps=tuple(json.loads(row[5])),
             failed_step=row[6],
             repair_count=int(row[7]),
@@ -126,7 +126,7 @@ class AgentRunRepository:
             if not row:
                 raise ValueError("Agent run not found for tenant.")
             if row[12] and row[13]:
-                existing_until = datetime.fromisoformat(str(row[14])) if row[14] else now
+                existing_until = datetime.fromisoformat(str(row[13])) if row[13] else now
                 if existing_until > now:
                     return None
             state = AgentRunState(run_id=str(row[0]), status=str(row[3]), plan=json.loads(row[2]), completed_steps=tuple(json.loads(row[4])), failed_step=row[5], repair_count=int(row[6]), evidence=tuple(json.loads(row[7])))

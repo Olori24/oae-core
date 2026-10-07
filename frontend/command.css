@@ -18,3 +18,13 @@
 @media(max-width:520px){.oae-command-header{height:52px}.oae-chat-stage{padding:18px 10px 10px}.oae-empty-state{min-height:42vh}.oae-empty-state h1{font-size:clamp(25px,8vw,34px)}.oae-empty-state>p:not(.oae-kicker){font-size:12px;line-height:1.55}.oae-examples{gap:6px}.oae-examples button{font-size:9px;padding:8px 9px}.oae-composer-wrap{padding:8px 8px calc(8px + env(safe-area-inset-bottom))}.oae-toolbar{margin-bottom:7px}.oae-select{flex:0 0 auto}.oae-composer{gap:5px;padding:6px;border-radius:12px}.oae-icon-button{width:38px;height:38px;flex:0 0 38px}.oae-send{height:38px;padding:0 11px;flex:0 0 auto}.oae-composer textarea{font-size:12px;min-width:0;min-height:38px;padding:8px}.oae-composer-foot{line-height:1.35;align-items:flex-start}.oae-composer-foot span:last-child{display:none}}
 
 .oae-pending-attachments{max-width:1000px;margin:0 auto 7px;display:flex;gap:6px;flex-wrap:wrap}.oae-attachment-chip{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:6px 8px 6px 10px;border:1px solid rgba(154,232,190,.18);background:#0c2115;color:#a9d4b7;border-radius:8px;font-size:10px}.oae-attachment-chip span{max-width:min(360px,65vw);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.oae-attachment-chip button{border:0;background:transparent;color:#82a991;font-size:15px;line-height:1;cursor:pointer;padding:0 2px}.oae-attachment-chip button:hover{color:#d9f7e4}
+.oae-plan-card{margin-top:12px;padding:14px;border:1px solid rgba(125,255,205,.22);border-radius:14px;background:rgba(125,255,205,.045);display:grid;gap:8px}
+.oae-plan-card>span{font-size:10px;letter-spacing:.12em;color:#7dffcd}
+.oae-plan-card>strong{font-size:14px;line-height:1.4}
+.oae-plan-card ol{margin:0;padding-left:20px;display:grid;gap:6px;font-size:12px;color:#c7d2ce}
+.oae-plan-card li{padding-left:2px}
+.oae-risk{margin-left:6px;font-size:9px;text-transform:uppercase;opacity:.7}
+.oae-run-card small{display:block;margin-top:4px;opacity:.72}
+
+.oae-run-action{margin-top:8px;border:1px solid rgba(125,255,205,.35);background:rgba(125,255,205,.08);color:#eafff7;border-radius:9px;padding:7px 10px;font:inherit;font-size:11px;cursor:pointer}
+.oae-run-action:disabled{opacity:.55;cursor:wait}

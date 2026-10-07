@@ -69,8 +69,7 @@
     app.prepend(shell);
     document.querySelector(".workspace-layout")?.setAttribute("hidden", "");
     bind();
-    loadSessions();
-    createSession();
+    bootstrap();
   }
 
   function bind() {
@@ -100,8 +99,19 @@
     } catch {}
   }
 
+  async function bootstrap() {
+    try {
+      await loadRepositories();
+      await createSession();
+      await loadSessions();
+      if (state.conversation) $("oae-attachment-status").textContent = "Ready";
+    } catch (e) {
+      toast(e.message || "Unable to open an engineering session.");
+    }
+  }
+
   async function loadSessions() {
-    await loadRepositories();
+
     try {
       const sessions = await api("/v1/conversations");
       $("oae-session-list").innerHTML = sessions.length
@@ -120,7 +130,11 @@
       });
       render();
       await loadSessions();
-    } catch (e) { toast(e.message); }
+    } catch (e) {
+      state.conversation = null;
+      $("oae-attachment-status").textContent = `Unable to open engineering session: ${e.message}`;
+      throw e;
+    }
   }
 
   async function openSession(id) {
@@ -179,10 +193,18 @@
 
   async function send() {
     const input=$("oae-input"), content=input?.value.trim();
-    if ((!content && !state.pendingFiles.length) || !state.conversation || state.busy) {
-      if (!state.conversation) toast("OAE is still opening your engineering session. Please try again in a moment.");
-      return;
+    if ((!content && !state.pendingFiles.length) || state.busy) return;
+    if (!state.conversation) {
+      setComposerBusy(true, "Opening…");
+      $("oae-attachment-status").textContent = "Opening engineering session…";
+      try { await createSession(); } catch (e) {
+        $("oae-attachment-status").textContent = `Send failed: ${e.message}`;
+        setComposerBusy(false);
+        return;
+      }
+      setComposerBusy(false);
     }
+    if (!state.conversation) return;
     setComposerBusy(true);
     $("oae-attachment-status").textContent = "Sending to OAE…";
     try {
@@ -207,21 +229,25 @@
         body:JSON.stringify({content,mode:$("oae-mode").value})
       });
       input.value=""; input.style.height="auto"; render();
-      if ($("oae-mode").value==="execute") {
-        const auth=prompt("EXECUTE mode requires an active worker authorization ID. Enter the authorization ID, or Cancel to keep this objective planned.");
-        if (auth) await execute(auth);
+      const mode=$("oae-mode").value;
+      if (mode==="plan") {
+        const planned=await api(`/v1/conversations/${state.conversation.id}/plan`, {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({repository_kind:"unknown",has_tests:true,has_linter:true})
+        });
+        appendPlan(planned.plan);
+      } else if (mode==="execute") {
+        const gate=await api(`/v1/conversations/${state.conversation.id}/authorization`, {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({expires_in_seconds:3600})
+        });
+        appendLive("Execution approval requested. A separate authorized approver must approve this operation before OAE can mutate the workspace.", {
+          authorization_id:gate.authorization_id, status:"pending approval"
+        });
+        watchAuthorization(gate.authorization_id);
       }
       await loadSessions();
     } catch(e) { toast(e.message); $("oae-attachment-status").textContent = `Send failed: ${e.message}`; } finally { setComposerBusy(false); }
-  }
-
-  async function execute(auth) {
-    try {
-      const result=await api(`/v1/conversations/${state.conversation.id}/execute`, {
-        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({authorization_id:auth})
-      });
-      appendLive("Execution queued. OAE is handing the objective to the governed engineering pipeline.", {job_id:result.job_id});
-    } catch(e) { appendLive(`Execution blocked: ${e.message}`); }
   }
 
   function uploadFiles() {
@@ -273,9 +299,67 @@
     r.start();
   }
 
+  async function watchAuthorization(authorizationId) {
+    for (let attempt=0; attempt<40; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      try {
+        const result=await api(`/v1/conversations/${state.conversation.id}/authorization`);
+        const auth=result.authorization;
+        if (auth?.id===authorizationId && auth.status==="approved") {
+          appendLive("Execution approved. OAE can now start the governed engineering run.", {
+            authorization_id:authorizationId, status:"approved",
+            action:`<button type="button" class="oae-run-action" data-run-auth="${esc(authorizationId)}">Start governed run</button>`
+          });
+          document.querySelector("[data-run-auth]")?.addEventListener("click", e => {
+            e.currentTarget.disabled=true;
+            executeApproved(authorizationId);
+          });
+          return;
+        }
+        if (auth?.id===authorizationId && ["rejected","revoked"].includes(auth.status)) {
+          appendLive(`Execution approval ${esc(auth.status)}. No mutation was started.`);
+          return;
+        }
+      } catch {}
+    }
+  }
+
+  async function executeApproved(authorizationId) {
+    try {
+      const result=await api(`/v1/conversations/${state.conversation.id}/execute`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({authorization_id:authorizationId})
+      });
+      appendLive("Governed engineering run started. OAE will verify and repair within the approved pipeline.", {
+        run_id:result.run_id, status:result.status
+      });
+      watchRun(result.run_id);
+    } catch(e) {
+      appendLive(`Execution blocked: ${e.message}`);
+    }
+  }
+
+  async function watchRun(runId) {
+    for (let attempt=0; attempt<120; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      try {
+        const run=await api(`/v1/conversations/${state.conversation.id}/runs/${runId}`);
+        if (["completed","failed","blocked"].includes(run.status)) {
+          appendLive(`Engineering run ${run.status}. Completed steps: ${run.completed_steps.length}.`, {run_id:runId, status:run.status});
+          return;
+        }
+      } catch {}
+    }
+  }
+
+  function appendPlan(plan) {
+    const steps=(plan.steps||[]).map(step => `<li><strong>${esc(step.id)}</strong> · ${esc(step.purpose)} <span class="oae-risk">${esc(step.risk)}</span></li>`).join("");
+    appendLive("Engineering plan ready. No repository mutation was performed.", {plan:true, html:`<div class="oae-plan-card"><span>PLAN ${esc(plan.version)}</span><strong>${esc(plan.objective)}</strong><ol>${steps}</ol></div>`});
+  }
+
   function appendLive(text, meta={}) {
     const el=document.createElement("article"); el.className="oae-message assistant";
-    el.innerHTML=`<div class="oae-message-role">OAE</div><div class="oae-message-body">${esc(text)}${meta.job_id ? `<div class="oae-run-card"><span>MISSION QUEUED</span><code>${esc(meta.job_id)}</code></div>` : ""}</div>`;
+    el.innerHTML=`<div class="oae-message-role">OAE</div><div class="oae-message-body">${esc(text)}${meta.job_id ? `<div class="oae-run-card"><span>MISSION QUEUED</span><code>${esc(meta.job_id)}</code></div>` : ""}${meta.authorization_id ? `<div class="oae-run-card"><span>APPROVAL</span><code>${esc(meta.authorization_id)}</code><small>${esc(meta.status||"pending")}</small>${meta.action||""}</div>` : ""}${meta.run_id ? `<div class="oae-run-card"><span>ENGINEERING RUN</span><code>${esc(meta.run_id)}</code><small>${esc(meta.status||"running")}</small></div>` : ""}${meta.html||""}</div>`;
     $("oae-messages").appendChild(el); $("oae-messages").scrollTop=$("oae-messages").scrollHeight;
   }
 
