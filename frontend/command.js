@@ -168,7 +168,7 @@
     $("oae-empty-state").style.display=messages.some(m=>m.role==="user") ? "none" : "flex";
     $("oae-messages").innerHTML=messages.map(m => {
       const meta=m.metadata?.objective;
-      const card=meta ? `<div class="oae-objective-card"><span>${esc(meta.intent.toUpperCase())}</span><strong>${esc(meta.mode.toUpperCase())}</strong></div>` : "";
+      const card=meta ? `<div class="oae-objective-card"><span>${esc(String(meta.intent || "engineering_task").toUpperCase())}</span><strong>${esc(String(meta.mode || m.mode || "ask").toUpperCase())}</strong></div>` : "";
       return `<article class="oae-message ${m.role==="user"?"user":"assistant"}"><div class="oae-message-role">${m.role==="user"?"YOU":"OAE"}</div><div class="oae-message-body">${esc(m.content).replace(/\n/g,"<br>")}${card}</div></article>`;
     }).join("");
     $("oae-messages").scrollTop=$("oae-messages").scrollHeight;
