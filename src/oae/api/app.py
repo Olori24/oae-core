@@ -15,6 +15,7 @@ from oae.api.conversation_routes import router as conversation_router
 from oae.api.engineering_routes import router as engineering_router
 from oae.api.observability import configure_error_tracking
 from oae.api.product_routes import router as product_router
+from oae.api.worker_routes import router as worker_router
 from oae.api.routes import router
 
 
@@ -98,6 +99,7 @@ app.include_router(engineering_router)
 app.include_router(conversation_router)
 app.include_router(ai_router)
 app.include_router(product_router)
+app.include_router(worker_router)
 
 
 _FRONTEND = Path(__file__).resolve().parents[3] / "frontend" / "index.html"
