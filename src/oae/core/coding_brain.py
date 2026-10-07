@@ -97,7 +97,7 @@ class RepositoryContextAssembler:
 class CodingBrain:
     """Turn a user objective plus bounded repository context into a safe proposal."""
 
-    def __init__(self, gateway: OpenWeightModelGateway, model: str):
+    def __init__(self, gateway: Any, model: str):
         self.gateway = gateway
         self.model = model
 
