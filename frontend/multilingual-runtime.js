@@ -4,9 +4,9 @@
   function translateTextNode(node) {
     const parent=node.parentElement;
     if (!parent || ["SCRIPT","STYLE","CODE","PRE"].includes(parent.tagName)) return;
-    const original=node.getAttribute?.(SOURCE) || exact(node.nodeValue);
+    const original=originals.get(node) || exact(node.nodeValue);
     if (!original || original.length > 180) return;
-    if (!node.getAttribute(SOURCE)) node.setAttribute(SOURCE, original);
+    if (!originals.has(node)) originals.set(node, original);
     const translated=window.OAEI18n?.t(original);
     if (translated && translated !== original) node.nodeValue=node.nodeValue.replace(original, translated);
   }
