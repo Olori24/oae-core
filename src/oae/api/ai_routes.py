@@ -28,7 +28,7 @@ class AIRespondRequest(BaseModel):
     messages: list[AIMessage] = Field(min_length=1, max_length=24)
     system: str | None = Field(default=None, max_length=12000)
     model: str | None = Field(default=None, max_length=120)
-    language: Literal["en", "it", "de"] = "en"
+    language: Literal["en", "it", "de", "fr", "es", "pt", "ar", "yo", "ha", "ig"] = "en"
 
 
 @router.get("/status")
