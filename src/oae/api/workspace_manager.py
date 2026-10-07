@@ -361,7 +361,10 @@ class WorkspaceManager:
         except Exception:
             shutil.rmtree(staging_root, ignore_errors=True)
             shutil.rmtree(final_root, ignore_errors=True)
-            if reserved: self.repository.mark_failed(tenant_id, workspace_id, "greenfield_workspace_provisioning_failed")
+            if reserved:
+                self.repository.mark_failed(
+                    tenant_id, workspace_id, "greenfield_workspace_provisioning_failed"
+                )
             raise
     def _workspace_root(self, tenant_id: str, workspace_id: str) -> Path:
         return self.root / "tenant" / tenant_id / "workspace" / workspace_id
