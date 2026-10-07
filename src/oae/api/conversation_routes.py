@@ -98,6 +98,14 @@ def _row(row) -> dict:
     }
 
 
+def _metadata(value) -> dict:
+    if isinstance(value, dict):
+        return value
+    if not value:
+        return {}
+    return json.loads(value)
+
+
 def _message(row) -> dict:
     return {
         "id": str(row[0]), "role": str(row[1]), "content": str(row[2]),
@@ -259,7 +267,7 @@ def create_plan(conversation_id: str, data: PlanRequest, principal: TenantPrinci
         ).fetchone()
     if not row:
         raise HTTPException(status_code=422, detail="No engineering objective found.")
-    metadata = json.loads(row[1] or "{}")
+    metadata = _metadata(row[1])
     objective = metadata.get("objective", {}).get("objective") or row[0]
     plan = build_engineering_plan(
         objective=str(objective),

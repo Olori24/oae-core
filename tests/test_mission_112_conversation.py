@@ -218,3 +218,10 @@ def test_command_center_objective_rendering_has_safe_defaults():
     assert 'String(meta.intent || "engineering_task").toUpperCase()' in script
     assert 'String(meta.mode || m.mode || "ask").toUpperCase()' in script
     assert "const meta=m.metadata?.objective;" in script
+
+
+def test_conversation_json_metadata_helper_accepts_postgres_dicts():
+    from oae.api.conversation_routes import _metadata
+
+    assert _metadata({"objective": {"objective": "Plan this"}})["objective"]["objective"] == "Plan this"
+    assert _metadata("") == {}
