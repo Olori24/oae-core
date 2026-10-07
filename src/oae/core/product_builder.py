@@ -106,7 +106,7 @@ Rules: infer conservatively; missing means information genuinely needed before a
     if context:
         messages = context[-8:] + messages
     try:
-        raw = generate_engineering_response(messages=messages, system=prompt)
+        raw = generate_engineering_response(messages=messages, system=prompt, language=language)
         data = json.loads(raw)
         if not isinstance(data, dict):
             raise ValueError("brief must be an object")
