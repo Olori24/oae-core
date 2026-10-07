@@ -76,6 +76,23 @@ class JobRunner:
                 (status, json.dumps(result), self._now(), job_id),
             )
 
+    def drain_authorized_queue(self, *, worker_name: str, max_jobs: int = 8) -> int:
+        """Synchronously drain a bounded set of authorized jobs for serverless execution."""
+        repository = DurableJobRepository()
+        worker_id = repository.register_worker(
+            worker_name=worker_name,
+            pool="engineering",
+            capabilities={"serverless": True, "governed_execution": True},
+        )
+        processed = 0
+        for _ in range(max_jobs):
+            lease = repository.claim_next(worker_id)
+            if lease is None:
+                break
+            self.run_lease(lease)
+            processed += 1
+        return processed
+
     def run_lease(self, lease) -> None:
         """Execute exactly one leased job and fence completion through the durable queue."""
         repository = DurableJobRepository()
