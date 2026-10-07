@@ -59,8 +59,8 @@ class WorkspaceManifest(BaseModel):
 
     workspace_id: str = Field(min_length=1, max_length=128)
     tenant_id: str = Field(min_length=1, max_length=128)
-    repository_id: str = Field(min_length=1, max_length=128)
-    source_revision_id: str = Field(min_length=1, max_length=128)
+    repository_id: str | None = Field(default=None, max_length=128)
+    source_revision_id: str | None = Field(default=None, max_length=128)
     purpose: WorkspacePurpose
     storage_uri: str = Field(min_length=5, max_length=4096)
     manifest_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
@@ -94,8 +94,8 @@ class WorkspaceRecord(BaseModel):
 
     id: str
     tenant_id: str
-    repository_id: str
-    source_revision_id: str
+    repository_id: str | None
+    source_revision_id: str | None
     parent_workspace_id: str | None = None
     purpose: WorkspacePurpose
     state: WorkspaceState
