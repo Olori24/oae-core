@@ -24,6 +24,7 @@ from oae.api.auth import (
 from oae.api.config import settings
 from oae.api.db import db
 from oae.api.durable_jobs import DurableJobRepository
+from oae.api.job_runner import JobRunner
 from oae.api.worker_authorizations import WorkerAuthorizationRepository
 from oae.core.engineering_planner import build_engineering_plan
 
