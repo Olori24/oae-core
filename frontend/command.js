@@ -236,6 +236,18 @@
           body:JSON.stringify({idea:content,context:(state.conversation.messages||[]).filter(m=>m.role==="user"||m.role==="assistant").slice(-8).map(m=>({role:m.role,content:m.content}))})
         });
         appendProductBrief(product.brief);
+        if (!state.conversation.workspace_id) {
+          const workspace = await api(`/v1/conversations/${state.conversation.id}/greenfield-workspace`, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              product_name: product.brief.product_name || "New OAE Product",
+              description: product.brief.problem || content
+            })
+          });
+          state.conversation.workspace_id = workspace.workspace_id;
+          appendLive("I prepared an isolated engineering workspace. No repository has been changed.");
+        }
       }
       const modelReply = await requestModelResponse();
       if (modelReply) appendLive(modelReply, {model:true});
