@@ -21,6 +21,7 @@ from oae.api.workspace_models import (
     WorkspaceState,
 )
 from oae.core.process_security import run_git, validate_git_ref, validate_repository_url
+from oae.core.vertical_slice_mission import VerticalSliceMission
 
 EXCLUDED_DIRECTORY_NAMES = {".git", ".next", "__pycache__", "node_modules"}
 
@@ -327,6 +328,40 @@ class WorkspaceManager:
                 self.repository.mark_failed(tenant_id, workspace_id, "workspace_provisioning_failed")
             raise
 
+    def provision_greenfield(self, tenant_id: str, *, name: str, description: str, language: str = "Python", framework: str = "FastAPI", database: str = "SQLite", testing_framework: str = "pytest") -> tuple[WorkspaceRecord, WorkspaceManifest]:
+        """Create an isolated product workspace before a Git repository exists."""
+        if not name.strip() or not description.strip():
+            raise WorkspaceError("Greenfield workspace requires a product name and description.")
+        workspace_id = str(uuid4())
+        created_at = datetime.now(timezone.utc)
+        expires_at = created_at + timedelta(days=settings.workspace_retention_days)
+        staging_root = self.root / ".staging" / workspace_id
+        content_root = staging_root / "content"
+        final_root = self._workspace_root(tenant_id, workspace_id)
+        reserved = False
+        try:
+            content_root.mkdir(parents=True, exist_ok=True)
+            VerticalSliceMission().run(content_root, name=name[:120], description=description[:4000], language=language, framework=framework, database=database, testing_framework=testing_framework)
+            entries = self._manifest_entries(tenant_id, workspace_id, content_root, created_at)
+            manifest_sha256 = self._manifest_sha256(tenant_id, workspace_id, None, None, WorkspacePurpose.EXECUTION, entries)
+            storage_uri = final_root.as_uri()
+            manifest_uri = (final_root / "manifest.json").as_uri()
+            record = WorkspaceRecord(id=workspace_id, tenant_id=tenant_id, repository_id=None, source_revision_id=None, purpose=WorkspacePurpose.EXECUTION, state=WorkspaceState.PROVISIONING, storage_uri=storage_uri, manifest_uri=manifest_uri, manifest_sha256=manifest_sha256, size_bytes=sum(e.size_bytes for e in entries), file_count=len(entries), retention_expires_at=expires_at, created_at=created_at)
+            manifest = WorkspaceManifest(workspace_id=workspace_id, tenant_id=tenant_id, repository_id=None, source_revision_id=None, purpose=WorkspacePurpose.EXECUTION, storage_uri=storage_uri, manifest_sha256=manifest_sha256, entries=entries, created_at=created_at, retention_expires_at=expires_at)
+            self.repository.reserve(record, entries)
+            reserved = True
+            (staging_root / "manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
+            final_root.parent.mkdir(parents=True, exist_ok=True)
+            if final_root.exists(): raise WorkspaceError("A workspace storage path collision occurred.")
+            shutil.move(str(staging_root), str(final_root))
+            ready_at = datetime.now(timezone.utc)
+            self.repository.mark_ready(tenant_id, workspace_id, ready_at)
+            return record.model_copy(update={"state": WorkspaceState.READY, "ready_at": ready_at}), manifest
+        except Exception:
+            shutil.rmtree(staging_root, ignore_errors=True)
+            shutil.rmtree(final_root, ignore_errors=True)
+            if reserved: self.repository.mark_failed(tenant_id, workspace_id, "greenfield_workspace_provisioning_failed")
+            raise
     def _workspace_root(self, tenant_id: str, workspace_id: str) -> Path:
         return self.root / "tenant" / tenant_id / "workspace" / workspace_id
 
