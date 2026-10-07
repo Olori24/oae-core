@@ -271,7 +271,7 @@ def create_plan(conversation_id: str, data: PlanRequest, principal: TenantPrinci
     metadata = _metadata(row[1])
     objective = metadata.get("objective", {}).get("objective") or row[0]
     current = _get(conversation_id, principal.tenant_id)
-    repository_context = {"selected": False}
+    repository_context: dict[str, object] = {"selected": False}
     repository_kind = data.repository_kind
     has_tests = data.has_tests
     has_linter = data.has_linter
