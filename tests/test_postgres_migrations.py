@@ -1,5 +1,5 @@
-from contextlib import contextmanager
 import os
+from contextlib import contextmanager
 from uuid import uuid4
 
 import pytest
@@ -11,6 +11,7 @@ from oae.api.migrations import (
     apply_postgres_migrations,
     migration_files,
 )
+from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
 
 
 class _MigrationCursor:
@@ -145,8 +146,6 @@ def test_all_postgres_migrations_apply_in_an_isolated_schema():
         try:
             connection.execute(f'SET search_path TO "{schema}"')
             # Reuse the same base-schema bootstrap used by the API and migration CLI.
-            from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
-
             _bootstrap_postgres(
                 _ConnectionAdapter(connection, "postgres"),
                 os.environ["OAE_POSTGRES_TEST_URL"] + "#schema=" + schema,
