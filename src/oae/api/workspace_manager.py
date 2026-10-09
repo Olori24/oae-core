@@ -330,6 +330,19 @@ class WorkspaceManager:
 
     def provision_greenfield(self, tenant_id: str, *, name: str, description: str, language: str = "Python", framework: str = "FastAPI", database: str = "SQLite", testing_framework: str = "pytest") -> tuple[WorkspaceRecord, WorkspaceManifest]:
         """Create an isolated product workspace before a Git repository exists."""
+        record, manifest, _ = self.provision_greenfield_with_result(
+            tenant_id,
+            name=name,
+            description=description,
+            language=language,
+            framework=framework,
+            database=database,
+            testing_framework=testing_framework,
+        )
+        return record, manifest
+
+    def provision_greenfield_with_result(self, tenant_id: str, *, name: str, description: str, language: str = "Python", framework: str = "FastAPI", database: str = "SQLite", testing_framework: str = "pytest") -> tuple[WorkspaceRecord, WorkspaceManifest, dict]:
+        """Provision a greenfield workspace and retain the generation/verification evidence."""
         if not name.strip() or not description.strip():
             raise WorkspaceError("Greenfield workspace requires a product name and description.")
         workspace_id = str(uuid4())
@@ -341,7 +354,7 @@ class WorkspaceManager:
         reserved = False
         try:
             content_root.mkdir(parents=True, exist_ok=True)
-            VerticalSliceMission().run(content_root, name=name[:120], description=description[:4000], language=language, framework=framework, database=database, testing_framework=testing_framework)
+            mission_result = VerticalSliceMission().run(content_root, name=name[:120], description=description[:4000], language=language, framework=framework, database=database, testing_framework=testing_framework)
             entries = self._manifest_entries(tenant_id, workspace_id, content_root, created_at)
             manifest_sha256 = self._manifest_sha256(tenant_id, workspace_id, None, None, WorkspacePurpose.EXECUTION, entries)
             storage_uri = final_root.as_uri()
@@ -357,7 +370,7 @@ class WorkspaceManager:
             shutil.move(str(staging_root), str(final_root))
             ready_at = datetime.now(timezone.utc)
             self.repository.mark_ready(tenant_id, workspace_id, ready_at)
-            return record.model_copy(update={"state": WorkspaceState.READY, "ready_at": ready_at}), manifest
+            return record.model_copy(update={"state": WorkspaceState.READY, "ready_at": ready_at}), manifest, mission_result
         except Exception:
             shutil.rmtree(staging_root, ignore_errors=True)
             shutil.rmtree(final_root, ignore_errors=True)
