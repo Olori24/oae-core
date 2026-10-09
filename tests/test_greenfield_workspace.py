@@ -76,7 +76,7 @@ def test_greenfield_workspace_is_generated_persisted_and_idempotent(monkeypatch,
     workspace_id = first_body["workspace_id"]
     record = repository.records[(tenant["tenant_id"], workspace_id)]
     workspace_root = Path(record.storage_uri.removeprefix("file://"))
-    assert record.state.value == "ready"
+    assert str(record.state) == "ready"
     assert record.file_count > 0
     assert (workspace_root / "manifest.json").is_file()
     assert (workspace_root / "content").is_dir()
