@@ -84,15 +84,21 @@ def generate_engineering_response(
     prompt_messages: list[dict[str, str]] = []
     if system:
         prompt_messages.append({"role": "system", "content": system})
-    language_names = {"en": "English", "it": "Italian", "de": "German", "fr": "French", "es": "Spanish", "pt": "Portuguese", "ar": "Arabic", "yo": "Yoruba", "ha": "Hausa", "ig": "Igbo"}
+    language_instructions = {
+        "it": "Rispondi interamente in italiano.",
+        "de": "Antworte vollständig auf Deutsch.",
+        "fr": "Réponds entièrement en français.",
+        "es": "Responde completamente en español.",
+        "pt": "Responda inteiramente em português.",
+        "ar": "أجب باللغة العربية بالكامل.",
+        "yo": "Dáhùn ní èdè Yorùbá pátápátá.",
+        "ha": "Amsa gaba ɗaya cikin harshen Hausa.",
+        "ig": "Zaa ajụjụ ma zaa aza ya n'asụsụ Igbo kpamkpam.",
+    }
     if language != "en":
-        language_instructions = {
-            "it": "Rispondi interamente in italiano.",
-            "de": "Antworte vollständig auf Deutsch.",
-        }
         instruction = language_instructions.get(
             language,
-            f"Respond entirely in {language_names.get(language, 'English')}.",
+            "Respond entirely in English.",
         )
         prompt_messages.append({
             "role": "system",
