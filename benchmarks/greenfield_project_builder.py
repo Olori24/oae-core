@@ -78,7 +78,14 @@ def run_benchmark(
     ]
     contract = result.get("contract") or {}
 
-    verified = result.get("verified") is True
+    mission_verified = result.get("verified") is True
+    verified = (
+        mission_verified
+        and contract.get("passed") is True
+        and verification.get("status") == "verified"
+        and bool(checks)
+        and not failed_checks
+    )
     return {
         "benchmark": "oae-greenfield-project-builder-v1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -93,6 +100,7 @@ def run_benchmark(
         "result": {
             "status": result.get("status", "unknown"),
             "verified": verified,
+            "mission_reported_verified": mission_verified,
             "readiness_score": result.get("readiness_score", 0),
             "elapsed_seconds": elapsed,
             "file_count": len(files),
@@ -108,19 +116,8 @@ def run_benchmark(
             "fresh_workspace": True,
             "generated_files_present": bool(files),
             "project_contract_passed": contract.get("passed") is True,
-            "verification_passed": (
-                verified
-                and verification.get("status") == "verified"
-                and bool(checks)
-                and not failed_checks
-            ),
-            "all_declared_checks_passed": (
-                verified
-                and contract.get("passed") is True
-                and verification.get("status") == "verified"
-                and bool(checks)
-                and not failed_checks
-            ),
+            "verification_passed": verified,
+            "all_declared_checks_passed": verified,
         },
         "limitations": [
             "This benchmark does not deploy the generated application.",
