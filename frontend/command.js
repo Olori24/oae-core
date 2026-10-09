@@ -52,9 +52,16 @@
         <section class="oae-composer-wrap">
           <div class="oae-toolbar">
             <label class="oae-select"><span>MODE</span><select id="oae-mode"><option value="ask">BUILD · from idea</option><option value="plan">PLAN · prepare changes</option><option value="execute">EXECUTE · authorized changes</option></select></label>
-            <label class="oae-select"><span>REPOSITORY</span><select id="oae-repository"><option value="">Current / none</option></select></label>
+            <div class="oae-repository-picker"><label class="oae-select"><span>REPOSITORY</span><select id="oae-repository"><option value="">Current / none</option></select></label><button id="oae-repository-add-toggle" type="button" class="oae-repository-add-toggle" aria-expanded="false">＋ Add repo</button></div>
             <label class="oae-input-mini"><span>WORKSPACE</span><input id="oae-workspace" placeholder="ready workspace id" /></label>
           </div>
+
+          <form id="oae-repository-add-form" class="oae-repository-add-form" hidden>
+            <label><span>GITHUB REPOSITORY URL</span><input id="oae-repository-url" type="text" inputmode="url" placeholder="https://github.com/owner/repository" autocomplete="url" required /></label>
+            <label><span>DEFAULT BRANCH</span><input id="oae-repository-branch" type="text" value="main" maxlength="255" pattern="[A-Za-z0-9._/-]+" required /></label>
+            <div class="oae-repository-add-actions"><button type="submit" class="oae-repository-add-submit">Register repository</button><button id="oae-repository-add-cancel" type="button" class="oae-repository-add-cancel">Cancel</button><span id="oae-repository-add-status" role="status"></span></div>
+            <p>Registering a repository saves its reference in OAE. Private-repository access and code changes still require configured GitHub credentials and governed authorization.</p>
+          </form>
           <form id="oae-composer-form" class="oae-composer">
             <button id="oae-attach" type="button" class="oae-icon-button" title="Attach document, image, audio or video">＋</button>
             <input id="oae-file" type="file" hidden accept=".pdf,.txt,.md,.docx,.png,.jpg,.jpeg,.webp,.mp4,.mp3,.wav,.m4a" multiple />
@@ -74,6 +81,18 @@
 
   function bind() {
     $("oae-new-session").onclick = createSession;
+    $("oae-repository-add-toggle").onclick = () => {
+      const form = $("oae-repository-add-form");
+      form.hidden = !form.hidden;
+      $("oae-repository-add-toggle").setAttribute("aria-expanded", String(!form.hidden));
+      if (!form.hidden) $("oae-repository-url").focus();
+    };
+    $("oae-repository-add-cancel").onclick = () => {
+      $("oae-repository-add-form").hidden = true;
+      $("oae-repository-add-toggle").setAttribute("aria-expanded", "false");
+      $("oae-repository-add-status").textContent = "";
+    };
+    $("oae-repository-add-form").addEventListener("submit", e => { e.preventDefault(); registerRepository(); });
     $("oae-composer-form").addEventListener("submit", e => { e.preventDefault(); send(); });
     $("oae-attach").onclick = () => $("oae-file").click();
     $("oae-file").onchange = uploadFiles;
@@ -91,12 +110,59 @@
     });
   }
 
-  async function loadRepositories() {
+  async function loadRepositories(selectedId = "") {
     try {
       state.repositories = await api("/v1/repositories");
       $("oae-repository").innerHTML = '<option value="">Current / none</option>' +
         state.repositories.map(r => `<option value="${esc(r.id)}">${esc(r.external_id)} · ${esc(r.default_branch)}</option>`).join("");
-    } catch {}
+      if (selectedId && state.repositories.some(r => r.id === selectedId)) $("oae-repository").value = selectedId;
+      return true;
+    } catch (e) {
+      $("oae-repository-add-status").textContent = "Could not load repositories: " + e.message;
+      return false;
+    }
+  }
+
+  async function registerRepository() {
+    const status = $("oae-repository-add-status");
+    const raw = $("oae-repository-url").value.trim();
+    const branch = $("oae-repository-branch").value.trim() || "main";
+    let url;
+    try { url = new URL(raw.includes("://") ? raw : "https://github.com/" + raw); }
+    catch { status.textContent = "Enter a valid GitHub repository URL."; return; }
+    if (url.protocol !== "https:" || url.hostname.toLowerCase() !== "github.com" || url.username || url.password || url.search || url.hash) {
+      status.textContent = "Only a credential-free https://github.com/owner/repository URL is supported.";
+      return;
+    }
+    const parts = url.pathname.replace(/\/+$/, "").replace(/\.git$/i, "").split("/").filter(Boolean);
+    if (parts.length !== 2 || parts.some(part => !/^[A-Za-z0-9_.-]+$/.test(part)) || parts[1] === "." || parts[1] === "..") {
+      status.textContent = "Use a repository URL with exactly an owner and repository name.";
+      return;
+    }
+    if (!/^[A-Za-z0-9._/-]{1,255}$/.test(branch) || branch.startsWith("/") || branch.endsWith("/") || branch.includes("..") || branch.includes("//")) {
+      status.textContent = "Enter a valid default branch name.";
+      return;
+    }
+    const externalId = parts.join("/");
+    status.textContent = "Registering " + externalId + "…";
+    const submit = $("oae-repository-add-form").querySelector('button[type="submit"]');
+    submit.disabled = true;
+    try {
+      const created = await api("/v1/repositories", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({provider:"github",external_id:externalId,clone_url:"https://github.com/" + externalId + ".git",default_branch:branch})
+      });
+      await loadRepositories(created.id);
+      $("oae-repository-add-form").hidden = true;
+      $("oae-repository-add-toggle").setAttribute("aria-expanded", "false");
+      $("oae-repository-url").value = "";
+      status.textContent = "Registered " + created.external_id + ".";
+      if (state.conversation) await updateContext();
+      toast("Repository registered. Confirm GitHub access before running code operations.");
+    } catch (e) {
+      status.textContent = e.message || "Repository could not be registered.";
+    } finally { submit.disabled = false; }
   }
 
   async function bootstrap() {
