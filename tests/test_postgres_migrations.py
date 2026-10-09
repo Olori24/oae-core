@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
+from oae.api.db import _bootstrap_postgres, _ConnectionAdapter
 from oae.api.migrations import (
     CREATE_MIGRATION_TABLE_SQL,
     INSERT_MIGRATION_SQL,
