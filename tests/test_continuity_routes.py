@@ -1,3 +1,8 @@
+import os
+from urllib.parse import urlencode, urlsplit, urlunsplit
+from uuid import uuid4
+
+import pytest
 from fastapi.testclient import TestClient
 
 from oae.api.app import app
@@ -142,3 +147,84 @@ def test_continuity_and_history_api_routes_are_registered():
     assert "/v1/runs/{run_id}/checkpoints" in paths
     assert "/v1/history/conversations" in paths
     assert "/v1/history/conversations/{conversation_id}/messages" in paths
+
+
+@pytest.mark.postgres_integration
+@pytest.mark.skipif(not os.environ.get("OAE_POSTGRES_TEST_URL"), reason="isolated PostgreSQL test URL not configured")
+def test_postgres_interrupted_run_recovers_after_client_restart(monkeypatch):
+    import psycopg
+
+    from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
+    from oae.api.migrations import apply_postgres_migrations
+
+    base_url = os.environ["OAE_POSTGRES_TEST_URL"]
+    schema = f"oae_resume_test_{uuid4().hex}"
+    parts = urlsplit(base_url)
+    query = dict(__import__("urllib.parse", fromlist=["parse_qsl"]).parse_qsl(parts.query))
+    query["options"] = f"-csearch_path={schema}"
+    scoped_url = urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+
+    with psycopg.connect(base_url) as connection:
+        connection.execute(f'CREATE SCHEMA "{schema}"')
+        try:
+            connection.execute(f'SET search_path TO "{schema}"')
+            _bootstrap_postgres(_ConnectionAdapter(connection, "postgres"), scoped_url)
+            applied = apply_postgres_migrations(connection)
+            assert "0100_persistent_continuity.sql" in applied
+            assert "0101_conversation_history_controls.sql" in applied
+
+            monkeypatch.setattr(settings, "database_url", scoped_url)
+            client = TestClient(app)
+            owner = _workspace(client, "PostgreSQL recovery")
+            project = client.post(
+                "/v1/projects",
+                headers=owner,
+                json={"name": "Restart recovery", "description": "PostgreSQL-backed recovery test"},
+            )
+            assert project.status_code == 201, project.text
+            project_id = project.json()["id"]
+            created = client.post(
+                "/v1/runs",
+                headers=owner,
+                json={
+                    "project_id": project_id,
+                    "objective": "Recover without repeating a verified step",
+                    "plan": [
+                        {"id": "migration", "title": "Apply schema migration"},
+                        {"id": "verify", "title": "Verify recovery"},
+                    ],
+                    "idempotency_key": f"postgres-recovery-{uuid4().hex}",
+                },
+            )
+            assert created.status_code == 201, created.text
+            run_id = created.json()["id"]
+            checkpoint = client.post(
+                f"/v1/runs/{run_id}/checkpoints",
+                headers=owner,
+                json={
+                    "label": "Migration completed; process interrupted",
+                    "status": "interrupted",
+                    "completed_steps": ["migration"],
+                    "pending_steps": ["verify"],
+                    "current_step": "verify",
+                    "evidence": [{"kind": "migration", "reference": "0100", "verified": True}],
+                },
+            )
+            assert checkpoint.status_code == 201, checkpoint.text
+            client.close()
+
+            # A new client instance must reconstruct the run from PostgreSQL records.
+            reopened = TestClient(app)
+            restored = reopened.get(f"/v1/runs/{run_id}", headers=owner)
+            assert restored.status_code == 200, restored.text
+            assert restored.json()["status"] == "interrupted"
+            assert restored.json()["completed_steps"] == ["migration"]
+            resumed = reopened.post(f"/v1/runs/{run_id}/resume", headers=owner)
+            assert resumed.status_code == 200, resumed.text
+            assert resumed.json()["resumed"] is True
+            assert resumed.json()["run"]["completed_steps"] == ["migration"]
+            assert resumed.json()["run"]["pending_steps"] == ["verify"]
+            reopened.close()
+        finally:
+            connection.execute("SET search_path TO public")
+            connection.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
