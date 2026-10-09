@@ -1,5 +1,5 @@
 import os
-from urllib.parse import urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from uuid import uuid4
 
 import pytest
@@ -160,7 +160,7 @@ def test_postgres_interrupted_run_recovers_after_client_restart(monkeypatch):
     base_url = os.environ["OAE_POSTGRES_TEST_URL"]
     schema = f"oae_resume_test_{uuid4().hex}"
     parts = urlsplit(base_url)
-    query = dict(__import__("urllib.parse", fromlist=["parse_qsl"]).parse_qsl(parts.query))
+    query = dict(parse_qsl(parts.query))
     query["options"] = f"-csearch_path={schema}"
     scoped_url = urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
