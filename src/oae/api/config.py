@@ -139,7 +139,12 @@ class Settings(BaseSettings):
 
     @property
     def resolved_database_url(self) -> str:
-        """Resolve the production database from explicit and integration env names."""
+        """Resolve a branch-isolated preview database before normal environment URLs."""
+        if os.getenv("VERCEL_ENV", "").strip().lower() == "preview":
+            preview_url = os.getenv("OAE_PREVIEW_DATABASE_URL", "").strip()
+            if preview_url:
+                return preview_url
+
         if self.database_url:
             return self.database_url
 
