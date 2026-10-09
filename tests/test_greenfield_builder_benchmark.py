@@ -71,3 +71,22 @@ def test_benchmark_requires_an_empty_workspace(tmp_path):
 
     with pytest.raises(ValueError, match="must be empty"):
         run_benchmark(root, mission=FakeMission({}))
+
+def test_benchmark_fails_closed_when_verification_evidence_is_missing(tmp_path):
+    result = run_benchmark(
+        tmp_path / "missing-evidence",
+        mission=FakeMission(
+            {
+                "status": "production_candidate",
+                "verified": True,
+                "readiness_score": 100,
+                "blockers": [],
+                "contract": {"passed": True},
+                "verification": None,
+            }
+        ),
+    )
+
+    assert result["result"]["verified"] is True
+    assert result["acceptance"]["verification_passed"] is False
+    assert result["acceptance"]["all_declared_checks_passed"] is False
