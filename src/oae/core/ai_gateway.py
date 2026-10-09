@@ -86,7 +86,18 @@ def generate_engineering_response(
         prompt_messages.append({"role": "system", "content": system})
     language_names = {"en": "English", "it": "Italian", "de": "German", "fr": "French", "es": "Spanish", "pt": "Portuguese", "ar": "Arabic", "yo": "Yoruba", "ha": "Hausa", "ig": "Igbo"}
     if language != "en":
-        prompt_messages.append({"role": "system", "content": f"Respond entirely in {language_names.get(language, 'English')}. Preserve code and technical identifiers."})
+        language_instructions = {
+            "it": "Rispondi interamente in italiano.",
+            "de": "Antworte vollständig auf Deutsch.",
+        }
+        instruction = language_instructions.get(
+            language,
+            f"Respond entirely in {language_names.get(language, 'English')}.",
+        )
+        prompt_messages.append({
+            "role": "system",
+            "content": f"{instruction} Preserve code and technical identifiers.",
+        })
     prompt_messages.extend(messages[-24:])
 
     payload = json.dumps(
