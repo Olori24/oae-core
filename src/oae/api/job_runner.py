@@ -1011,7 +1011,11 @@ class JobRunner:
             raise ValueError("Workspace path escapes the configured workspace root.") from exc
         if not path.is_dir():
             raise ValueError("Workspace storage directory is unavailable.")
-        return path
+        # Workspace records point at the durable container (manifest + content/).
+        # Engineering tools must operate on the project root inside content/ when
+        # present, while preserving compatibility with legacy flat workspaces.
+        content_root = path / "content"
+        return content_root if content_root.is_dir() else path
 
     @staticmethod
     def _now() -> str:
