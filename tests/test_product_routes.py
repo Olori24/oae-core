@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from oae.api.app import app
 
+
 def test_product_brief_requires_auth():
     response = TestClient(app).post(
         "/v1/product/brief",

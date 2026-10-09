@@ -13,8 +13,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from oae.providers.open_weight import OpenWeightModelGateway
-
 MAX_CONTEXT_FILES = 80
 MAX_FILE_CHARS = 12_000
 MAX_CONTEXT_CHARS = 6_000
@@ -97,7 +95,7 @@ class RepositoryContextAssembler:
 class CodingBrain:
     """Turn a user objective plus bounded repository context into a safe proposal."""
 
-    def __init__(self, gateway: OpenWeightModelGateway, model: str):
+    def __init__(self, gateway: Any, model: str):
         self.gateway = gateway
         self.model = model
 

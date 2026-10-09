@@ -236,6 +236,18 @@
           body:JSON.stringify({idea:content,context:(state.conversation.messages||[]).filter(m=>m.role==="user"||m.role==="assistant").slice(-8).map(m=>({role:m.role,content:m.content}))})
         });
         appendProductBrief(product.brief);
+        if (!state.conversation.workspace_id) {
+          const workspace = await api(`/v1/conversations/${state.conversation.id}/greenfield-workspace`, {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              product_name: product.brief.product_name || "New OAE Product",
+              description: product.brief.problem || content
+            })
+          });
+          state.conversation.workspace_id = workspace.workspace_id;
+          appendLive("I prepared an isolated engineering workspace. No repository has been changed.");
+        }
       }
       const modelReply = await requestModelResponse();
       if (modelReply) appendLive(modelReply, {model:true});
@@ -303,7 +315,7 @@
     const SR=window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { toast("Voice input is not supported by this browser."); return; }
     if (state.recognition) { state.recognition.stop(); return; }
-    const r=new SR(); r.lang=navigator.language || "en-NG"; r.interimResults=true;
+    const r=new SR(); r.lang=({en:"en-NG",it:"it-IT",de:"de-DE",fr:"fr-FR",es:"es-ES",pt:"pt-PT",ar:"ar-SA",yo:"yo-NG",ha:"ha-NG",ig:"ig-NG"}[window.OAEI18n?.getLanguage?.()] || navigator.language || "en-NG"); r.interimResults=true;
     r.onstart=()=>{ state.recognition=r; $("oae-mic").classList.add("recording"); $("oae-attachment-status").textContent="Listening…"; };
     r.onresult=e=>{ $("oae-input").value=[...e.results].map(x=>x[0].transcript).join(""); };
     r.onend=()=>{ state.recognition=null; $("oae-mic").classList.remove("recording"); $("oae-attachment-status").textContent="Voice captured"; };

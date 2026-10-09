@@ -26,6 +26,7 @@ from oae.api.db import db
 from oae.api.durable_jobs import DurableJobRepository
 from oae.api.job_runner import JobRunner
 from oae.api.worker_authorizations import WorkerAuthorizationRepository
+from oae.api.workspace_manager import WorkspaceManager
 from oae.core.engineering_planner import build_engineering_plan
 
 router = APIRouter(prefix="/v1/conversations", tags=["conversations"])
@@ -64,6 +65,12 @@ class PlanRequest(BaseModel):
     has_typecheck: bool = False
     test_runner: Literal["none", "vitest", "jest"] = "none"
     auto_context: bool = True
+
+
+class GreenfieldWorkspaceCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    product_name: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=4000)
 
 
 class AuthorizationCreate(BaseModel):
@@ -302,6 +309,7 @@ def create_plan(conversation_id: str, data: PlanRequest, principal: TenantPrinci
         has_typecheck=has_typecheck,
         test_runner=test_runner,
         security_required=True,
+        greenfield=not bool(current.get("repository_id")),
     ).to_dict()
     now = _now()
     with db(principal.tenant_id) as conn:
@@ -313,6 +321,29 @@ def create_plan(conversation_id: str, data: PlanRequest, principal: TenantPrinci
         )
         conn.execute("UPDATE conversations SET updated_at=? WHERE id=? AND tenant_id=?", (now, conversation_id, principal.tenant_id))
     return {"conversation_id": conversation_id, "plan": plan, "repository_context": repository_context, "status": "planned"}
+
+
+@router.post("/{conversation_id}/greenfield-workspace", status_code=201)
+def create_greenfield_workspace(
+    conversation_id: str,
+    data: GreenfieldWorkspaceCreate,
+    principal: TenantPrincipal = Depends(require_principal),
+):
+    principal = require_requester_principal(principal)
+    current = _get(conversation_id, principal.tenant_id)
+    if current.get("workspace_id"):
+        return {"conversation_id": conversation_id, "workspace_id": current["workspace_id"], "status": "ready", "existing": True}
+    workspace, _manifest = WorkspaceManager().provision_greenfield(
+        principal.tenant_id,
+        name=data.product_name,
+        description=data.description,
+    )
+    with db(principal.tenant_id) as conn:
+        conn.execute(
+            "UPDATE conversations SET workspace_id=?,updated_at=? WHERE id=? AND tenant_id=?",
+            (workspace.id, _now(), conversation_id, principal.tenant_id),
+        )
+    return {"conversation_id": conversation_id, "workspace_id": workspace.id, "status": "ready", "existing": False}
 
 
 @router.post("/{conversation_id}/authorization", status_code=201)
@@ -444,6 +475,7 @@ def execute_conversation(
     plan = build_engineering_plan(
         objective=str(objective), repository_kind="unknown", has_tests=True, has_linter=True,
         has_typecheck=False, test_runner="none", security_required=True,
+        greenfield=not bool(current.get("repository_id")),
     ).to_dict()
     key = hashlib.sha256(objective.encode("utf-8")).hexdigest()[:24]
     run = AgentRunRepository().start(
@@ -451,6 +483,7 @@ def execute_conversation(
         idempotency_key=f"conversation-run:{conversation_id}:{key}", correlation_id=conversation_id,
         max_repairs=2, authorization_id=data.authorization_id,
     )
+
     if run.state.status == "running":
         DurableJobRepository().enqueue(
             tenant_id=principal.tenant_id, operation="build",

@@ -1,6 +1,6 @@
 import json
-import os
 import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -16,13 +16,13 @@ from oae.api.mission_results import build_result
 from oae.api.workspace_manager import WorkspaceManager
 from oae.api.workspace_models import WorkspacePurpose
 from oae.core.agent_action_executor import execute_agent_action
+from oae.core.ai_gateway import AIGatewayCodingGateway
 from oae.core.autonomous_agent import next_agent_decision
 from oae.core.ci_inspector import GitHubCiInspector
 from oae.core.coding_brain import CodingBrain
 from oae.core.coding_executor import apply_coding_proposal
 from oae.core.coding_repair import CodingRepairBrain
 from oae.core.engineering_planner import build_engineering_plan
-from oae.core.ai_gateway import AIGatewayCodingGateway
 from oae.core.governed_execution import run_governed_command, supported_commands
 from oae.core.production_readiness import evaluate_production_readiness
 from oae.core.repository_quality_gate import RepositoryQualityGate
@@ -497,7 +497,7 @@ class JobRunner:
         if not row or row[1] != "ready":
             raise ValueError("Workspace must be ready before coding execution.")
         root = JobRunner._safe_workspace_path(row[0])
-        gateway = AIGatewayCodingGateway() if os.getenv("AI_GATEWAY_API_KEY") else OpenWeightModelGateway(open_weight_config_from_settings(settings))
+        gateway = AIGatewayCodingGateway() if (os.getenv("AI_GATEWAY_API_KEY") or os.getenv("VERCEL_OIDC_TOKEN")) else OpenWeightModelGateway(open_weight_config_from_settings(settings))
         proposal = CodingBrain(gateway, model).propose(
             tenant_id=tenant_id, workspace=root, objective=objective
         )
@@ -562,7 +562,7 @@ class JobRunner:
         if not row or row[1] != "ready":
             raise ValueError("Workspace must be ready before coding repair.")
         root = JobRunner._safe_workspace_path(row[0])
-        gateway = AIGatewayCodingGateway() if __import__("os").getenv("AI_GATEWAY_API_KEY") else OpenWeightModelGateway(open_weight_config_from_settings(settings))
+        gateway = AIGatewayCodingGateway() if (__import__("os").getenv("AI_GATEWAY_API_KEY") or __import__("os").getenv("VERCEL_OIDC_TOKEN")) else OpenWeightModelGateway(open_weight_config_from_settings(settings))
         proposal = CodingRepairBrain(gateway, model).propose_repair(
             tenant_id=tenant_id,
             workspace=root,

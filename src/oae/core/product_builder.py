@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import asdict, dataclass
 from typing import Any
 
 from oae.core.ai_gateway import AIGatewayUnavailable, generate_engineering_response
+
 
 @dataclass(frozen=True)
 class ProductBrief:
@@ -29,7 +29,7 @@ class ProductBrief:
 
 _REQUIRED = ("problem", "users", "core_workflows", "deployment")
 
-def _fallback(text: str) -> ProductBrief:
+def _fallback(text: str, language: str = "en") -> ProductBrief:
     lower = text.lower()
     product_name = "New product"
     for marker in ("called ", "named "):
@@ -54,6 +54,33 @@ def _fallback(text: str) -> ProductBrief:
     missing = ["exact target users", "must-have workflow", "deployment preference"]
     if "school" in lower or "clinic" in lower:
         missing = ["exact MVP scope", "deployment preference"]
+    labels = {
+        "it": {
+            "users": ["Amministratori", "Insegnanti", "Genitori", "Studenti"],
+            "workflows": ["Onboarding utenti", "Flusso principale del prodotto", "Amministrazione"],
+            "screens": ["Accesso / onboarding", "Dashboard", "Flusso principale", "Impostazioni"],
+            "entities": ["Utente", "Organizzazione", "Attività"],
+            "auth": "Email/password o SSO dell'organizzazione, da confermare",
+            "deployment": "Applicazione web, destinazione da confermare",
+            "missing": ["utenti target esatti", "flusso obbligatorio", "preferenza di deployment"],
+        },
+        "de": {
+            "users": ["Administratoren", "Lehrkräfte", "Eltern", "Schüler"],
+            "workflows": ["Benutzer-Onboarding", "Kernprozess des Produkts", "Administration"],
+            "screens": ["Anmeldung / Onboarding", "Dashboard", "Kernprozess", "Einstellungen"],
+            "entities": ["Benutzer", "Organisation", "Aktivität"],
+            "auth": "E-Mail/Passwort oder Organisations-SSO, noch zu bestätigen",
+            "deployment": "Webanwendung, Zielumgebung noch zu bestätigen",
+            "missing": ["genauer Zielnutzerkreis", "verbindlicher Kernprozess", "Deployment-Präferenz"],
+        },
+    }.get(language, {})
+    users = list(labels["users"]) if "users" in labels else users
+    workflows = list(labels["workflows"]) if "workflows" in labels else workflows
+    screens = list(labels["screens"]) if "screens" in labels else screens
+    entities = list(labels["entities"]) if "entities" in labels else entities
+    auth = str(labels.get("auth", "Email/password or organization SSO, to be confirmed"))
+    deployment = str(labels.get("deployment", "Web application, deployment target to be confirmed"))
+    missing = list(labels["missing"]) if "missing" in labels else missing
     return ProductBrief(
         product_name=product_name,
         problem=text.strip(),
@@ -61,32 +88,32 @@ def _fallback(text: str) -> ProductBrief:
         core_workflows=workflows,
         screens=screens,
         entities=list(dict.fromkeys(entities)),
-        auth="Email/password or organization SSO, to be confirmed",
+        auth=auth,
         integrations=[],
         payments=("payment" in lower or "fee" in lower or "pay" in lower),
         notifications=("notification" in lower or "alert" in lower or "sms" in lower),
-        deployment="Web application, deployment target to be confirmed",
+        deployment=deployment,
         build_ready=False,
         missing=missing,
     )
 
-def build_product_brief(text: str, context: list[dict[str, str]] | None = None) -> dict[str, Any]:
+def build_product_brief(text: str, context: list[dict[str, str]] | None = None, language: str = "en") -> dict[str, Any]:
     prompt = """Return ONLY valid JSON for a software product brief.
 Schema:
 {"product_name":str,"problem":str,"users":[str],"core_workflows":[str],"screens":[str],"entities":[str],"auth":str,"integrations":[str],"payments":bool,"notifications":bool,"deployment":str,"build_ready":bool,"missing":[str]}
-Rules: infer conservatively; missing means information genuinely needed before autonomous implementation. Never claim implementation, testing, deployment, or repository changes. A non-coder should understand the result.
+Rules: infer conservatively; missing means information genuinely needed before autonomous implementation. Never claim implementation, testing, deployment, or repository changes. A non-coder should understand the result. Respond entirely in the requested language. Requested language: """ + language + """. Keep technical identifiers and code terms stable where appropriate.
 """
     messages = [{"role":"user","content":text}]
     if context:
         messages = context[-8:] + messages
     try:
-        raw = generate_engineering_response(messages=messages, system=prompt)
+        raw = generate_engineering_response(messages=messages, system=prompt, language=language)
         data = json.loads(raw)
         if not isinstance(data, dict):
             raise ValueError("brief must be an object")
-        fallback = _fallback(text)
+        fallback = _fallback(text, language)
         for key, value in fallback.to_dict().items():
             data.setdefault(key, value)
         return data
     except (AIGatewayUnavailable, ValueError, json.JSONDecodeError):
-        return _fallback(text).to_dict()
+        return _fallback(text, language).to_dict()

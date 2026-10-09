@@ -1,7 +1,7 @@
 """Product-builder API for non-coder OAE users."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
@@ -15,6 +15,7 @@ class ProductBriefRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     idea: str = Field(min_length=10, max_length=12000)
     context: list[dict[str, str]] = Field(default_factory=list, max_length=12)
+    language: Literal["en", "it", "de", "fr", "es", "pt", "ar", "yo", "ha", "ig"] = "en"
 
 @router.post("/brief")
 def create_product_brief(
@@ -22,7 +23,7 @@ def create_product_brief(
     principal: TenantPrincipal = Depends(require_principal),
 ) -> dict[str, Any]:
     require_requester_principal(principal)
-    brief = build_product_brief(data.idea, data.context)
+    brief = build_product_brief(data.idea, data.context, data.language)
     return {"brief": brief, "ready": bool(brief.get("build_ready")), "next": (
         "The product brief is complete enough to propose an engineering plan."
         if brief.get("build_ready")

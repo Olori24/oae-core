@@ -165,8 +165,8 @@ class RevisionResponse(_StrictModel):
 
 class WorkspaceResponse(_StrictModel):
     id: str
-    repository_id: str
-    source_revision_id: str
+    repository_id: str | None = None
+    source_revision_id: str | None = None
     parent_workspace_id: str | None = None
     purpose: Literal["source", "execution", "output", "review"]
     state: Literal["provisioning", "ready", "deleting", "deleted", "failed"]

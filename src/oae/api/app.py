@@ -15,8 +15,8 @@ from oae.api.conversation_routes import router as conversation_router
 from oae.api.engineering_routes import router as engineering_router
 from oae.api.observability import configure_error_tracking
 from oae.api.product_routes import router as product_router
-from oae.api.worker_routes import router as worker_router
 from oae.api.routes import router
+from oae.api.worker_routes import router as worker_router
 
 
 class JsonFormatter(logging.Formatter):
