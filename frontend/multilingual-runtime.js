@@ -10,7 +10,12 @@
     if (!originals.has(node)) originals.set(node, original);
     const translated = window.OAEI18n?.t(original);
     if (translated && translated !== original && node.nodeValue.trim() !== translated) {
-      node.nodeValue = node.nodeValue.replace(original, translated);
+      // Replace the currently displayed phrase, not the original phrase: this lets
+      // users switch languages repeatedly without stale text surviving the change.
+      const current = node.nodeValue;
+      const leading = current.match(/^\\s*/)?.[0] || "";
+      const trailing = current.match(/\\s*$/)?.[0] || "";
+      node.nodeValue = leading + translated + trailing;
     }
   }
   function translateTree(root = document) {
