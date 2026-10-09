@@ -1,9 +1,10 @@
-import os
 from contextlib import contextmanager
+import os
 from uuid import uuid4
 
 import pytest
 
+from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
 from oae.api.migrations import (
     CREATE_MIGRATION_TABLE_SQL,
     INSERT_MIGRATION_SQL,
@@ -11,7 +12,6 @@ from oae.api.migrations import (
     apply_postgres_migrations,
     migration_files,
 )
-from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
 
 
 class _MigrationCursor:
