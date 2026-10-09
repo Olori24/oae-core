@@ -22,3 +22,13 @@ def test_vercel_entrypoint_routes_api_requests_to_fastapi():
     # The request must reach FastAPI's authenticated API, not a static HTML fallback.
     assert response.status_code in {401, 403}
     assert "text/html" not in response.headers.get("content-type", "")
+
+def test_preview_database_override_is_scoped_to_preview_environment(monkeypatch):
+    from oae.api.config import settings
+
+    monkeypatch.setenv("VERCEL_ENV", "preview")
+    monkeypatch.setenv("OAE_PREVIEW_DATABASE_URL", "postgresql://preview.example/oae")
+    assert settings.resolved_database_url == "postgresql://preview.example/oae"
+
+    monkeypatch.setenv("VERCEL_ENV", "production")
+    assert settings.resolved_database_url != "postgresql://preview.example/oae"
