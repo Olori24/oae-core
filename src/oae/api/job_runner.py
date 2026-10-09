@@ -172,6 +172,8 @@ class JobRunner:
             stage = payload.get("stage", "bootstrap")
             if stage == "provision":
                 return self._provision_workspace(payload, tenant_id)
+            if stage == "greenfield_provision":
+                return self._provision_greenfield_workspace(payload, tenant_id)
             if stage in {"validate", "readiness"}:
                 return self._validate_workspace(payload, tenant_id, stage)
             if stage in {"attach", "branch", "write", "delete", "diff", "commit"}:
@@ -253,6 +255,42 @@ class JobRunner:
                 "stage": "provision",
                 "workspace": record.model_dump(mode="json"),
                 "manifest": manifest.model_dump(mode="json"),
+                "workspace_persistent": True,
+            },
+        )
+
+    @staticmethod
+    def _provision_greenfield_workspace(payload: dict, tenant_id: str | None) -> dict:
+        if not tenant_id:
+            raise ValueError("Greenfield project provisioning requires a tenant context.")
+        name = str(payload.get("name", "")).strip()
+        description = str(payload.get("description", "")).strip()
+        if not name or not description:
+            raise ValueError("greenfield_provision requires name and description.")
+        record, manifest, mission = WorkspaceManager().provision_greenfield_with_result(
+            tenant_id=tenant_id,
+            name=name,
+            description=description,
+            language=str(payload.get("language", "Python")),
+            framework=str(payload.get("framework", "FastAPI")),
+            database=str(payload.get("database", "SQLite")),
+            testing_framework=str(payload.get("testing_framework", "pytest")),
+        )
+        verified = mission.get("verified") is True
+        return build_result(
+            operation="build",
+            payload=payload,
+            summary=(
+                f"Greenfield project {name} was generated and verified."
+                if verified
+                else f"Greenfield project {name} was generated but did not pass its verification gate."
+            ),
+            evidence={
+                "stage": "greenfield_provision",
+                "workspace": record.model_dump(mode="json"),
+                "manifest": manifest.model_dump(mode="json"),
+                "mission": mission,
+                "verified": verified,
                 "workspace_persistent": True,
             },
         )
@@ -973,7 +1011,11 @@ class JobRunner:
             raise ValueError("Workspace path escapes the configured workspace root.") from exc
         if not path.is_dir():
             raise ValueError("Workspace storage directory is unavailable.")
-        return path
+        # Workspace records point at the durable container (manifest + content/).
+        # Engineering tools must operate on the project root inside content/ when
+        # present, while preserving compatibility with legacy flat workspaces.
+        content_root = path / "content"
+        return content_root if content_root.is_dir() else path
 
     @staticmethod
     def _now() -> str:
