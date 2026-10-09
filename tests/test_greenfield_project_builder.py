@@ -60,7 +60,9 @@ def test_greenfield_workspace_preserves_mission_verification_evidence(tmp_path, 
 
     assert record.state.value == "ready"
     assert record.repository_id is None
-    assert result == mission_result
+    assert result["verified"] is True
+    assert result["root"] == str(tmp_path / "tenant" / "tenant-1" / "workspace" / record.id / "content")
+    assert result["workspace_persistent"] is True
     assert "README.md" in {entry.relative_path for entry in manifest.entries}
 
 
