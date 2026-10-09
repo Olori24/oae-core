@@ -300,3 +300,33 @@ def test_invalid_api_key_is_rejected():
     client = TestClient(app)
     response = client.get("/v1/me", headers={"Authorization": "Bearer invalid"})
     assert response.status_code == 401
+
+
+def test_api_docs_csp_allows_swagger_ui_without_weakening_api_csp():
+    client = TestClient(app)
+    docs = client.get("/docs")
+    assert docs.status_code == 200
+    assert "SwaggerUIBundle" in docs.text
+    docs_csp = docs.headers["content-security-policy"]
+    assert "https://cdn.jsdelivr.net" in docs_csp
+    assert "'unsafe-inline'" in docs_csp
+
+    health = client.get("/health")
+    api_csp = health.headers["content-security-policy"]
+    assert "https://cdn.jsdelivr.net" not in api_csp
+    assert "'unsafe-inline'" not in api_csp
+
+
+def test_all_advertised_languages_have_ui_translations_and_switch_support():
+    client = TestClient(app)
+    i18n = client.get("/assets/i18n.js")
+    runtime = client.get("/assets/multilingual-runtime.js")
+    assert i18n.status_code == 200
+    assert runtime.status_code == 200
+    for language in ("en", "it", "de", "fr", "es", "pt", "ar", "yo", "ha", "ig"):
+        assert f"{language}:" in i18n.text
+    for phrase in ("Create workspace", "Analyze repository", "What do you want me to build?"):
+        assert phrase in i18n.text
+    assert 'window.dispatchEvent(new CustomEvent("oae:language"' in i18n.text
+    assert "node.nodeValue = leading + translated + trailing" in runtime.text
+    assert "body.language = window.OAEI18n?.getLanguage?.() || \"en\"" in runtime.text

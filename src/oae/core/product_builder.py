@@ -37,6 +37,13 @@ def _fallback(text: str, language: str = "en") -> ProductBrief:
             tail = text[lower.index(marker) + len(marker):].strip(" .")
             product_name = tail[:60] or product_name
             break
+    product_name_by_language = {
+        "it": "Nuovo prodotto", "de": "Neues Produkt", "fr": "Nouveau produit",
+        "es": "Producto nuevo", "pt": "Novo produto", "ar": "منتج جديد",
+        "yo": "Ọjà tuntun", "ha": "Sabon samfuri", "ig": "Ngwaahịa ọhụrụ",
+    }
+    if product_name == "New product":
+        product_name = product_name_by_language.get(language, product_name)
     users = ["Product owner"]
     if "school" in lower or "student" in lower:
         users = ["School administrators", "Teachers", "Parents", "Students"]
@@ -72,6 +79,69 @@ def _fallback(text: str, language: str = "en") -> ProductBrief:
             "auth": "E-Mail/Passwort oder Organisations-SSO, noch zu bestätigen",
             "deployment": "Webanwendung, Zielumgebung noch zu bestätigen",
             "missing": ["genauer Zielnutzerkreis", "verbindlicher Kernprozess", "Deployment-Präferenz"],
+        },
+        "fr": {
+            "users": ["Administrateurs", "Équipe", "Clients", "Utilisateurs"],
+            "workflows": ["Inscription", "Parcours principal", "Administration"],
+            "screens": ["Connexion / inscription", "Tableau de bord", "Parcours principal", "Paramètres"],
+            "entities": ["Utilisateur", "Organisation", "Activité"],
+            "auth": "E-mail/mot de passe ou SSO d’organisation, à confirmer",
+            "deployment": "Application web, destination à confirmer",
+            "missing": ["utilisateurs cibles précis", "parcours essentiel", "préférence de déploiement"],
+        },
+        "es": {
+            "users": ["Administradores", "Equipo", "Clientes", "Usuarios"],
+            "workflows": ["Registro de usuarios", "Flujo principal", "Administración"],
+            "screens": ["Acceso / registro", "Panel", "Flujo principal", "Configuración"],
+            "entities": ["Usuario", "Organización", "Actividad"],
+            "auth": "Correo/contraseña o SSO de la organización, por confirmar",
+            "deployment": "Aplicación web, destino por confirmar",
+            "missing": ["usuarios objetivo exactos", "flujo imprescindible", "preferencia de despliegue"],
+        },
+        "pt": {
+            "users": ["Administradores", "Equipa", "Clientes", "Utilizadores"],
+            "workflows": ["Registo de utilizadores", "Fluxo principal", "Administração"],
+            "screens": ["Entrada / registo", "Painel", "Fluxo principal", "Definições"],
+            "entities": ["Utilizador", "Organização", "Atividade"],
+            "auth": "E-mail/palavra-passe ou SSO da organização, por confirmar",
+            "deployment": "Aplicação web, destino por confirmar",
+            "missing": ["utilizadores-alvo exatos", "fluxo obrigatório", "preferência de implementação"],
+        },
+        "ar": {
+            "users": ["المسؤولون", "الفريق", "العملاء", "المستخدمون"],
+            "workflows": ["تسجيل المستخدم", "مسار العمل الأساسي", "الإدارة"],
+            "screens": ["تسجيل الدخول", "لوحة التحكم", "مسار العمل", "الإعدادات"],
+            "entities": ["المستخدم", "المؤسسة", "النشاط"],
+            "auth": "البريد الإلكتروني وكلمة المرور أو دخول المؤسسة الموحد، يحتاج إلى تأكيد",
+            "deployment": "تطبيق ويب، وجهة النشر تحتاج إلى تأكيد",
+            "missing": ["المستخدمون المستهدفون بدقة", "مسار العمل الأساسي", "تفضيل النشر"],
+        },
+        "yo": {
+            "users": ["Àwọn olùṣàkóso", "Ẹgbẹ́ iṣẹ́", "Oníbàárà", "Àwọn olùlò"],
+            "workflows": ["Ìforúkọsílẹ̀ olùlò", "Ìlànà iṣẹ́ pàtàkì", "Ìṣàkóso"],
+            "screens": ["Wọlé / forúkọsílẹ̀", "Pánẹ́ẹ̀lì", "Ìlànà iṣẹ́", "Ètò"],
+            "entities": ["Olùlò", "Àjọ", "Ìṣe"],
+            "auth": "Í-meèlì/ọ̀rọ̀ aṣínà tàbí SSO àjọ, a nílò ìmúdájú",
+            "deployment": "Ohun èlò wẹ́ẹ̀bù, ibi fífi sílẹ̀ ṣì nílò ìmúdájú",
+            "missing": ["àwọn olùlò tí a fẹ́ dé sí", "ìlànà pàtàkì", "àṣàyàn ibi fífi sílẹ̀"],
+        },
+        "ha": {
+            "users": ["Masu gudanarwa", "Ƙungiya", "Abokan ciniki", "Masu amfani"],
+            "workflows": ["Rajistar mai amfani", "Babban tsarin aiki", "Gudanarwa"],
+            "screens": ["Shiga / rajista", "Allon bayanai", "Babban aiki", "Saituna"],
+            "entities": ["Mai amfani", "Ƙungiya", "Aiki"],
+            "auth": "Imel/kalmar sirri ko SSO na ƙungiya, sai an tabbatar",
+            "deployment": "Manhajar yanar gizo, sai an tabbatar da inda za a ɗora ta",
+            "missing": ["ainihin masu amfani da aka nufa", "babban aikin dole", "zaɓin ɗora manhaja"],
+        },
+        "ig": {
+            "users": ["Ndị nchịkwa", "Otu ọrụ", "Ndị ahịa", "Ndị ọrụ"],
+            "workflows": ["Ndebanye aha onye ọrụ", "Usoro ọrụ bụ isi", "Nlekọta"],
+            "screens": ["Banye / debanye aha", "Dashboard", "Usoro ọrụ", "Ntọala"],
+            "entities": ["Onye ọrụ", "Ụlọ ọrụ", "Omume"],
+            "auth": "Email/okwuntughe ma ọ bụ SSO ụlọ ọrụ, a ga-akwado",
+            "deployment": "Ngwa weebụ, a ga-akwado ebe a ga-etinye ya",
+            "missing": ["ndị ọrụ a chọrọ iru", "usoro ọrụ dị mkpa", "nhọrọ ebe ntinye"],
         },
     }.get(language, {})
     users = list(labels["users"]) if "users" in labels else users
