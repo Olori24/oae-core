@@ -74,13 +74,13 @@ def _fallback(text: str, language: str = "en") -> ProductBrief:
             "missing": ["genauer Zielnutzerkreis", "verbindlicher Kernprozess", "Deployment-Präferenz"],
         },
     }.get(language, {})
-    users = labels.get("users", users)
-    workflows = labels.get("workflows", workflows)
-    screens = labels.get("screens", screens)
-    entities = labels.get("entities", entities)
-    auth = labels.get("auth", "Email/password or organization SSO, to be confirmed")
-    deployment = labels.get("deployment", "Web application, deployment target to be confirmed")
-    missing = labels.get("missing", missing)
+    users = list(labels["users"]) if "users" in labels else users
+    workflows = list(labels["workflows"]) if "workflows" in labels else workflows
+    screens = list(labels["screens"]) if "screens" in labels else screens
+    entities = list(labels["entities"]) if "entities" in labels else entities
+    auth = str(labels.get("auth", "Email/password or organization SSO, to be confirmed"))
+    deployment = str(labels.get("deployment", "Web application, deployment target to be confirmed"))
+    missing = list(labels["missing"]) if "missing" in labels else missing
     return ProductBrief(
         product_name=product_name,
         problem=text.strip(),
