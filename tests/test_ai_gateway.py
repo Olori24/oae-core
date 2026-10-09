@@ -72,3 +72,32 @@ def test_model_gateway_accepts_vercel_oidc_without_api_key(monkeypatch):
     monkeypatch.setenv("VERCEL_OIDC_TOKEN", "oidc-token")
     from oae.core.ai_gateway import model_available
     assert model_available() is True
+
+
+def test_model_gateway_adds_native_language_instruction_for_all_supported_languages(monkeypatch):
+    class Response:
+        def read(self):
+            return json.dumps({"choices": [{"message": {"content": "translated response"}}]}).encode()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+    captured = []
+    def fake_urlopen(req, timeout):
+        captured.append(json.loads(req.data.decode()))
+        return Response()
+
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "test-key")
+    monkeypatch.setattr("oae.core.ai_gateway.request.urlopen", fake_urlopen)
+    for language in ("it", "de", "fr", "es", "pt", "ar", "yo", "ha", "ig"):
+        result = generate_engineering_response(
+            messages=[{"role": "user", "content": "Explain this feature."}],
+            language=language,
+        )
+        assert result == "translated response"
+    assert len(captured) == 9
+    for payload in captured:
+        assert any(message["role"] == "system" for message in payload["messages"])
