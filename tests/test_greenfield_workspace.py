@@ -14,7 +14,7 @@ class FakeVerticalSliceMission:
     def run(self, root, *, name, description, language, framework, database, testing_framework):
         generated = root / "src" / "main.py"
         generated.parent.mkdir(parents=True, exist_ok=True)
-        generated.write_text("# generated integration fixture\\nprint('ready')\\n", encoding="utf-8")
+        generated.write_text("# generated integration fixture\nprint('ready')\n", encoding="utf-8")
         return {"mission": name, "status": "production_candidate", "verified": True, "readiness_score": 100, "blockers": []}
 
 
