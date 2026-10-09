@@ -1,5 +1,5 @@
-from contextlib import contextmanager
 import os
+from contextlib import contextmanager
 from uuid import uuid4
 
 import pytest
