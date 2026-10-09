@@ -1,5 +1,10 @@
+import os
 from contextlib import contextmanager
+from uuid import uuid4
 
+import pytest
+
+from oae.api.db import _bootstrap_postgres, _ConnectionAdapter
 from oae.api.migrations import (
     CREATE_MIGRATION_TABLE_SQL,
     INSERT_MIGRATION_SQL,
@@ -50,6 +55,8 @@ def test_postgres_migration_files_are_ordered_and_present():
         "0011_agent_run_execution_leases.sql",
         "0012_conversation_interface.sql",
         "0013_greenfield_workspaces.sql",
+        "0100_persistent_continuity.sql",
+        "0101_conversation_history_controls.sql",
     ]
 
 
@@ -126,3 +133,45 @@ def test_migration_ledger_uses_fixed_queries_for_its_fixed_table_name():
     assert "{" not in SELECT_APPLIED_MIGRATIONS_SQL
     assert "%s" in INSERT_MIGRATION_SQL
     assert connection.committed is True
+
+
+@pytest.mark.postgres_integration
+@pytest.mark.skipif(not os.environ.get("OAE_POSTGRES_TEST_URL"), reason="isolated PostgreSQL test URL not configured")
+def test_all_postgres_migrations_apply_in_an_isolated_schema():
+    import psycopg
+
+    schema = f"oae_migration_test_{uuid4().hex}"
+    with psycopg.connect(os.environ["OAE_POSTGRES_TEST_URL"]) as connection:
+        connection.execute(f'CREATE SCHEMA "{schema}"')
+        try:
+            connection.execute(f'SET search_path TO "{schema}"')
+            # Reuse the same base-schema bootstrap used by the API and migration CLI.
+            _bootstrap_postgres(
+                _ConnectionAdapter(connection, "postgres"),
+                os.environ["OAE_POSTGRES_TEST_URL"] + "#schema=" + schema,
+            )
+            applied = apply_postgres_migrations(connection)
+            expected = [path.name for path in migration_files()]
+            assert applied == expected
+
+            rows = connection.execute(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = %s",
+                (schema,),
+            ).fetchall()
+            tables = {row[0] for row in rows}
+            assert {
+                "oae_projects",
+                "oae_memory_records",
+                "oae_tasks",
+                "oae_execution_runs",
+                "oae_checkpoints",
+                "oae_decisions",
+                "oae_conversation_state",
+            } <= tables
+            ledger = connection.execute(
+                "SELECT name FROM oae_schema_migrations ORDER BY name"
+            ).fetchall()
+            assert {row[0] for row in ledger} == set(expected)
+        finally:
+            connection.execute("SET search_path TO public")
+            connection.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')

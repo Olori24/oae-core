@@ -51,3 +51,24 @@
 .oae-repository-add-actions span{flex:1 1 180px;font-size:11px;color:#a4c0ad;overflow-wrap:anywhere}
 .oae-repository-add-form p{grid-column:1/-1;margin:0;color:#7f9d89;font-size:11px;line-height:1.5}
 @media(max-width:640px){.oae-repository-picker{flex-basis:100%}.oae-repository-add-form{grid-template-columns:minmax(0,1fr)}.oae-repository-add-actions{align-items:stretch}.oae-repository-add-actions button{flex:1 1 42%}.oae-repository-add-form p{grid-column:auto}}
+
+
+/* Durable history controls: compact on desktop and scroll-safe on mobile. */
+.oae-history-search{width:100%;height:36px;margin:0 0 10px;padding:0 10px;border:1px solid var(--line,#dce5e1);border-radius:8px;background:#fff;font:inherit;font-size:12px}
+.oae-session-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px;align-items:center}
+.oae-session-row .oae-session{min-width:0;width:100%;text-align:left}
+.oae-session-row .oae-session.is-current{border-color:#a8d3c6;background:#eaf6f1}
+.oae-session-row .oae-session strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.oae-session-actions{display:flex;gap:1px;opacity:.72}
+.oae-session-actions button{width:25px;height:27px;border:0;border-radius:5px;color:#64756e;background:transparent;cursor:pointer;font-size:13px}
+.oae-session-actions button:hover{color:#135f50;background:#e8f4ef}
+@media(max-width:640px){.oae-session-actions{opacity:1}.oae-history-search{font-size:16px}}
+
+.oae-continuity-bar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;padding:10px 14px;border:1px solid var(--line,#dce5e1);border-radius:12px;background:rgba(255,255,255,.92)}
+.oae-continuity-bar .oae-select{flex:1 1 170px;min-width:150px}
+.oae-continuity-bar .oae-select select{max-width:100%}
+.oae-continuity-button{min-height:32px;padding:0 10px;border:1px solid var(--line,#dce5e1);border-radius:7px;background:#fff;color:var(--ink,#172321);font:600 11px/1.2 system-ui,sans-serif;cursor:pointer}
+.oae-continuity-button:hover:not(:disabled){border-color:#9dc8b9;background:#f0f8f4}
+.oae-continuity-button:disabled{opacity:.45;cursor:not-allowed}
+.oae-continuity-bar p{flex:1 1 100%;margin:0;color:var(--muted,#697874);font-size:11px;line-height:1.5}
+@media(max-width:640px){.oae-continuity-bar{padding:9px;gap:6px}.oae-continuity-button{flex:1 1 42%;min-height:36px}.oae-continuity-bar .oae-select{flex-basis:100%}}
