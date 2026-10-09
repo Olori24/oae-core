@@ -13,8 +13,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from oae.providers.open_weight import OpenWeightModelGateway
-
 MAX_CONTEXT_FILES = 80
 MAX_FILE_CHARS = 12_000
 MAX_CONTEXT_CHARS = 6_000
