@@ -87,6 +87,7 @@ def test_benchmark_fails_closed_when_verification_evidence_is_missing(tmp_path):
         ),
     )
 
-    assert result["result"]["verified"] is True
+    assert result["result"]["mission_reported_verified"] is True
+    assert result["result"]["verified"] is False
     assert result["acceptance"]["verification_passed"] is False
     assert result["acceptance"]["all_declared_checks_passed"] is False
