@@ -276,7 +276,7 @@ class JobRunner:
             database=str(payload.get("database", "SQLite")),
             testing_framework=str(payload.get("testing_framework", "pytest")),
         )
-        verified = bool(mission.get("verified")) and mission.get("status") == "ready"
+        verified = mission.get("verified") is True
         return build_result(
             operation="build",
             payload=payload,
