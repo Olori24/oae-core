@@ -57,7 +57,7 @@
           </div>
 
           <form id="oae-repository-add-form" class="oae-repository-add-form" hidden>
-            <label><span>GITHUB REPOSITORY URL</span><input id="oae-repository-url" type="url" placeholder="https://github.com/owner/repository" autocomplete="url" required /></label>
+            <label><span>GITHUB REPOSITORY URL</span><input id="oae-repository-url" type="text" inputmode="url" placeholder="https://github.com/owner/repository" autocomplete="url" required /></label>
             <label><span>DEFAULT BRANCH</span><input id="oae-repository-branch" type="text" value="main" maxlength="255" pattern="[A-Za-z0-9._/-]+" required /></label>
             <div class="oae-repository-add-actions"><button type="submit" class="oae-repository-add-submit">Register repository</button><button id="oae-repository-add-cancel" type="button" class="oae-repository-add-cancel">Cancel</button><span id="oae-repository-add-status" role="status"></span></div>
             <p>Registering a repository saves its reference in OAE. Private-repository access and code changes still require configured GitHub credentials and governed authorization.</p>
