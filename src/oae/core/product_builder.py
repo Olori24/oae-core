@@ -7,6 +7,7 @@ from typing import Any
 
 from oae.core.ai_gateway import AIGatewayUnavailable, generate_engineering_response
 
+
 @dataclass(frozen=True)
 class ProductBrief:
     product_name: str
