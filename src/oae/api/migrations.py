@@ -54,9 +54,10 @@ def main() -> int:
 
     import psycopg
 
+    from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
+
     # Initialize the existing base schema before applying versioned migrations.
     # The API bootstrap and the migration CLI must use the same ordered foundation.
-    from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
 
     with psycopg.connect(settings.resolved_database_url) as connection:
         _bootstrap_postgres(
