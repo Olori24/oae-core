@@ -115,6 +115,7 @@ class GreenfieldProjectRequest(EngineeringRequest):
     database: Literal["SQLite"] = "SQLite"
     testing_framework: Literal["pytest"] = "pytest"
     authorization_id: str = Field(min_length=1, max_length=120)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
 
 
 
