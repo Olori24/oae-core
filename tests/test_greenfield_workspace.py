@@ -6,7 +6,16 @@ from oae.api import auth as auth_module
 from oae.api import conversation_routes
 from oae.api import db as database
 from oae.api.app import app
+from oae.api import workspace_manager as workspace_manager_module
 from oae.api.workspace_manager import WorkspaceManager as RealWorkspaceManager
+
+
+class FakeVerticalSliceMission:
+    def run(self, root, *, name, description, language, framework, database, testing_framework):
+        generated = root / "src" / "main.py"
+        generated.parent.mkdir(parents=True, exist_ok=True)
+        generated.write_text("# generated integration fixture\\nprint('ready')\\n", encoding="utf-8")
+        return {"mission": name, "status": "production_candidate", "verified": True, "readiness_score": 100, "blockers": []}
 
 
 class InMemoryWorkspaceRepository:
@@ -39,6 +48,7 @@ def test_greenfield_workspace_is_generated_persisted_and_idempotent(monkeypatch,
     database.settings.database_url = database_url
     auth_module.settings.database_url = database_url
     repository = InMemoryWorkspaceRepository()
+    monkeypatch.setattr(workspace_manager_module, "VerticalSliceMission", FakeVerticalSliceMission)
 
     def workspace_manager_factory():
         return RealWorkspaceManager(root=Path(tmp_path / "workspaces"), repository=repository)
