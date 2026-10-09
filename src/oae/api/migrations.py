@@ -54,7 +54,15 @@ def main() -> int:
 
     import psycopg
 
+    # Initialize the existing base schema before applying versioned migrations.
+    # The API bootstrap and the migration CLI must use the same ordered foundation.
+    from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
+
     with psycopg.connect(settings.resolved_database_url) as connection:
+        _bootstrap_postgres(
+            _ConnectionAdapter(connection, "postgres"),
+            settings.resolved_database_url,
+        )
         applied = apply_postgres_migrations(connection)
     print("No pending migrations." if not applied else f"Applied: {', '.join(applied)}")
     return 0

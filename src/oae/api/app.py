@@ -12,7 +12,9 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from oae.api.ai_routes import router as ai_router
 from oae.api.config import settings
 from oae.api.conversation_routes import router as conversation_router
+from oae.api.continuity_routes import router as continuity_router
 from oae.api.engineering_routes import router as engineering_router
+from oae.api.history_routes import router as history_router
 from oae.api.observability import configure_error_tracking
 from oae.api.product_routes import router as product_router
 from oae.api.routes import router
@@ -107,6 +109,8 @@ async def runtime_error_handler(request: Request, exc: RuntimeError):
 app.include_router(router)
 app.include_router(engineering_router)
 app.include_router(conversation_router)
+app.include_router(continuity_router)
+app.include_router(history_router)
 app.include_router(ai_router)
 app.include_router(product_router)
 app.include_router(worker_router)
