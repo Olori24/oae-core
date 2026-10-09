@@ -370,6 +370,9 @@ class WorkspaceManager:
             shutil.move(str(staging_root), str(final_root))
             ready_at = datetime.now(timezone.utc)
             self.repository.mark_ready(tenant_id, workspace_id, ready_at)
+            mission_result = dict(mission_result)
+            mission_result["root"] = str(final_root / "content")
+            mission_result["workspace_persistent"] = True
             return record.model_copy(update={"state": WorkspaceState.READY, "ready_at": ready_at}), manifest, mission_result
         except Exception:
             shutil.rmtree(staging_root, ignore_errors=True)
