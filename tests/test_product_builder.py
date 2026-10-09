@@ -16,3 +16,22 @@ def test_product_builder_fallback_never_claims_delivery():
     assert "deployment" in brief
     assert "tested" not in str(brief).lower()
     assert "deployed" not in str(brief).lower()
+
+
+def test_product_builder_fallback_localizes_supported_languages():
+    expected = {
+        "it": "Nuovo prodotto",
+        "de": "Neues Produkt",
+        "fr": "Nouveau produit",
+        "es": "Producto nuevo",
+        "pt": "Novo produto",
+        "ar": "منتج جديد",
+        "yo": "Ọjà tuntun",
+        "ha": "Sabon samfuri",
+        "ig": "Ngwaahịa ọhụrụ",
+    }
+    for language, product_name in expected.items():
+        brief = build_product_brief("Build an app for my business.", language=language)
+        assert brief["product_name"] == product_name
+        assert brief["auth"] != ""
+        assert brief["deployment"] != ""
