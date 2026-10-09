@@ -29,6 +29,7 @@ def test_preview_database_override_is_scoped_to_preview_environment(monkeypatch)
     monkeypatch.setenv("VERCEL_ENV", "preview")
     monkeypatch.setenv("OAE_PREVIEW_DATABASE_URL", "postgresql://preview.example/oae")
     assert settings.resolved_database_url == "postgresql://preview.example/oae"
+    assert settings.database_backend == "postgres"
 
     monkeypatch.setenv("VERCEL_ENV", "production")
     assert settings.resolved_database_url != "postgresql://preview.example/oae"
