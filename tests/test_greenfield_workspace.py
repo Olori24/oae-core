@@ -5,8 +5,8 @@ from fastapi.testclient import TestClient
 from oae.api import auth as auth_module
 from oae.api import conversation_routes
 from oae.api import db as database
-from oae.api.app import app
 from oae.api import workspace_manager as workspace_manager_module
+from oae.api.app import app
 from oae.api.workspace_manager import WorkspaceManager as RealWorkspaceManager
 
 
