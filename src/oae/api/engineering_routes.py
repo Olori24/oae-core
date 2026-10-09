@@ -107,6 +107,17 @@ class WorkspaceProvisionRequest(EngineeringRequest):
     parent_workspace_id: str | None = Field(default=None, min_length=1, max_length=120)
     authorization_id: str = Field(min_length=1, max_length=120)
 
+class GreenfieldProjectRequest(EngineeringRequest):
+    name: str = Field(min_length=1, max_length=120)
+    description: str = Field(min_length=1, max_length=4000)
+    language: Literal["Python"] = "Python"
+    framework: Literal["FastAPI"] = "FastAPI"
+    database: Literal["SQLite"] = "SQLite"
+    testing_framework: Literal["pytest"] = "pytest"
+    authorization_id: str = Field(min_length=1, max_length=120)
+
+
+
 
 class WorkspaceValidationRequest(EngineeringRequest):
     workspace_id: str = Field(min_length=1, max_length=120)
@@ -333,6 +344,19 @@ def provision_workspace(
         principal=principal,
         authorization_id=data.authorization_id,
         stage="provision",
+        payload=data.model_dump(exclude={"authorization_id"}),
+    )
+
+
+@router.post("/projects/greenfield", response_model=JobResponse, status_code=202)
+def provision_greenfield_project(
+    data: GreenfieldProjectRequest,
+    principal: TenantPrincipal = Depends(require_principal),
+) -> JobResponse:
+    return _queue(
+        principal=principal,
+        authorization_id=data.authorization_id,
+        stage="greenfield_provision",
         payload=data.model_dump(exclude={"authorization_id"}),
     )
 
