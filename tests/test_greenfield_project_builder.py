@@ -64,6 +64,24 @@ def test_greenfield_workspace_preserves_mission_verification_evidence(tmp_path, 
     assert "README.md" in {entry.relative_path for entry in manifest.entries}
 
 
+def test_engineering_tools_receive_project_content_root(tmp_path, monkeypatch):
+    workspace_container = tmp_path / "workspace-root"
+    workspace = workspace_container / "tenant" / "tenant-1" / "workspace" / "workspace-1"
+    content_root = workspace / "content"
+    content_root.mkdir(parents=True)
+    monkeypatch.setattr(job_runner_module.settings, "workspace_root", str(workspace_container))
+
+    assert JobRunner._safe_workspace_path(workspace.as_uri()) == content_root
+
+
+def test_legacy_flat_workspace_path_remains_supported(tmp_path, monkeypatch):
+    workspace_root = tmp_path / "workspace-root"
+    workspace_root.mkdir()
+    monkeypatch.setattr(job_runner_module.settings, "workspace_root", str(tmp_path))
+
+    assert JobRunner._safe_workspace_path(workspace_root.as_uri()) == workspace_root
+
+
 def test_greenfield_request_accepts_an_idempotency_key():
     request = GreenfieldProjectRequest(
         name="Demo",
