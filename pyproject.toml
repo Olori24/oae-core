@@ -58,4 +58,4 @@ check_untyped_defs = true
 warn_unused_ignores = true
 
 [tool.vercel]
-entrypoint = "src.oae.api.app:app"
+entrypoint = "index:app"
