@@ -154,7 +154,7 @@ def test_continuity_and_history_api_routes_are_registered():
 def test_postgres_interrupted_run_recovers_after_client_restart(monkeypatch):
     import psycopg
 
-    from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
+    from oae.api.db import _bootstrap_postgres, _ConnectionAdapter
     from oae.api.migrations import apply_postgres_migrations
 
     base_url = os.environ["OAE_POSTGRES_TEST_URL"]
