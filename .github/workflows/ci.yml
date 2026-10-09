@@ -47,7 +47,7 @@ jobs:
       - name: Install ruff
         run: pip install ruff==0.12.2
       - name: Ruff
-        run: ruff check src tests scripts
+        run: ruff check src tests scripts benchmarks
 
   typecheck:
     runs-on: ubuntu-latest
