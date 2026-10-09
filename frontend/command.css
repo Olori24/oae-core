@@ -34,3 +34,20 @@
 .oae-plan-context span{font-size:10px;letter-spacing:.12em;color:#72d7b4}
 .oae-plan-context strong{font-size:13px;color:#f4f8f6}
 .oae-plan-context small{font-size:11px;color:#8e9b97}
+
+.oae-repository-picker{display:flex;align-items:end;gap:7px;min-width:0;flex:1 1 230px}
+.oae-repository-picker .oae-select{flex:1 1 150px;min-width:0}
+.oae-repository-add-toggle,.oae-repository-add-submit,.oae-repository-add-cancel{min-height:36px;padding:0 11px;border:1px solid rgba(154,232,190,.2);border-radius:8px;background:#0c2115;color:#dff7e8;font:600 11px/1.2 system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.oae-repository-add-toggle:hover,.oae-repository-add-submit:hover,.oae-repository-add-cancel:hover{border-color:#65e59a;background:#102b1b}
+.oae-repository-add-form{display:grid;grid-template-columns:minmax(0,2fr) minmax(120px,1fr);gap:10px;margin:0 0 10px;padding:13px;border:1px solid rgba(154,232,190,.16);border-radius:12px;background:#091a10}
+.oae-repository-add-form[hidden]{display:none!important}
+.oae-repository-add-form label{display:flex;flex-direction:column;gap:6px;min-width:0}
+.oae-repository-add-form label span{font-size:9px;font-weight:700;letter-spacing:.12em;color:#8eae9a}
+.oae-repository-add-form input{width:100%;min-width:0;height:38px;padding:0 10px;border:1px solid rgba(154,232,190,.2);border-radius:7px;background:#06100b;color:#f4faf6;font:13px system-ui,sans-serif}
+.oae-repository-add-form input:focus{outline:2px solid rgba(101,229,154,.5);outline-offset:1px}
+.oae-repository-add-actions{display:flex;align-items:center;flex-wrap:wrap;gap:7px;grid-column:1/-1}
+.oae-repository-add-submit{background:#9af0bd;color:#06100b;border-color:#9af0bd}
+.oae-repository-add-submit:disabled{opacity:.55;cursor:wait}
+.oae-repository-add-actions span{flex:1 1 180px;font-size:11px;color:#a4c0ad;overflow-wrap:anywhere}
+.oae-repository-add-form p{grid-column:1/-1;margin:0;color:#7f9d89;font-size:11px;line-height:1.5}
+@media(max-width:640px){.oae-repository-picker{flex-basis:100%}.oae-repository-add-form{grid-template-columns:minmax(0,1fr)}.oae-repository-add-actions{align-items:stretch}.oae-repository-add-actions button{flex:1 1 42%}.oae-repository-add-form p{grid-column:auto}}
