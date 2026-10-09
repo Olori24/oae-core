@@ -108,8 +108,19 @@ def run_benchmark(
             "fresh_workspace": True,
             "generated_files_present": bool(files),
             "project_contract_passed": contract.get("passed") is True,
-            "verification_passed": verified,
-            "all_declared_checks_passed": verified and not failed_checks,
+            "verification_passed": (
+                verified
+                and verification.get("status") == "verified"
+                and bool(checks)
+                and not failed_checks
+            ),
+            "all_declared_checks_passed": (
+                verified
+                and contract.get("passed") is True
+                and verification.get("status") == "verified"
+                and bool(checks)
+                and not failed_checks
+            ),
         },
         "limitations": [
             "This benchmark does not deploy the generated application.",
