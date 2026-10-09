@@ -49,6 +49,7 @@ def test_postgres_migration_files_are_ordered_and_present():
         "0010_engineering_agent_runs.sql",
         "0011_agent_run_execution_leases.sql",
         "0012_conversation_interface.sql",
+        "0013_greenfield_workspaces.sql",
     ]
 
 
