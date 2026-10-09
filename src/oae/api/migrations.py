@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from oae.api.config import settings
-from oae.api.db import _ConnectionAdapter, _bootstrap_postgres
+from oae.api.db import _bootstrap_postgres, _ConnectionAdapter
 
 MIGRATIONS_DIRECTORY = Path(__file__).parents[3] / "migrations" / "postgres"
 MIGRATION_TABLE = "oae_schema_migrations"
