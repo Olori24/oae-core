@@ -252,6 +252,71 @@
       "Describe an engineering task...":"Kọwaa ọrụ injinia...","Send":"Zipu","Voice input":"Ntinye olu"
     }
   };
+  const COMMON = {
+    it: {
+      "Start with repository facts, not a black-box promise. OAE gives your team an inspectable analysis and keeps the evidence with your workspace.":"Parti dai fatti del repository, non da promesse opache. OAE offre un'analisi verificabile e conserva le prove nel tuo spazio di lavoro.",
+      "Built for developers who want to understand the work before trusting the automation.":"Per sviluppatori che vogliono capire il lavoro prima di affidarsi all'automazione.",
+      "Your API key will be shown once. You can use it to sign in again.":"La chiave API verrà mostrata una sola volta. Conservala per accedere di nuovo.",
+      "Your key stays in this browser on this device. Never share it publicly.":"La chiave resta in questo browser e dispositivo. Non condividerla pubblicamente.",
+      "OAE analyzes and records. This beta does not publish repository changes.":"OAE analizza e registra. Questa beta non pubblica modifiche al repository."
+    },
+    de: {
+      "Start with repository facts, not a black-box promise. OAE gives your team an inspectable analysis and keeps the evidence with your workspace.":"Beginne mit Fakten zum Repository statt mit undurchsichtigen Versprechen. OAE liefert überprüfbare Analysen und speichert die Belege im Arbeitsbereich.",
+      "Built for developers who want to understand the work before trusting the automation.":"Für Entwickler, die den Ablauf verstehen möchten, bevor sie der Automatisierung vertrauen.",
+      "Your API key will be shown once. You can use it to sign in again.":"Dein API-Schlüssel wird nur einmal angezeigt. Bewahre ihn für eine erneute Anmeldung auf.",
+      "Your key stays in this browser on this device. Never share it publicly.":"Dein Schlüssel bleibt in diesem Browser auf diesem Gerät. Teile ihn niemals öffentlich.",
+      "OAE analyzes and records. This beta does not publish repository changes.":"OAE analysiert und protokolliert. Diese Beta veröffentlicht keine Repository-Änderungen."
+    },
+    fr: {
+      "Start with repository facts, not a black-box promise. OAE gives your team an inspectable analysis and keeps the evidence with your workspace.":"Commencez par les faits du dépôt, pas par une promesse opaque. OAE fournit une analyse vérifiable et conserve les preuves dans votre espace.",
+      "Built for developers who want to understand the work before trusting the automation.":"Conçu pour les développeurs qui veulent comprendre le travail avant de faire confiance à l’automatisation.",
+      "Your API key will be shown once. You can use it to sign in again.":"Votre clé API ne sera affichée qu’une fois. Conservez-la pour vous reconnecter.",
+      "Your key stays in this browser on this device. Never share it publicly.":"Votre clé reste dans ce navigateur sur cet appareil. Ne la partagez jamais publiquement.",
+      "OAE analyzes and records. This beta does not publish repository changes.":"OAE analyse et consigne les résultats. Cette bêta ne publie aucune modification du dépôt."
+    },
+    es: {
+      "Start with repository facts, not a black-box promise. OAE gives your team an inspectable analysis and keeps the evidence with your workspace.":"Empieza con datos del repositorio, no con promesas opacas. OAE ofrece análisis verificables y guarda las pruebas en tu espacio de trabajo.",
+      "Built for developers who want to understand the work before trusting the automation.":"Diseñado para desarrolladores que quieren entender el trabajo antes de confiar en la automatización.",
+      "Your API key will be shown once. You can use it to sign in again.":"Tu clave API se mostrará una sola vez. Guárdala para volver a iniciar sesión.",
+      "Your key stays in this browser on this device. Never share it publicly.":"Tu clave permanece en este navegador y dispositivo. Nunca la compartas públicamente.",
+      "OAE analyzes and records. This beta does not publish repository changes.":"OAE analiza y registra. Esta beta no publica cambios en el repositorio."
+    },
+    pt: {
+      "Start with repository facts, not a black-box promise. OAE gives your team an inspectable analysis and keeps the evidence with your workspace.":"Comece pelos factos do repositório, não por promessas opacas. OAE fornece análises verificáveis e guarda as evidências no seu espaço de trabalho.",
+      "Built for developers who want to understand the work before trusting the automation.":"Feito para programadores que querem compreender o trabalho antes de confiar na automação.",
+      "Your API key will be shown once. You can use it to sign in again.":"A sua chave API será apresentada apenas uma vez. Guarde-a para voltar a entrar.",
+      "Your key stays in this browser on this device. Never share it publicly.":"A sua chave permanece neste navegador e dispositivo. Nunca a partilhe publicamente.",
+      "OAE analyzes and records. This beta does not publish repository changes.":"OAE analisa e regista. Esta beta não publica alterações no repositório."
+    },
+    ar: {
+      "Start with repository facts, not a black-box promise. OAE gives your team an inspectable analysis and keeps the evidence with your workspace.":"ابدأ بوقائع المستودع بدل الوعود الغامضة. يقدم OAE تحليلاً قابلاً للفحص ويحفظ الأدلة في مساحة عملك.",
+      "Built for developers who want to understand the work before trusting the automation.":"مصمم للمطورين الذين يريدون فهم العمل قبل الوثوق بالأتمتة.",
+      "Your API key will be shown once. You can use it to sign in again.":"سيظهر مفتاح API مرة واحدة فقط. احتفظ به لتسجيل الدخول لاحقًا.",
+      "Your key stays in this browser on this device. Never share it publicly.":"يبقى مفتاحك في هذا المتصفح على هذا الجهاز. لا تشاركه علنًا أبدًا.",
+      "OAE analyzes and records. This beta does not publish repository changes.":"يحلل OAE النتائج ويسجلها. لا تنشر هذه النسخة التجريبية تغييرات على المستودع."
+    },
+    yo: {
+      "Start with repository facts, not a black-box promise. OAE gives your team an inspectable analysis and keeps the evidence with your workspace.":"Bẹ̀rẹ̀ pẹ̀lú òtítọ́ nípa repository, kì í ṣe ìlérí tí kò ṣe kedere. OAE ń ṣe àyẹ̀wò tí a lè ṣàyẹ̀wò, ó sì ń pa ẹ̀rí mọ́ sínú àyè iṣẹ́ rẹ.",
+      "Built for developers who want to understand the work before trusting the automation.":"A ṣe é fún àwọn olùdàgbàsókè tó fẹ́ lóye iṣẹ́ kí wọ́n tó gbẹ́kẹ̀ lé ìṣiṣẹ́ aládàáṣe.",
+      "Your API key will be shown once. You can use it to sign in again.":"A ó fi kọ́kọ́rọ́ API rẹ hàn lẹ́ẹ̀kan ṣoṣo. Pa á mọ́ fún ìwọlé míì.",
+      "Your key stays in this browser on this device. Never share it publicly.":"Kọ́kọ́rọ́ rẹ yóò wà nínú ẹ̀rọ aṣàwárí yìí. Má ṣe pín in fún gbogbo ènìyàn.",
+      "OAE analyzes and records. This beta does not publish repository changes.":"OAE ń ṣàyẹ̀wò, ó sì ń kọ àkọsílẹ̀. Beta yìí kì í ṣe àtẹ̀jáde àyípadà sí repository."
+    },
+    ha: {
+      "Start with repository facts, not a black-box promise. OAE gives your team an inspectable analysis and keeps the evidence with your workspace.":"Fara da bayanan ma'ajiyar lamba, ba alkawarin da ba a iya gani ba. OAE tana yin bincike da za a iya dubawa kuma tana adana shaida a wurin aikinka.",
+      "Built for developers who want to understand the work before trusting the automation.":"An gina shi ga masu haɓaka da suke son fahimtar aiki kafin su amince da sarrafa kai.",
+      "Your API key will be shown once. You can use it to sign in again.":"Za a nuna maɓallin API ɗinka sau ɗaya kawai. Ka adana shi don sake shiga.",
+      "Your key stays in this browser on this device. Never share it publicly.":"Maɓallinka zai kasance a wannan burauzar da na'ura. Kada ka raba shi a fili.",
+      "OAE analyzes and records. This beta does not publish repository changes.":"OAE tana bincike da rubuta sakamako. Wannan beta ba ta wallafa canje-canje a ma'ajiyar lamba."
+    },
+    ig: {
+      "Start with repository facts, not a black-box promise. OAE gives your team an inspectable analysis and keeps the evidence with your workspace.":"Malite na eziokwu gbasara ebe nchekwa, ọ bụghị nkwa a na-apụghị ịhụ. OAE na-enye nyocha a pụrụ ilele ma debe ihe akaebe n'ebe ọrụ gị.",
+      "Built for developers who want to understand the work before trusting the automation.":"E mere ya maka ndị mmepe chọrọ ịghọta ọrụ tupu ha atụkwasị akpaaka obi.",
+      "Your API key will be shown once. You can use it to sign in again.":"A ga-egosi igodo API gị naanị otu ugboro. Debe ya ka i wee banye ọzọ.",
+      "Your key stays in this browser on this device. Never share it publicly.":"Igodo gị ga-adị na ihe nchọgharị a na ngwaọrụ a. E kesala ya n'ihu ọha.",
+      "OAE analyzes and records. This beta does not publish repository changes.":"OAE na-enyocha ma dekọọ nsonaazụ. Beta a anaghị ebipụta mgbanwe ebe nchekwa."
+    }
+  };
   function getLanguage() {
     try {
       const saved = localStorage.getItem(KEY);
@@ -262,7 +327,7 @@
   }
   function t(value, language = getLanguage()) {
     const source = String(value ?? "").trim();
-    return TRANSLATIONS[language]?.[source] || EN[source] || source;
+    return TRANSLATIONS[language]?.[source] || COMMON[language]?.[source] || EN[source] || source;
   }
   function apply(root = document) {
     const language = getLanguage();
