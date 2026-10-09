@@ -27,7 +27,6 @@ from oae.api.durable_jobs import DurableJobRepository
 from oae.api.job_runner import JobRunner
 from oae.api.worker_authorizations import WorkerAuthorizationRepository
 from oae.api.workspace_manager import WorkspaceManager
-
 from oae.core.engineering_planner import build_engineering_plan
 
 router = APIRouter(prefix="/v1/conversations", tags=["conversations"])
