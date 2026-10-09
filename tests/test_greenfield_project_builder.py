@@ -64,6 +64,17 @@ def test_greenfield_workspace_preserves_mission_verification_evidence(tmp_path, 
     assert "README.md" in {entry.relative_path for entry in manifest.entries}
 
 
+def test_greenfield_request_accepts_an_idempotency_key():
+    request = GreenfieldProjectRequest(
+        name="Demo",
+        description="A small demo project",
+        authorization_id="auth-1",
+        idempotency_key="demo-build-001",
+    )
+
+    assert request.idempotency_key == "demo-build-001"
+
+
 def test_greenfield_request_rejects_unapproved_stack_values():
     with pytest.raises(ValidationError):
         GreenfieldProjectRequest(
