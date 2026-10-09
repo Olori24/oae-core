@@ -37,6 +37,13 @@ def _fallback(text: str, language: str = "en") -> ProductBrief:
             tail = text[lower.index(marker) + len(marker):].strip(" .")
             product_name = tail[:60] or product_name
             break
+    product_name_by_language = {
+        "it": "Nuovo prodotto", "de": "Neues Produkt", "fr": "Nouveau produit",
+        "es": "Producto nuevo", "pt": "Novo produto", "ar": "منتج جديد",
+        "yo": "Ọjà tuntun", "ha": "Sabon samfuri", "ig": "Ngwaahịa ọhụrụ",
+    }
+    if product_name == "New product":
+        product_name = product_name_by_language.get(language, product_name)
     users = ["Product owner"]
     if "school" in lower or "student" in lower:
         users = ["School administrators", "Teachers", "Parents", "Students"]
