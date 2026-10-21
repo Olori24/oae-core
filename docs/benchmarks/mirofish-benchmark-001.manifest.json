@@ -1,0 +1,36 @@
+{
+  "benchmark_id": "MIROFISH-BENCHMARK-001",
+  "status": "defined",
+  "repository": "Olori24/oae-core",
+  "branch": "mission/mirofish-benchmark-001",
+  "source_repository": "666ghj/MiroFish",
+  "source_ref": "main",
+  "source_observed_at": "2026-09-28",
+  "source_commit": "TO_PIN_BEFORE_EXECUTION",
+  "oae_base_commit": "1a4839a7f01bdf97213a34b3c820107a5612987b",
+  "workload_sizes": [
+    100,
+    250,
+    500,
+    1000,
+    2500,
+    5000
+  ],
+  "simulation_windows_hours": [
+    72,
+    168,
+    720
+  ],
+  "gates": [
+    "G1",
+    "G2",
+    "G3",
+    "G4",
+    "G5",
+    "G6",
+    "G7",
+    "G8"
+  ],
+  "licensing_rule": "Do not copy MiroFish or OASIS implementation into OAE; perform independent reproduction.",
+  "evidence_rule": "Every measured claim must include source revision, environment, workload, and artifact."
+}
