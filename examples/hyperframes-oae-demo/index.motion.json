@@ -1,0 +1,12 @@
+{
+  "duration": 12,
+  "assertions": [
+    {"kind":"appearsBy","selector":"#t1","bySec":0.9},
+    {"kind":"before","a":"#t1","b":"#b1"},
+    {"kind":"keepsMoving","withinSelector":"#s1","maxStaticSec":2},
+    {"kind":"appearsBy","selector":"#flow","bySec":3.8},
+    {"kind":"appearsBy","selector":"#n3","bySec":7},
+    {"kind":"appearsBy","selector":"#t4","bySec":10},
+    {"kind":"keepsMoving","withinSelector":"#s4","maxStaticSec":2}
+  ]
+}
