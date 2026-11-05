@@ -47,7 +47,7 @@ jobs:
       - name: Install ruff
         run: pip install ruff==0.12.2
       - name: Ruff
-        run: ruff check src tests scripts
+        run: ruff check src tests scripts benchmarks
 
   typecheck:
     runs-on: ubuntu-latest
@@ -60,3 +60,31 @@ jobs:
         run: pip install -r requirements.lock.txt && pip install -e . --no-deps
       - name: Mypy
         run: mypy src
+
+  greenfield-benchmark:
+    name: Greenfield project-builder benchmark
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install locked Python dependencies
+        run: pip install -r requirements.lock.txt && pip install -e . --no-deps
+      - name: Run fresh-workspace project-builder benchmark
+        run: |
+          mkdir -p artifacts
+          python benchmarks/greenfield_project_builder.py \
+            --workspace "$RUNNER_TEMP/oae-greenfield-benchmark-workspace" \
+            --output artifacts/greenfield-benchmark.json
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: greenfield-project-builder-benchmark
+          path: artifacts/greenfield-benchmark.json
+          if-no-files-found: warn
