@@ -81,6 +81,7 @@ def run_benchmark(
     mission_verified = result.get("verified") is True
     verified = (
         mission_verified
+        and bool(files)
         and contract.get("passed") is True
         and verification.get("status") == "verified"
         and bool(checks)
