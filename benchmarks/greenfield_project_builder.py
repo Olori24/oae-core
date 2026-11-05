@@ -11,14 +11,13 @@ Exit codes:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any
-
 import argparse
 import json
 import tempfile
 import time
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 from oae.core.vertical_slice_mission import VerticalSliceMission
 
