@@ -14,6 +14,18 @@ class FakeMission:
         return self.result
 
 
+class EmptyOutputMission:
+    def run(self, root, **kwargs):
+        return {
+            "verified": True,
+            "contract": {"passed": True},
+            "verification": {
+                "status": "verified",
+                "checks": [{"name": "pytest", "passed": True}],
+            },
+        }
+
+
 def test_benchmark_records_verified_project_evidence(tmp_path):
     result = run_benchmark(
         tmp_path / "empty-project",
@@ -72,6 +84,7 @@ def test_benchmark_requires_an_empty_workspace(tmp_path):
     with pytest.raises(ValueError, match="must be empty"):
         run_benchmark(root, mission=FakeMission({}))
 
+
 def test_benchmark_fails_closed_when_verification_evidence_is_missing(tmp_path):
     result = run_benchmark(
         tmp_path / "missing-evidence",
@@ -91,3 +104,12 @@ def test_benchmark_fails_closed_when_verification_evidence_is_missing(tmp_path):
     assert result["result"]["verified"] is False
     assert result["acceptance"]["verification_passed"] is False
     assert result["acceptance"]["all_declared_checks_passed"] is False
+
+
+def test_benchmark_requires_generated_files_before_passing(tmp_path):
+    result = run_benchmark(tmp_path / "empty-output", mission=EmptyOutputMission())
+
+    assert result["result"]["mission_reported_verified"] is True
+    assert result["result"]["file_count"] == 0
+    assert result["result"]["verified"] is False
+    assert result["acceptance"]["generated_files_present"] is False
